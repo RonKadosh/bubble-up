@@ -1,0 +1,163 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* ===== BUBBLE.UP BRAND — light blue ===== */
+    --color-primary-50:  #f0faff;
+    --color-primary-100: #dff3ff;
+    --color-primary-200: #b9e3fd;
+    --color-primary-300: #8acdf6;
+    --color-primary-400: #5cb5ee;
+    --color-primary-500: #389ae0;
+    --color-primary-600: #2780c3;
+    --color-primary-700: #21659a;
+    --color-primary-800: #1d527a;
+    --color-primary-900: #19405d;
+
+    /* ===== LIGHT MODE ===== */
+    --bg: #f4f9fc;
+    --bg-secondary: #ecf3f9;
+    --surface: #ffffff;
+    --surface-hover: #f1f7fc;
+    --surface-muted: #ebf2f8;
+
+    --border: #d7e2ec;
+    --border-strong: #b8cad9;
+
+    --text: #15202b;
+    --text-secondary: #4a5965;
+    --text-muted: #6f8090;
+
+    --success: #2fb36d;
+    --warning: #d4a72c;
+    --danger: #d94f4f;
+
+    /* Silver — cool grey-blue, partner of the brand blue. */
+    --silver: #cfdae3;
+    --silver-soft: #e6ecf1;
+
+    --shadow:
+      0 2px 8px rgba(13, 71, 116, 0.05),
+      0 8px 24px rgba(56, 154, 224, 0.10);
+
+    --shadow-bubble:
+      0 4px 14px rgba(13, 71, 116, 0.08),
+      0 18px 40px rgba(56, 154, 224, 0.16);
+  }
+
+  .dark {
+    /* ===== DARK MODE ===== */
+    --bg: #0c1218;
+    --bg-secondary: #131c24;
+    --surface: #19232d;
+    --surface-hover: #213040;
+    --surface-muted: #1c2731;
+
+    --border: #2d3d4d;
+    --border-strong: #3f5365;
+
+    --text: #eaf4fa;
+    --text-secondary: #b3c4cf;
+    --text-muted: #7f919e;
+
+    --success: #35d48a;
+    --warning: #e8bc4b;
+    --danger: #ff7676;
+
+    --silver: #2a3540;
+    --silver-soft: #1f2932;
+
+    --shadow:
+      0 2px 8px rgba(0,0,0,0.35),
+      0 0 24px rgba(56, 154, 224, 0.10);
+
+    --shadow-bubble:
+      0 6px 18px rgba(0,0,0,0.45),
+      0 0 36px rgba(56, 154, 224, 0.18);
+  }
+
+  html, body, #root {
+    height: 100%;
+  }
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+                 "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection {
+    background-color: var(--color-primary-200);
+    color: var(--color-primary-900);
+  }
+}
+
+@layer utilities {
+  /* Semantic neutral tokens — auto dark-mode via CSS variable swap. */
+  .bg-base { background-color: var(--bg); }
+  .bg-base-secondary { background-color: var(--bg-secondary); }
+  .bg-surface { background-color: var(--surface); }
+  .bg-surface-hover { background-color: var(--surface-hover); }
+  .bg-surface-muted { background-color: var(--surface-muted); }
+  .hover\:bg-surface-hover:hover { background-color: var(--surface-hover); }
+  .hover\:bg-surface-muted:hover { background-color: var(--surface-muted); }
+
+  .text-base { color: var(--text); }
+  .text-secondary { color: var(--text-secondary); }
+  .text-muted { color: var(--text-muted); }
+  .hover\:text-base:hover { color: var(--text); }
+
+  .border-line { border-color: var(--border); }
+  .border-line-strong { border-color: var(--border-strong); }
+  .hover\:border-line-strong:hover { border-color: var(--border-strong); }
+
+  .text-success { color: var(--success); }
+  .text-warning { color: var(--warning); }
+  .text-danger  { color: var(--danger); }
+  .bg-danger-soft { background-color: color-mix(in srgb, var(--danger) 12%, transparent); }
+
+  .shadow-themed { box-shadow: var(--shadow); }
+  .shadow-bubble { box-shadow: var(--shadow-bubble); }
+
+  /* Brand gradients: light-blue → silver. The signature Bubble.up look. */
+  .bg-brand-gradient {
+    background-image: linear-gradient(135deg, var(--color-primary-300) 0%, var(--color-primary-200) 40%, var(--silver) 100%);
+  }
+  .bg-brand-gradient-soft {
+    background-image: linear-gradient(135deg, var(--color-primary-100) 0%, var(--color-primary-50) 45%, var(--silver-soft) 100%);
+  }
+  .bg-brand-gradient-strong {
+    background-image: linear-gradient(135deg, var(--color-primary-400) 0%, var(--color-primary-300) 50%, var(--silver) 100%);
+  }
+  .bg-brand-gradient-vertical {
+    background-image: linear-gradient(180deg, var(--color-primary-300) 0%, var(--color-primary-400) 40%, var(--silver) 100%);
+  }
+  .bg-bubble-glow {
+    background:
+      radial-gradient(ellipse at 20% 20%, rgba(255,255,255,0.45) 0%, transparent 50%),
+      linear-gradient(135deg, var(--color-primary-300) 0%, var(--color-primary-200) 50%, var(--silver) 100%);
+  }
+  .text-on-brand { color: #0d2334; }
+
+  /* Used by elements layered on the brand gradient. */
+  .ring-on-brand {
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,0.35),
+      inset 0 -2px 6px rgba(13, 71, 116, 0.08);
+  }
+
+  /* Soft "bubble" pop on hover for primary tappable surfaces. */
+  .bubble-pop {
+    transition: transform 200ms cubic-bezier(.34,1.56,.64,1), box-shadow 200ms, filter 200ms;
+  }
+  .bubble-pop:hover {
+    transform: translateY(-1px) scale(1.02);
+    filter: brightness(1.04);
+  }
+  .bubble-pop:active {
+    transform: translateY(0) scale(0.98);
+    filter: brightness(0.97);
+  }
+}

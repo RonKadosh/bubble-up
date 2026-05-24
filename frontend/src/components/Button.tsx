@@ -1,0 +1,121 @@
+/**
+ * The Bubble.up button system. Everything is a pill (`rounded-full`) and
+ * everything springs on hover (`bubble-pop`). Variants set color & weight,
+ * sizes set padding & text size.
+ *
+ * Pick a variant by intent, not appearance:
+ *   - primary: the page's main CTA (gradient).
+ *   - secondary: alternative actions (surface + border).
+ *   - ghost: low-weight inline actions (no fill).
+ *   - danger: destructive (pop, remove).
+ */
+import type { ButtonHTMLAttributes, AnchorHTMLAttributes, ReactNode } from 'react'
+
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
+export type ButtonSize = 'xs' | 'sm' | 'md' | 'lg'
+
+const SIZE_CLASSES: Record<ButtonSize, string> = {
+  xs: 'px-3 py-1.5 text-xs',
+  sm: 'px-4 py-2 text-sm',
+  md: 'px-5 py-2.5 text-sm font-semibold',
+  lg: 'px-6 py-3 text-base font-semibold',
+}
+
+const VARIANT_CLASSES: Record<ButtonVariant, string> = {
+  primary: 'bg-brand-gradient-strong text-on-brand shadow-themed',
+  secondary: 'bg-surface text-base border border-line hover:border-line-strong',
+  ghost: 'text-secondary hover:bg-surface-hover',
+  danger: 'bg-danger-soft text-danger border border-line hover:brightness-95',
+}
+
+const BASE =
+  'inline-flex items-center justify-center gap-2 rounded-full bubble-pop disabled:opacity-60 disabled:cursor-not-allowed disabled:pointer-events-none whitespace-nowrap'
+
+interface SharedProps {
+  variant?: ButtonVariant
+  size?: ButtonSize
+  leftIcon?: ReactNode
+  rightIcon?: ReactNode
+  className?: string
+}
+
+type ButtonProps = SharedProps & ButtonHTMLAttributes<HTMLButtonElement>
+
+export function Button({
+  variant = 'primary',
+  size = 'md',
+  leftIcon,
+  rightIcon,
+  className = '',
+  children,
+  ...rest
+}: ButtonProps) {
+  return (
+    <button
+      {...rest}
+      className={`${BASE} ${SIZE_CLASSES[size]} ${VARIANT_CLASSES[variant]} ${className}`}
+    >
+      {leftIcon}
+      {children}
+      {rightIcon}
+    </button>
+  )
+}
+
+/** Same look as Button, renders as <a>. Use react-router's Link if you need client-side nav. */
+type LinkButtonProps = SharedProps & AnchorHTMLAttributes<HTMLAnchorElement>
+
+export function LinkButton({
+  variant = 'primary',
+  size = 'md',
+  leftIcon,
+  rightIcon,
+  className = '',
+  children,
+  ...rest
+}: LinkButtonProps) {
+  return (
+    <a
+      {...rest}
+      className={`${BASE} ${SIZE_CLASSES[size]} ${VARIANT_CLASSES[variant]} ${className}`}
+    >
+      {leftIcon}
+      {children}
+      {rightIcon}
+    </a>
+  )
+}
+
+/**
+ * Round icon-only button. The chat send button, sidebar collapse toggle,
+ * month nav arrows in calendar — all the same shape.
+ */
+export type IconButtonSize = 'sm' | 'md' | 'lg'
+
+const ICON_SIZE_CLASSES: Record<IconButtonSize, string> = {
+  sm: 'w-9 h-9',
+  md: 'w-10 h-10',
+  lg: 'w-12 h-12',
+}
+
+interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: ButtonVariant
+  size?: IconButtonSize
+}
+
+export function IconButton({
+  variant = 'ghost',
+  size = 'md',
+  className = '',
+  children,
+  ...rest
+}: IconButtonProps) {
+  return (
+    <button
+      {...rest}
+      className={`inline-flex items-center justify-center rounded-full bubble-pop disabled:opacity-60 disabled:cursor-not-allowed ${ICON_SIZE_CLASSES[size]} ${VARIANT_CLASSES[variant]} ${className}`}
+    >
+      {children}
+    </button>
+  )
+}

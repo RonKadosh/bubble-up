@@ -1,0 +1,57 @@
+# ---------- Node / frontend ----------
+node_modules/
+dist/
+build/
+.vite/
+.cache/
+coverage/
+.nyc_output/
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# env (real secrets — never commit)
+.env
+.env.local
+.env.*.local
+
+# ---------- Java / Maven / backend ----------
+target/
+*.class
+*.jar
+*.war
+*.ear
+
+# Maven wrapper artifacts
+.mvn/wrapper/maven-wrapper.jar
+
+# JVM crash logs
+hs_err_pid*
+replay_pid*
+
+# ---------- IDE / editor ----------
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+.factorypath
+*.swp
+*.swo
+*~
+
+# ---------- OS noise ----------
+.DS_Store
+Thumbs.db
+desktop.ini
+ehthumbs.db
+
+# ---------- Misc ----------
+*.log

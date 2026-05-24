@@ -1,0 +1,37 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:studybuddy}
+    username: ${DB_USERNAME:studybuddy}
+    password: ${DB_PASSWORD:studybuddy}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 25MB
+      max-request-size: 26MB
+
+server:
+  port: 8080
+
+app:
+  security:
+    jwt-secret: ${JWT_SECRET:studybuddy-dev-secret-key-change-this-in-production-must-be-at-least-256-bits}
+    jwt-access-expiration-ms: ${JWT_ACCESS_EXPIRATION_MS:900000}
+    refresh-token-expiration-ms: ${REFRESH_TOKEN_EXPIRATION_MS:2592000000}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+  file-storage:
+    type: ${FILE_STORAGE_TYPE:local}
+    local-path: ${FILE_STORAGE_LOCAL_PATH:/tmp/studybuddy-files}
+  simulation:
+    enabled: false
+  agents:
+    enabled: false

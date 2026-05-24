@@ -1,0 +1,59 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: studybuddy
+      POSTGRES_USER: studybuddy
+      POSTGRES_PASSWORD: studybuddy
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U studybuddy"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - studybuddy-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: studybuddy
+      DB_USERNAME: studybuddy
+      DB_PASSWORD: studybuddy
+      JWT_SECRET: studybuddy-dev-secret-key-change-this-in-production-must-be-at-least-256-bits
+      JWT_EXPIRATION_MS: 86400000
+      CORS_ALLOWED_ORIGINS: http://localhost:3000
+      FILE_STORAGE_TYPE: local
+      FILE_STORAGE_LOCAL_PATH: /tmp/studybuddy-files
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - studybuddy-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - studybuddy-network
+
+volumes:
+  postgres_data:
+
+networks:
+  studybuddy-network:
+    driver: bridge

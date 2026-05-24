@@ -1,0 +1,34 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:studybuddy_test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        dialect: org.hibernate.dialect.H2Dialect
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 25MB
+      max-request-size: 26MB
+
+app:
+  security:
+    jwt-secret: test-secret-key-deterministic-must-be-at-least-256-bits-aaaaaaaaaaaaa
+    jwt-access-expiration-ms: 900000
+    refresh-token-expiration-ms: 2592000000
+  cors:
+    allowed-origins: http://localhost:3000
+  file-storage:
+    type: local
+    local-path: /tmp/studybuddy-test-files
+  simulation:
+    enabled: false
+  agents:
+    enabled: false
