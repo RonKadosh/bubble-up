@@ -13,11 +13,14 @@
     "share": "שיתוף",
     "loading": "טוען…",
     "comingSoon": "בקרוב.",
-    "you": "אתה"
+    "you": "אתה",
+    "close": "סגירה"
   },
   "nav": {
     "home": "בית",
     "myBubbles": "הבועות שלי",
+    "academy": "אקדמיה",
+    "experts": "מומחים",
     "help": "עזרה",
     "report": "דיווח",
     "logout": "התנתקות",
@@ -26,7 +29,35 @@
     "collapse": "צמצום סרגל הצד",
     "expand": "פתיחת סרגל הצד",
     "signedIn": "מחובר/ת",
-    "language": "שפה"
+    "language": "שפה",
+    "dashboard": "לוח בקרה",
+    "profile": "פרופיל"
+  },
+  "profile": {
+    "title": "הפרופיל שלך",
+    "titleOther": "פרופיל",
+    "displayNameLabel": "שם תצוגה",
+    "displayNamePlaceholder": "איך אתה מופיע לאחרים",
+    "bioLabel": "ביוגרפיה",
+    "bioPlaceholder": "כתבו משהו על עצמכם (אופציונלי)",
+    "affiliationLabel": "שיוך אקדמי",
+    "universityLabel": "אוניברסיטה",
+    "departmentLabel": "מחלקה",
+    "selectDepartment": "בחר/י מחלקה",
+    "enrollmentYearLabel": "שנה",
+    "uploadAvatar": "החלפת תמונה",
+    "removeAvatar": "הסרת תמונה",
+    "saveButton": "שמירת שינויים",
+    "savingButton": "שומר…",
+    "joinedAt": "הצטרף ב־{{date}}",
+    "cannotView": "🫧 אין לך עדיין בועה משותפת עם המשתמש הזה.",
+    "errorLoad": "טעינת הפרופיל נכשלה.",
+    "errorSave": "שמירת הפרופיל נכשלה.",
+    "errorAvatarType": "התמונה חייבת להיות PNG, JPEG, WebP או GIF.",
+    "errorAvatarTooLarge": "התמונה חייבת להיות עד 5 מ\"ב.",
+    "errorAvatarGeneric": "העלאת התמונה נכשלה.",
+    "noBio": "—",
+    "noAffiliation": "—"
   },
   "login": {
     "headingSignIn": "ברוכים השבים",
@@ -48,16 +79,41 @@
     "switchToRegisterAction": "ליצירת חשבון",
     "switchToSignInPrompt": "כבר יש לך חשבון?",
     "switchToSignInAction": "להתחברות",
+    "displayName": "שם תצוגה",
+    "displayNamePlaceholder": "השם שלך",
+    "displayNameRequired": "שם התצוגה חובה.",
     "errorInvalidCredentials": "האימייל או הסיסמה שגויים.",
     "errorEmailExists": "אימייל זה כבר רשום.",
     "errorRegisterGeneric": "ההרשמה נכשלה.",
-    "errorSignInGeneric": "ההתחברות נכשלה.",
-    "collage": {
-      "focusLearnGrow": ["מיקוד", "למידה", "צמיחה"],
-      "shareIdeas": "לשתף רעיונות",
-      "shareIdeasSub": "להשיג יותר",
-      "studyTogether": "ללמוד ביחד",
-      "studyTogetherSub": "להישאר ממוקדים"
+    "errorSignInGeneric": "ההתחברות נכשלה."
+  },
+  "academy": {
+    "title": "אקדמיה",
+    "subtitle": "עיון במחלקות ובקורסים באוניברסיטה שלך.",
+    "term": {
+      "label": "סמסטר",
+      "all": "כל הסמסטרים",
+      "current": "הסמסטר הנוכחי"
+    },
+    "column": {
+      "departments": "מחלקות",
+      "courses": "קורסים",
+      "detail": "פרטי הקורס"
+    },
+    "empty": {
+      "departments": "אין מחלקות להצגה.",
+      "courses": "בחר/י מחלקה כדי לראות את הקורסים שלה.",
+      "detail": "בחר/י קורס כדי לראות פרטים."
+    },
+    "detail": {
+      "code": "קוד",
+      "credits": "נקודות זכות",
+      "description": "תיאור",
+      "departments": "מחלקות",
+      "offerings": "מוצע ב"
+    },
+    "error": {
+      "load": "טעינת הקטלוג נכשלה."
     }
   },
   "dashboard": {
@@ -85,11 +141,16 @@
     "newBubble": "+ בועה חדשה",
     "emptyList": "אין עדיין בועות. פתחו אחת חדשה עם",
     "pickFromSidebar": "🫧 בחר/י בועה מסרגל הצד.",
+    "openBubbleList": "פתיחת רשימת הבועות",
+    "openBubbleListAria": "פתיחת רשימת הבועות",
     "createForm": {
       "bubbleName": "שם הבועה",
       "descriptionOptional": "תיאור (לא חובה)",
       "public": "ציבורי",
       "private": "פרטי",
+      "universityLabel": "אוניברסיטה",
+      "selectDepartment": "בחר/י מחלקה",
+      "selectCourse": "בחר/י קורס",
       "submit": "להציף 🫧"
     },
     "header": {
@@ -107,16 +168,31 @@
     "tabs": {
       "chat": "צ׳אט",
       "calendar": "יומן",
-      "files": "קבצים",
-      "members": "חברים"
+      "files": "קבצים"
+    },
+    "bento": {
+      "maximize": "הגדל"
     },
     "members": {
       "empty": "אין עדיין חברים.",
       "youSuffix": "(אתה)",
+      "manage": "ניהול",
+      "modalTitle": "ניהול חברים",
       "makeOwner": "הפוך לבעלים",
       "remove": "הסר",
       "addPlaceholder": "מזהה משתמש להוספה",
-      "addButton": "+ הוספה"
+      "addButton": "+ הוספה",
+      "onlineNow": "מחובר עכשיו",
+      "lastSeen": "נראה לאחרונה {{rel}}",
+      "lastSeenUnknown": "טרם נראה",
+      "relJustNow": "ממש עכשיו",
+      "relMinutes_one": "לפני דקה",
+      "relMinutes_other": "לפני {{count}} דקות",
+      "relHours_one": "לפני שעה",
+      "relHours_other": "לפני {{count}} שעות",
+      "relDays_one": "אתמול",
+      "relDays_other": "לפני {{count}} ימים",
+      "relOn": "ב-{{date}}"
     },
     "chat": {
       "joinPrompt": "הצטרף/י לבועה זו כדי לצפות בהודעות ולשלוח.",
@@ -131,10 +207,64 @@
       "sendAria": "שלח",
       "linkAria": "שיתוף קישור",
       "linkTitle": "שתף אירוע יומן",
-      "modalTitle": "שיתוף אירוע יומן",
+      "emoji": {
+        "pickerAria": "פתח בורר בועות-אימוג'י",
+        "pickerTitle": "בועות אימוג'י",
+        "smiling": "בועה מחייכת",
+        "sad": "בועה עצובה",
+        "approving": "בועה מאשרת",
+        "disapproving": "בועה לא־מאשרת",
+        "laughing": "בועה צוחקת",
+        "crying": "בועה בוכה",
+        "loving": "בועה מאוהבת"
+      },
+      "modalTitle": "שיתוף לצ׳אט",
       "modalEmpty": "אין אירועים קרובים בבועה זו.",
-      "modalLoading": "טוען אירועים…",
-      "captionPlaceholder": "כיתוב (לא חובה)…"
+      "modalLoading": "טוען…",
+      "captionPlaceholder": "כיתוב (לא חובה)…",
+      "linkPicker": {
+        "calendarTab": "יומן",
+        "filesTab": "קבצים"
+      },
+      "reply": {
+        "button": "השב",
+        "replyingTo": "משיב/ה ל-{{name}}",
+        "cancel": "בטל תגובה",
+        "jumpTitle": "לחיצה לחזרה להודעה המקורית",
+        "parentUnavailable": "הודעה מצוטטת ({{id}}…) — לחצו לטעינה",
+        "unknownAuthor": "מערכת"
+      },
+      "pin": {
+        "button": "הצמד",
+        "unpin": "בטל הצמדה"
+      },
+      "pinned": {
+        "strip_one": "{{count}} מוצמדת",
+        "strip_other": "{{count}} מוצמדות",
+        "viewAll": "הצג הכול",
+        "jumpTitle": "מעבר להודעה מוצמדת",
+        "modalTitle": "הודעות מוצמדות",
+        "empty": "אין הודעות מוצמדות."
+      },
+      "poll": {
+        "openComposer": "סקר חדש",
+        "composerTitle": "יצירת סקר",
+        "questionPlaceholder": "מה תרצו לשאול…",
+        "optionPlaceholder": "אפשרות {{n}}",
+        "addOption": "+ הוסף אפשרות",
+        "removeOption": "הסר אפשרות",
+        "allowMultiple": "אפשר בחירות מרובות",
+        "create": "צור סקר",
+        "multiSelect": "בחירה מרובה",
+        "submitVote": "הצבע",
+        "totalVotes_one": "הצבעה {{count}}",
+        "totalVotes_other": "{{count}} הצבעות",
+        "closed": "סגור",
+        "closePoll": "סגור סקר",
+        "confirmClose": "לסגור את הסקר? המצביעים לא יוכלו לשנות את בחירתם.",
+        "loadingPoll": "טוען סקר…",
+        "pollUnavailable": "📊 הסקר לא זמין"
+      }
     },
     "calendar": {
       "newEvent": "+ אירוע חדש",
@@ -146,15 +276,37 @@
       "descriptionPlaceholder": "תיאור (לא חובה)",
       "shareToChat": "שתף לצ׳אט",
       "shareToChatTitle": "שיתוף האירוע לצ׳אט הבועה",
-      "confirmDelete": "למחוק את האירוע הזה?"
+      "confirmDelete": "למחוק את האירוע הזה?",
+      "noUpcoming": "אין אירועים קרובים.",
+      "moreEvents_one": "אירוע נוסף אחד — הגדל לכל האירועים",
+      "moreEvents_other": "עוד {{count}} אירועים — הגדל לכל האירועים",
+      "today": "היום",
+      "prevMonth": "החודש הקודם",
+      "nextMonth": "החודש הבא"
     },
     "files": {
       "uploadHint": "עד 25MB. ללא קבצי הפעלה.",
-      "uploadButton": "+ העלאת קובץ",
+      "uploadButton": "+ העלאה",
       "uploading": "מעלה…",
       "empty": "אין עדיין קבצים משותפים.",
+      "emptyFolder": "תיקייה זו ריקה.",
       "downloadTitle": "לחץ להורדה",
-      "confirmDelete": "למחוק את \"{{name}}\"?"
+      "previewTitle": "לחץ לתצוגה מקדימה",
+      "confirmDelete": "למחוק את \"{{name}}\"?",
+      "confirmDeleteFolder": "למחוק את התיקייה \"{{name}}\"? עליה להיות ריקה.",
+      "newFolder": "+ תיקייה",
+      "newFolderPlaceholder": "שם התיקייה",
+      "root": "קבצים",
+      "moreFiles_one": "עוד קובץ אחד — הגדל לבדוק הכול",
+      "moreFiles_other": "עוד {{count}} קבצים — הגדל לבדוק הכול",
+      "viewerLoading": "טוען…",
+      "viewerLoadFailed": "טעינת הקובץ נכשלה.",
+      "viewerUnsupported": "סוג הקובץ הזה אינו נתמך לתצוגה מקדימה.",
+      "viewerFullscreen": "מסך מלא",
+      "viewerExitFullscreen": "יציאה ממסך מלא",
+      "viewerDownload": "הורדה",
+      "viewerPrevPage": "העמוד הקודם",
+      "viewerNextPage": "העמוד הבא"
     },
     "confirm": {
       "popBubble": "לפוצץ את הבועה הזו? פעולה זו תמחק את כל הצ׳אטים, ההודעות, הקבצים והאירועים.",
@@ -163,6 +315,7 @@
     "error": {
       "loadList": "טעינת הבועות נכשלה.",
       "create": "יצירת הבועה נכשלה.",
+      "loadCatalog": "טעינת קטלוג הקורסים נכשלה.",
       "join": "ההצטרפות לבועה נכשלה.",
       "leaveOwner": "אתה הבעלים. יש להעביר את הבעלות לפני העזיבה.",
       "leave": "העזיבה נכשלה.",
@@ -177,6 +330,10 @@
       "loadOlder": "טעינת ההודעות הקודמות נכשלה.",
       "send": "השליחה נכשלה.",
       "shareLink": "שיתוף הקישור נכשל.",
+      "pin": "פעולת ההצמדה נכשלה.",
+      "pollCreate": "יצירת הסקר נכשלה.",
+      "pollVote": "ההצבעה נכשלה.",
+      "pollClose": "סגירת הסקר נכשלה.",
       "notMember": "אינך חבר/ה בבועה זו.",
       "loadEvents": "טעינת האירועים נכשלה.",
       "invalidTimeRange": "זמן הסיום חייב להיות לאחר זמן ההתחלה.",
@@ -192,7 +349,272 @@
       "uploadGeneric": "העלאת הקובץ נכשלה.",
       "downloadGeneric": "הורדת הקובץ נכשלה.",
       "deleteFileForbidden": "רק המעלה או בעלי הבועה יכולים למחוק.",
-      "deleteFileGeneric": "מחיקת הקובץ נכשלה."
+      "deleteFileGeneric": "מחיקת הקובץ נכשלה.",
+      "loadFolders": "טעינת התיקיות נכשלה.",
+      "folderGone": "התיקייה כבר לא קיימת.",
+      "folderNameTaken": "כבר קיימת תיקייה בשם הזה.",
+      "folderNameInvalid": "שם התיקייה חייב שלא להכיל קווים נטויים ולא להיות ריק.",
+      "folderCreateGeneric": "יצירת התיקייה נכשלה.",
+      "folderNotEmpty": "התיקייה חייבת להיות ריקה לפני מחיקה.",
+      "folderDeleteForbidden": "רק יוצר התיקייה או בעלי הבועה יכולים למחוק.",
+      "folderDeleteGeneric": "מחיקת התיקייה נכשלה.",
+      "openRoom": "פתיחת חדר הבועה נכשלה.",
+      "roomNotFound": "החדר כבר לא קיים.",
+      "roomNotYetOpen": "החדר עוד לא נפתח — נסה 15 דקות לפני תחילת המפגש.",
+      "roomEnded": "המפגש הסתיים.",
+      "jitsiNotConfigured": "שירות הווידאו לא מוגדר בשרת.",
+      "extendRoom": "הארכת המפגש נכשלה.",
+      "scheduleConflictExpert": "הבועה שלך כבר רשומה למפגש מומחה באותו זמן.",
+      "extendConflictExpert": "אי אפשר להאריך — הבועה שלך רשומה למפגש מומחה בסלוט הבא."
     }
+  },
+  "room": {
+    "title": "חדר הבועה",
+    "openBubble": "↗ פתח את הבועה",
+    "openBubbleTitle": "פתיחת בועת הלמידה (השיחה ממשיכה, הווידאו מתכווץ לתצוגת תמונה-בתוך-תמונה)",
+    "leave": "עזיבה",
+    "backToBubbles": "חזרה לבועות שלך",
+    "dismiss": "סגירה",
+    "video": "וידאו",
+    "whiteboard": "לוח שיתופי",
+    "chat": "צ׳אט",
+    "focusVideo": "התמקדות בווידאו",
+    "focusWhiteboard": "התמקדות בלוח",
+    "focusChat": "התמקדות בצ׳אט",
+    "loadingWhiteboard": "טוען לוח…",
+    "videoNotConfigured": "שירות הווידאו לא מוגדר. יש להגדיר משתני סביבה APP_JITSI_* בשרת.",
+    "errorLoadChat": "טעינת הצ׳אט נכשלה.",
+    "errorLoadGeneric": "טעינת החדר נכשלה.",
+    "status": {
+      "starts": "מתחיל {{when}}",
+      "ended": "הסתיים {{when}}",
+      "liveEnds": "משודר · מסתיים {{when}}"
+    },
+    "rel": {
+      "in_one": "בעוד דקה",
+      "in_other": "בעוד {{count}} דקות",
+      "at": "בשעה {{time}}",
+      "justNow": "ממש עכשיו",
+      "minAgo_one": "לפני דקה",
+      "minAgo_other": "לפני {{count}} דקות",
+      "hAgo_one": "לפני שעה",
+      "hAgo_other": "לפני {{count}} שעות"
+    },
+    "pip": {
+      "label": "🎥 חדר הבועה",
+      "return": "↗ חזרה לחדר",
+      "returnAria": "חזרה לחדר הבועה"
+    },
+    "liveBanner": {
+      "fallback": "מפגש משודר",
+      "fallbackExpert": "מפגש מומחה משודר",
+      "started": "התחיל {{when}}",
+      "opensIn_one": "נפתח בעוד דקה",
+      "opensIn_other": "נפתח בעוד {{count}} דקות",
+      "join": "הצטרפות"
+    },
+    "schedule": {
+      "title": "🎥 תזמון חדר",
+      "start": "התחלה",
+      "duration": "משך",
+      "explainer": "חברים יכולים להיכנס לחדר עד 15 דקות לפני זמן ההתחלה. הוא נסגר אוטומטית בסיום.",
+      "defaultDescription": "מפגש לימוד — {{groupName}}",
+      "submit": "תזמון",
+      "submitting": "מתזמן…",
+      "duration30": "30 דקות",
+      "duration45": "45 דקות",
+      "duration60": "שעה",
+      "duration90": "שעה וחצי",
+      "duration120": "שעתיים"
+    }
+  },
+  "expertRoom": {
+    "openProfile": "↗ פרופיל המומחה",
+    "openProfileTitle": "פתח את הפרופיל הציבורי של המומחה (השיחה ממשיכה ברקע)",
+    "loadingSession": "טוען מפגש…",
+    "backToDirectory": "חזרה למומחים",
+    "systemOpenFallback": "מפגש המומחה נפתח — צ׳אט ולוח לבן זמינים.",
+    "linkCard": {
+      "enterButton": "כניסה למפגש",
+      "loading": "טוען קישור למפגש…",
+      "unavailable": "הקישור לא זמין"
+    },
+    "videoCountdown": {
+      "headline": "הווידאו ייפתח בשעת ההתחלה",
+      "opens": "נפתח {{when}}",
+      "absoluteHint": "מתוזמן ל-{{time}}"
+    },
+    "host": {
+      "button": "ניהול חדר",
+      "heading": "ניהול חדר",
+      "close": "סגירה",
+      "intro": "אישור כתיבה בלוח לבן עבור כל משתתף.",
+      "loadError": "לא ניתן לטעון את רשימת המשתתפים.",
+      "noneYet": "אין משתתפים עדיין.",
+      "hostBadge": "מארח",
+      "canDraw": "יכול לכתוב",
+      "grant": "אישור",
+      "granting": "מאשר…",
+      "revoke": "ביטול",
+      "revoking": "מבטל…",
+      "errorGrant": "לא ניתן לאשר כתיבה.",
+      "errorRevoke": "לא ניתן לבטל כתיבה."
+    },
+    "chat": {
+      "joined": "הצטרף/ה למפגש",
+      "left": "עזב/ה את המפגש"
+    }
+  },
+  "expert": {
+    "hubNav": "אזור המומחים",
+    "onboarding": {
+      "title": "להפוך למומחה",
+      "subtitle": "ספר/י לסטודנטים במה את/ה יכול/ה לעזור. לאחר ההגשה תוכל/י לתזמן מפגשים פתוחים ולאשר בקשות הזמנה פרטיות מקבוצות.",
+      "headlineLabel": "כותרת",
+      "headlinePlaceholder": "למשל: מתרגל/ת באלגברה לינארית, BGU",
+      "bioLabel": "ביוגרפיה",
+      "bioPlaceholder": "רקע, קורסים שלימדת, מה את/ה אוהב/ת ללמד…",
+      "tagsLabel": "תגיות התמחות",
+      "tagsPlaceholder": "מופרדות בפסיק, למשל: אלגברה-לינארית, הוכחות, חשבון",
+      "tagsHint": "עד 20 תגיות.",
+      "submit": "הגש בקשה",
+      "submitting": "מגיש…",
+      "errorGeneric": "לא ניתן היה לשלוח את הבקשה. נסה שוב."
+    },
+    "dashboard": {
+      "title": "אזור המומחים",
+      "editProfile": "ערוך פרופיל",
+      "bookingsHeading": "בקשות הזמנה",
+      "noPendingRequests": "אין בקשות ממתינות.",
+      "sessionsHeading": "המפגשים שלי",
+      "noSessions": "אין מפגשים מתוכננים. לחץ \"תזמן\" כדי לפתוח מפגש.",
+      "schedule": "+ תזמן",
+      "enter": "כניסה",
+      "cancel": "בטל",
+      "reject": "דחה",
+      "accept": "אשר",
+      "groupsCount": "{{count}}/{{capacity}} קבוצות",
+      "confirmCancel": "לבטל את המפגש? קבוצות רשומות יוסרו.",
+      "errorCancel": "לא ניתן לבטל את המפגש.",
+      "errorAccept": "לא ניתן לאשר את הבקשה.",
+      "errorReject": "לא ניתן לדחות את הבקשה."
+    },
+    "schedule": {
+      "title": "תזמן מפגש חדש",
+      "titleLabel": "כותרת",
+      "descriptionLabel": "תיאור",
+      "startLabel": "התחלה",
+      "endLabel": "סיום",
+      "capacityLabel": "מקסימום קבוצות",
+      "cancel": "ביטול",
+      "create": "צור",
+      "creating": "יוצר…",
+      "errorBadRange": "זמן הסיום חייב להיות אחרי זמן ההתחלה.",
+      "errorNotVerified": "פרופיל המומחה שלך עדיין לא אומת.",
+      "errorGeneric": "לא ניתן ליצור את המפגש."
+    },
+    "profileEdit": {
+      "title": "ערוך פרופיל מומחה",
+      "headlineLabel": "כותרת",
+      "bioLabel": "ביוגרפיה",
+      "tagsLabel": "תגיות התמחות",
+      "tagsPlaceholder": "מופרדות בפסיק",
+      "cancel": "ביטול",
+      "save": "שמור",
+      "saving": "שומר…",
+      "errorSave": "לא ניתן לשמור את הפרופיל."
+    },
+    "directory": {
+      "title": "מומחים",
+      "becomeLink": "להפוך למומחה ←",
+      "searchPlaceholder": "חיפוש לפי כותרת, ביוגרפיה או תגית…",
+      "noMatches": "לא נמצאו מומחים תואמים.",
+      "verifiedBadge": "מאומת",
+      "openSessionsHeading": "מפגשים פתוחים",
+      "noOpenSessions": "אין מפגשים פתוחים כרגע.",
+      "expertsHeading": "מומחים",
+      "enrollButton": "רשום קבוצה",
+      "pickGroup": "בחר קבוצה",
+      "noOwnedGroups": "צריך להיות בעלים של קבוצה כדי להירשם. צור אחת ב\"הבועות שלי\".",
+      "groupsCount": "{{count}}/{{capacity}} קבוצות",
+      "enrolledOk": "נרשמת — המפגש מופיע ביומן הקבוצה.",
+      "errorAlreadyEnrolled": "הקבוצה כבר רשומה.",
+      "errorCapacity": "המפגש כבר מלא.",
+      "errorNotGroupOwner": "צריך להיות בעלים של הקבוצה כדי לרשום אותה.",
+      "errorEnrollmentClosed": "ההרשמה נסגרה — מפגשים ננעלים 5 דקות לפני תחילתם.",
+      "errorScheduleConflict": "לקבוצה הזו כבר יש חדר בועה מתוזמן באותו זמן.",
+      "errorEnrollGeneric": "לא ניתן לרשום."
+    },
+    "room": {
+      "notYetOpen": "המפגש נפתח 15 דקות לפני תחילתו בשעה {{time}}. חזור מאוחר יותר.",
+      "notYetOpenNoTime": "המפגש עוד לא נפתח — נסה 15 דקות לפני תחילתו.",
+      "ended": "המפגש הסתיים.",
+      "forbidden": "אין לך גישה לחדר זה."
+    },
+    "publicProfile": {
+      "verifiedBadge": "מאומת",
+      "requestButton": "בקש מפגש",
+      "needGroupToBook": "צריך להיות בעלים של קבוצה כדי להזמין.",
+      "notFound": "המומחה לא נמצא.",
+      "backToDirectory": "חזרה לרשימת המומחים",
+      "yourOpenSessions": "המפגשים הפתוחים שלך",
+      "noOpenSessions": "אין מפגשים פתוחים. תזמן אחד מאזור המומחים.",
+      "enrollLabel": "רישום:",
+      "groupsCount": "{{count}}/{{capacity}} קבוצות",
+      "infoEnrolled": "הקבוצה שלך נרשמה.",
+      "infoRequestSent": "בקשת ההזמנה נשלחה.",
+      "errorAlreadyEnrolled": "הקבוצה כבר רשומה.",
+      "errorCapacity": "המפגש כבר מלא.",
+      "errorNotGroupOwner": "צריך להיות בעלים של הקבוצה כדי לרשום אותה.",
+      "errorEnrollmentClosed": "ההרשמה נסגרה — מפגשים ננעלים 5 דקות לפני תחילתם.",
+      "errorScheduleConflict": "לקבוצה הזו כבר יש חדר בועה מתוזמן באותו זמן.",
+      "errorEnrollGeneric": "לא ניתן לרשום."
+    },
+    "booking": {
+      "title": "בקש מפגש",
+      "needsGroupOwner": "צריך להיות בעלים של קבוצה כדי לשלוח בקשת הזמנה. צור אחת ב\"הבועות שלי\" קודם.",
+      "loadingGroups": "טוען את הקבוצות שלך…",
+      "groupLabel": "קבוצה",
+      "startLabel": "התחלה",
+      "endLabel": "סיום",
+      "messageLabel": "הודעה",
+      "messagePlaceholder": "במה את/ה צריך/ה עזרה…",
+      "cancel": "ביטול",
+      "send": "שלח בקשה",
+      "sending": "שולח…",
+      "errorBadRange": "זמן הסיום חייב להיות אחרי זמן ההתחלה.",
+      "errorNotGroupOwner": "צריך להיות בעלים של הקבוצה שנבחרה.",
+      "errorNotVerified": "המומחה הזה לא מאומת כרגע.",
+      "errorGeneric": "לא ניתן לשלוח את הבקשה."
+    },
+    "requests": {
+      "title": "בקשות הזמנה",
+      "tabInbound": "נכנסות (כמומחה)",
+      "tabOutbound": "יוצאות שלי",
+      "empty": "אין בקשות עדיין.",
+      "reject": "דחה",
+      "accept": "אשר",
+      "withdraw": "משוך",
+      "errorLoad": "לא ניתן לטעון את הבקשות.",
+      "errorAction": "הפעולה נכשלה."
+    },
+    "hostControls": {
+      "button": "🛠 בקרת מארח",
+      "heading": "בקרת מארח",
+      "intro": "הלוח הוא של המארח בלבד כברירת מחדל. הדבק מזהה משתמש כדי לאפשר לו לצייר.",
+      "userIdPlaceholder": "user-uuid",
+      "grant": "אפשר",
+      "writersCount": "כותבים מורשים ({{count}}):",
+      "noneYet": "אין עדיין",
+      "revoke": "ביטול",
+      "close": "סגור",
+      "errorGrant": "לא ניתן להעניק גישה.",
+      "errorRevoke": "לא ניתן לבטל גישה."
+    }
+  },
+  "matching": {
+    "title": "צ׳ק-אין קצר",
+    "submitting": "שומר…",
+    "error": "לא הצלחנו לשמור את התשובה. נסו שוב."
   }
 }

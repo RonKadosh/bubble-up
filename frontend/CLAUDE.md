@@ -34,10 +34,15 @@ frontend/src/
 │   ├── files.ts           ← upload/list/download/delete group files
 │   └── calendar.ts        ← CRUD calendar events (GROUP-owned)
 ├── store/
-│   └── authStore.ts       ← Zustand: { accessToken, refreshToken, user }, persisted as studybuddy-auth-v2
+│   └── authStore.ts       ← Zustand: { accessToken, refreshToken, user }, persisted as bubbleup-auth-v2
 ├── pages/                 ← route-level components, one per route
 │   ├── LoginPage.tsx
-│   └── GroupsPage.tsx     ← the hub: list + per-group tabs (Members / Chat / Calendar / Files)
+│   ├── GroupsPage.tsx     ← the hub: orchestrator only — state + handlers + layout
+│   └── groups/            ← panel components owned by GroupsPage (not generic UI)
+│       ├── GroupSidebar.tsx, GroupHeader.tsx
+│       ├── ChatPanel.tsx (+ nested ChatMessageRow / CalendarLinkCard / LinkPickerModal)
+│       ├── CalendarPanel.tsx, FilesPanel.tsx, MembersPanel.tsx
+│       └── calendarFormat.ts   ← shared date/badge helpers for Chat link cards + Calendar
 ├── components/            ← shared UI used by multiple pages
 │   └── Navbar.tsx         ← Groups link + Logout (no Chat/Calendar links — only the hub)
 ├── App.tsx                ← <BrowserRouter> + /login + /groups + RequireAuth + WS lifecycle
@@ -49,7 +54,7 @@ Rules:
 - **One file per feature in `api/`.** Each file exports typed functions and any DTO types that file needs.
 - **One store per concern in `store/`.** `authStore.ts` for auth. Add `<feature>Store.ts` only when state is shared across pages — single-page state stays in `useState`.
 - **One page per route in `pages/`.** Page components own their own local state and call `api/<feature>.ts` functions.
-- **Group sub-features (chat/calendar/files/members) live inside `GroupsPage.tsx` as inline panel components.** They are not separate pages and not under `components/` — they're only used by the hub. If a panel grows past ~200 lines or is reused elsewhere, then promote.
+- **Group sub-features (chat/calendar/files/members + sidebar/header) live in `pages/groups/`** as components owned by the GroupsPage hub. They are not separate pages and not under `components/` (which is for generic, multi-page UI). `GroupsPage.tsx` itself is a thin orchestrator (~270 lines) that owns the state and handlers and composes the panels. New hub-specific UI goes here, NOT in `components/`.
 - **`components/` is for reuse.** If only one page uses it, keep it inline or co-located.
 - **No new top-level folders** without good reason. No `hooks/`, `utils/`, `types/` until there's real reuse demand.
 
@@ -105,7 +110,7 @@ The shape is stable — don't try to "normalize" it per call. If you find yourse
 
 Zustand is the only state library. One store per concern, in `src/store/`. Stores are plain TypeScript modules — import the hook and read what you need.
 
-**The auth store** (`src/store/authStore.ts`) — token + current user, persisted to localStorage via the `persist` middleware under the key `studybuddy-auth`:
+**The auth store** (`src/store/authStore.ts`) — token + current user, persisted to localStorage via the `persist` middleware under the key `bubbleup-auth-v2`:
 
 ```ts
 export const useAuthStore = create<AuthState>()(
@@ -116,7 +121,7 @@ export const useAuthStore = create<AuthState>()(
       setAuth: (token, user) => set({ token, user }),
       clearAuth: () => set({ token: null, user: null }),
     }),
-    { name: 'studybuddy-auth' }
+    { name: 'bubbleup-auth-v2' }
   )
 )
 ```
@@ -172,13 +177,13 @@ Rules:
 
 ## Auth flow
 
-- **State lives in `useAuthStore`** (Zustand, persisted to localStorage as `studybuddy-auth-v2`). Holds `{ accessToken, refreshToken, user }`. Don't touch `localStorage` directly anywhere.
+- **State lives in `useAuthStore`** (Zustand, persisted to localStorage as `bubbleup-auth-v2`). Holds `{ accessToken, refreshToken, user }`. Don't touch `localStorage` directly anywhere.
 - **Set on login/register**: `setAuth(res.accessToken, res.refreshToken, { id, email, role })` in `LoginPage.tsx`.
 - **Logout**: `Navbar.tsx` calls `logoutApi(refreshToken)` best-effort, then `clearAuth()`.
 - **Route guard**: `RequireAuth` in `App.tsx` subscribes to `accessToken`.
 - **Axios header**: `client.ts` reads `useAuthStore.getState().accessToken` per request.
 - **Token expiry is handled automatically.** 401 from any request → `client.ts` interceptor calls `/auth/refresh` once (single-flight; concurrent 401s share one in-flight promise), retries the original request with the new access token. If `/auth/refresh` itself fails → `clearAuth()` + hard navigate to `/login`. Pages don't need to think about expiry.
-- **Persist key is `studybuddy-auth-v2`** — bump it again if the store shape changes; old localStorage blobs become invalid and users re-login.
+- **Persist key is `bubbleup-auth-v2`** — bump it again if the store shape changes; old localStorage blobs become invalid and users re-login.
 
 ---
 
@@ -232,8 +237,8 @@ Backend must be running on `:8080` for the dev proxy to work. Easiest full setup
 
 ## Known gaps (don't invent silently — flag if relevant)
 
-- **No shared `ApiResponse<T>` / `ApiError` types**. Every `api/*.ts` re-types `{ success, data }` inline. When this lands, it goes in `src/api/client.ts` (or `src/api/types.ts`), not a feature file.
-- **No central error-message mapping**. LoginPage and the GroupsPage hub panels each have their own `describeError`-style switches with the same `code` strings. When a third caller shows up, lift it to a shared `src/api/errors.ts` helper.
+- **No shared `ApiError` type yet**. The success envelope is captured by `ApiSuccess<T>` in `src/api/client.ts` (re-export it: `import client, { ApiSuccess } from './client'`). The failure envelope is still unwrapped ad-hoc via `src/api/errors.ts`. If the failure shape gets formalized, it lands next to `ApiSuccess`.
+- **Error-code mapping lives in `src/api/errors.ts`** (`errorCode`, `errorBody`, `describeError`). Call sites pass a `{ CODE: 'i18n.key' }` map plus a fallback key — no more hand-rolled `e?.response?.data?.error?.code` chains. `LoginPage.describeError` is the lone holdout because it has a `fields?.length` validation-error branch, but it uses `errorBody()` for unwrapping.
 - **No environment config**. `client.ts` baseURL and the Vite proxy targets are hard-coded for dev. A `.env` + `import.meta.env` setup is needed before any non-localhost deploy.
 - **No tests** — `npm test` doesn't exist. If you change behavior, say so explicitly.
 - **"Add member by UUID" UX in GroupsPage**. Owners paste a user UUID — no user search yet. Add `GET /api/users?email=` + autocomplete when needed.

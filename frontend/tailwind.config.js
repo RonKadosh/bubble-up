@@ -4,6 +4,11 @@ export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
+      screens: {
+        tablet: '600px',
+        desktop: '1200px',
+        ultra: '1600px',
+      },
       colors: {
         primary: {
           50:  'var(--color-primary-50)',

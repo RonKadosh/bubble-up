@@ -1,4 +1,4 @@
-import client from './client'
+import client, { ApiSuccess } from './client'
 
 export type Visibility = 'PUBLIC' | 'PRIVATE'
 export type MembershipRole = 'OWNER' | 'MEMBER'
@@ -8,6 +8,7 @@ export interface Group {
   name: string
   description: string
   visibility: Visibility
+  offeringId: string
   createdBy: string
   ownerId: string
   memberCount: number
@@ -16,6 +17,10 @@ export interface Group {
 
 export interface GroupMember {
   userId: string
+  /** Display name embedded server-side. Null only for deleted users. */
+  displayName: string | null
+  /** Cache-busted avatar URL or null when no avatar set. */
+  avatarUrl: string | null
   role: MembershipRole
   joinedAt: string
 }
@@ -24,6 +29,7 @@ export interface CreateGroupPayload {
   name: string
   description?: string
   visibility?: Visibility
+  courseId: string
 }
 
 export interface UpdateGroupPayload {
@@ -33,22 +39,48 @@ export interface UpdateGroupPayload {
 }
 
 export async function getGroups(): Promise<Group[]> {
-  const res = await client.get<{ success: boolean; data: Group[] }>('/groups')
+  const res = await client.get<ApiSuccess<Group[]>>('/groups')
+  return res.data.data
+}
+
+/** Groups the current user is a member of. Backs the "My Bubbles" hub sidebar. */
+export async function getMyGroups(): Promise<Group[]> {
+  const res = await client.get<ApiSuccess<Group[]>>('/groups/me')
+  return res.data.data
+}
+
+export interface GroupsByCourseFilters {
+  q?: string
+  visibility?: Visibility
+  joinedOnly?: boolean
+}
+
+/**
+ * Groups under {@code courseId}'s current-term offering. Enrollment-gated on
+ * the backend — non-enrolled callers get a 403 NOT_ENROLLED_IN_COURSE.
+ */
+export async function getGroupsByCourse(
+  courseId: string,
+  filters: GroupsByCourseFilters = {}
+): Promise<Group[]> {
+  const res = await client.get<ApiSuccess<Group[]>>(`/groups/by-course/${courseId}`, {
+    params: filters,
+  })
   return res.data.data
 }
 
 export async function getGroup(id: string): Promise<Group> {
-  const res = await client.get<{ success: boolean; data: Group }>(`/groups/${id}`)
+  const res = await client.get<ApiSuccess<Group>>(`/groups/${id}`)
   return res.data.data
 }
 
 export async function createGroup(payload: CreateGroupPayload): Promise<Group> {
-  const res = await client.post<{ success: boolean; data: Group }>('/groups', payload)
+  const res = await client.post<ApiSuccess<Group>>('/groups', payload)
   return res.data.data
 }
 
 export async function updateGroup(id: string, payload: UpdateGroupPayload): Promise<Group> {
-  const res = await client.patch<{ success: boolean; data: Group }>(`/groups/${id}`, payload)
+  const res = await client.patch<ApiSuccess<Group>>(`/groups/${id}`, payload)
   return res.data.data
 }
 
@@ -57,20 +89,17 @@ export async function deleteGroup(id: string): Promise<void> {
 }
 
 export async function getMembers(groupId: string): Promise<GroupMember[]> {
-  const res = await client.get<{ success: boolean; data: GroupMember[] }>(`/groups/${groupId}/members`)
+  const res = await client.get<ApiSuccess<GroupMember[]>>(`/groups/${groupId}/members`)
   return res.data.data
 }
 
 export async function joinGroup(id: string): Promise<GroupMember> {
-  const res = await client.post<{ success: boolean; data: GroupMember }>(`/groups/${id}/join`)
+  const res = await client.post<ApiSuccess<GroupMember>>(`/groups/${id}/join`)
   return res.data.data
 }
 
 export async function addMember(groupId: string, userId: string): Promise<GroupMember> {
-  const res = await client.post<{ success: boolean; data: GroupMember }>(
-    `/groups/${groupId}/members`,
-    { userId }
-  )
+  const res = await client.post<ApiSuccess<GroupMember>>(`/groups/${groupId}/members`, { userId })
   return res.data.data
 }
 

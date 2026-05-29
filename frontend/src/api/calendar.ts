@@ -1,8 +1,9 @@
-import client from './client'
+import client, { ApiSuccess } from './client'
 
 export type CalendarOwnerType = 'GROUP' | 'USER'
 export type CalendarEventType =
   | 'STUDY_SESSION'
+  | 'EXPERT_SESSION'
   | 'MEETING'
   | 'DEADLINE'
   | 'EXAM'
@@ -10,6 +11,11 @@ export type CalendarEventType =
   | 'REMINDER'
   | 'OTHER'
 
+/**
+ * Types the user is allowed to pick in the create-event form. EXPERT_SESSION
+ * is intentionally excluded — those events are materialized by the backend
+ * when an expert schedules a session, not by group members hand-creating them.
+ */
 export const EVENT_TYPES: CalendarEventType[] = [
   'STUDY_SESSION', 'MEETING', 'DEADLINE', 'EXAM', 'ASSIGNMENT', 'REMINDER', 'OTHER',
 ]
@@ -49,7 +55,7 @@ export async function listEvents(
   from: string,
   to: string,
 ): Promise<CalendarEvent[]> {
-  const res = await client.get<{ success: boolean; data: CalendarEvent[] }>(
+  const res = await client.get<ApiSuccess<CalendarEvent[]>>(
     '/calendars/events',
     { params: { ownerType, ownerId, from, to } },
   )
@@ -57,17 +63,17 @@ export async function listEvents(
 }
 
 export async function getEvent(id: string): Promise<CalendarEvent> {
-  const res = await client.get<{ success: boolean; data: CalendarEvent }>(`/calendars/events/${id}`)
+  const res = await client.get<ApiSuccess<CalendarEvent>>(`/calendars/events/${id}`)
   return res.data.data
 }
 
 export async function createEvent(payload: CreateEventPayload): Promise<CalendarEvent> {
-  const res = await client.post<{ success: boolean; data: CalendarEvent }>('/calendars/events', payload)
+  const res = await client.post<ApiSuccess<CalendarEvent>>('/calendars/events', payload)
   return res.data.data
 }
 
 export async function updateEvent(id: string, payload: UpdateEventPayload): Promise<CalendarEvent> {
-  const res = await client.patch<{ success: boolean; data: CalendarEvent }>(`/calendars/events/${id}`, payload)
+  const res = await client.patch<ApiSuccess<CalendarEvent>>(`/calendars/events/${id}`, payload)
   return res.data.data
 }
 

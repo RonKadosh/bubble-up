@@ -2,31 +2,13 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { login, register } from '../api/auth'
+import { errorBody } from '../api/errors'
 import { useAuthStore } from '../store/authStore'
 import { Button } from '../components/Button'
-import {
-  BookIcon,
-  BubbleLogo,
-  BulbIcon,
-  CapIcon,
-  HeartIcon,
-  PeopleIcon,
-  TrendIcon,
-} from '../components/Icons'
-
-interface BackendErrorBody {
-  success: boolean
-  error?: {
-    code: string
-    message: string
-    category: string
-    fields?: { field: string; message: string }[]
-  }
-}
+import { BubbleLogo } from '../components/Icons'
 
 function describeError(e: unknown, isRegister: boolean, t: (k: string) => string): string {
-  const body = (e as { response?: { data?: BackendErrorBody } })?.response?.data
-  const err = body?.error
+  const err = errorBody(e)
   if (err?.fields?.length) {
     return err.fields.map((f) => `${f.field}: ${f.message}`).join(' • ')
   }
@@ -40,6 +22,7 @@ export default function LoginPage() {
   const { t } = useTranslation()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [displayName, setDisplayName] = useState('')
   const [isRegister, setIsRegister] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
@@ -53,9 +36,15 @@ export default function LoginPage() {
     setSubmitting(true)
     try {
       const res = isRegister
-        ? await register(email, password)
+        ? await register(email, password, displayName.trim())
         : await login(email, password)
-      setAuth(res.accessToken, res.refreshToken, { id: res.userId, email: res.email, role: res.role })
+      setAuth(res.accessToken, res.refreshToken, {
+        id: res.userId,
+        email: res.email,
+        role: res.role,
+        displayName: res.displayName,
+        avatarUrl: res.avatarUrl,
+      })
       navigate('/dashboard')
     } catch (err) {
       setError(describeError(err, isRegister, t))
@@ -65,18 +54,41 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex bg-base p-4 gap-4">
-      <BubbleCollage />
+    <div className="min-h-screen relative overflow-hidden bg-base">
+      <div className="absolute inset-0 bg-brand-gradient-soft opacity-40 pointer-events-none" />
 
-      <div className="flex flex-1 items-center justify-center px-6 py-10 bg-surface rounded-[2.5rem] border border-line shadow-themed">
-        <div className="w-full max-w-md">
-          <div className="flex items-center gap-2.5 mb-8">
-            <div className="w-11 h-11 rounded-full bg-brand-gradient text-on-brand flex items-center justify-center shadow-sm ring-on-brand">
+      <div className="relative min-h-screen mx-auto max-w-[1200px]">
+        <header className="absolute top-4 start-4 tablet:top-6 tablet:start-6 desktop:top-8 desktop:start-8 z-30 flex items-center gap-2.5">
+          <div className="ring-iridescent p-[1.5px] rounded-full shadow-themed">
+            <div className="w-11 h-11 rounded-full bg-brand-gradient text-on-brand flex items-center justify-center">
               <BubbleLogo className="w-5 h-5" />
             </div>
-            <span className="text-xl font-bold text-base">{t('brand.name')}</span>
           </div>
+          <span className="text-xl font-bold text-base">{t('brand.name')}</span>
+        </header>
 
+        <div className="hidden desktop:block absolute inset-0 pointer-events-none">
+          <PhotoBubble src="/images/photo-books.jpg"  alt="" className="top-[15%]  start-[38%] w-[18%]" />
+          <PhotoBubble src="/images/photo-group.jpg"  alt="" className="top-[10%] start-[20%]  w-[24%]" />
+          <PhotoBubble src="/images/photo-tablet.jpg" alt="" className="top-[40%] start-[14%] w-[18%]" />
+
+          <EmptyBubble className="top-[44%] start-[36%] w-[10%]" />
+          <EmptyBubble className="top-[41%] start-[50%] w-[15%]" />
+
+          <EmptyBubble className="top-[60%] start-[44%] w-[8%]"  />
+          <EmptyBubble className="top-[62%] start-[66%] w-[7%]"  />
+          <EmptyBubble className="top-[64%] start-[35%]  w-[7%]"  />
+
+          <EmptyBubble className="top-[78%] start-[48%] w-[5%]"  />
+          <EmptyBubble className="top-[76%] start-[60%] w-[5%]"  />
+
+          <EmptyBubble className="top-[90%] start-[80%] w-[3%]"  />
+          <EmptyBubble className="top-[86%] start-[68%] w-[4%]"  />
+        </div>
+
+        <main className="relative z-20 min-h-screen flex items-start justify-center desktop:justify-end px-4 tablet:px-6 desktop:pe-4 pt-[14vh] tablet:pt-[12vh] desktop:pt-[14vh] pb-12 tablet:pb-24">
+          <div className="w-full max-w-md ring-iridescent p-[2px] rounded-[2.5rem] shadow-themed">
+          <div className="bg-surface rounded-[2.5rem] p-6 tablet:p-8 desktop:p-10">
           <h1 className="text-3xl font-bold text-base">
             {isRegister ? t('login.headingRegister') : t('login.headingSignIn')}
           </h1>
@@ -85,6 +97,21 @@ export default function LoginPage() {
           </p>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            {isRegister && (
+              <div>
+                <label className="text-xs font-medium text-secondary mb-1 block">{t('login.displayName')}</label>
+                <input
+                  type="text"
+                  placeholder={t('login.displayNamePlaceholder')}
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  className="w-full bg-surface text-base border border-line rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 transition"
+                  required
+                  maxLength={100}
+                  autoComplete="name"
+                />
+              </div>
+            )}
             <div>
               <label className="text-xs font-medium text-secondary mb-1 block">{t('login.email')}</label>
               <input
@@ -155,66 +182,18 @@ export default function LoginPage() {
             </button>
           </div>
         </div>
+        </div>
+      </main>
       </div>
     </div>
   )
 }
 
-// ---------------------------------------------------------------------------
-// Bubble collage — empty glassy circles, floating icon chips, label pills,
-// and dashed connector swooshes. Decorative; no interactivity.
-// ---------------------------------------------------------------------------
-
-function BubbleCollage() {
-  const { t } = useTranslation()
-  const focusWords = t('login.collage.focusLearnGrow', { returnObjects: true }) as string[]
-
+function PhotoBubble({ src, alt, className = '' }: { src: string; alt: string; className?: string }) {
   return (
-    <div className="hidden lg:block lg:w-[55%] relative overflow-hidden bg-base rounded-[2.5rem] border border-line shadow-themed">
-      <div className="absolute inset-0 bg-brand-gradient-soft opacity-50" />
-
-      <DashedConnectors />
-
-      <EmptyBubble className="top-[4%] start-[22%] w-[50%]" />
-      <EmptyBubble className="top-[34%] start-[63%] w-[32%]" />
-      <EmptyBubble className="top-[52%] start-[10%] w-[44%]" />
-      <EmptyBubble className="top-[68%] start-[58%] w-[26%]" />
-
-      <Dot className="top-[42%] start-[6%] w-3 h-3" />
-      <Dot className="top-[18%] start-[10%] w-2 h-2" />
-      <Dot className="top-[58%] start-[92%] w-2.5 h-2.5" />
-      <Dot className="top-[92%] start-[40%] w-2 h-2" />
-
-      <IconChip className="top-[16%] start-[8%]" size="md"><BookIcon className="w-5 h-5" /></IconChip>
-      <IconChip className="top-[3%] start-[48%]" size="sm"><PeopleIcon className="w-4 h-4" /></IconChip>
-      <IconChip className="top-[14%] start-[82%]" size="md"><CapIcon className="w-5 h-5" /></IconChip>
-      <IconChip className="top-[38%] start-[90%]" size="md"><TrendIcon className="w-5 h-5" /></IconChip>
-      <IconChip className="top-[88%] start-[44%]" size="sm"><BulbIcon className="w-4 h-4" /></IconChip>
-
-      <LabelPill className="top-[22%] start-[52%]" dotted>
-        {focusWords.map((w, i) => (
-          <span key={w} className="inline-flex items-center gap-2">
-            {i > 0 && <Dotsep />}
-            <span className="font-semibold">{w}</span>
-          </span>
-        ))}
-      </LabelPill>
-
-      <CardPill className="top-[80%] start-[6%]" icon={<PeopleIcon className="w-4 h-4" />}>
-        <p className="font-semibold text-sm leading-tight">{t('login.collage.shareIdeas')}</p>
-        <p className="text-xs text-muted leading-tight">{t('login.collage.shareIdeasSub')}</p>
-      </CardPill>
-
-      <CardPill className="top-[83%] start-[64%]" icon={<HeartIcon className="w-4 h-4" />}>
-        <p className="font-semibold text-sm leading-tight">{t('login.collage.studyTogether')}</p>
-        <p className="text-xs text-muted leading-tight">{t('login.collage.studyTogetherSub')}</p>
-      </CardPill>
-
-      <div className="absolute top-6 start-6 z-20 flex items-center gap-2.5">
-        <div className="w-11 h-11 rounded-full bg-brand-gradient text-on-brand flex items-center justify-center shadow-themed ring-on-brand">
-          <BubbleLogo className="w-5 h-5" />
-        </div>
-        <span className="text-xl font-bold text-base">{t('brand.name')}</span>
+    <div className={`absolute aspect-square rounded-full ring-iridescent p-[2px] shadow-themed ${className}`}>
+      <div className="w-full h-full rounded-full overflow-hidden bg-surface">
+        <img src={src} alt={alt} className="w-full h-full object-cover" />
       </div>
     </div>
   )
@@ -222,94 +201,10 @@ function BubbleCollage() {
 
 function EmptyBubble({ className = '' }: { className?: string }) {
   return (
-    <div
-      className={`absolute aspect-square rounded-full bg-gradient-to-br from-white/85 via-primary-50/70 to-primary-200/40 ring-1 ring-primary-200/60 shadow-themed backdrop-blur-sm ${className}`}
-    >
-      <div className="absolute top-[6%] start-[8%] w-[28%] h-[20%] rounded-full bg-white/60 blur-md" />
-    </div>
-  )
-}
-
-function Dot({ className = '' }: { className?: string }) {
-  return <div className={`absolute rounded-full bg-primary-200/70 ${className}`} />
-}
-
-function IconChip({
-  className = '',
-  children,
-  size = 'md',
-}: {
-  className?: string
-  children: React.ReactNode
-  size?: 'sm' | 'md'
-}) {
-  const dim = size === 'sm' ? 'w-9 h-9' : 'w-11 h-11'
-  return (
-    <div className={`absolute ${dim} rounded-full bg-surface text-primary-600 flex items-center justify-center shadow-themed ring-1 ring-line z-10 ${className}`}>
-      {children}
-    </div>
-  )
-}
-
-function LabelPill({
-  className = '',
-  children,
-  dotted,
-}: {
-  className?: string
-  children: React.ReactNode
-  dotted?: boolean
-}) {
-  return (
-    <div className={`absolute z-10 inline-flex items-center gap-2 bg-surface rounded-full px-4 py-2 text-sm text-base shadow-themed ring-1 ring-line ${className}`}>
-      {dotted && <span className="w-2 h-2 rounded-full bg-brand-gradient-strong shrink-0" />}
-      {children}
-    </div>
-  )
-}
-
-function Dotsep() {
-  return <span className="w-1 h-1 rounded-full bg-primary-300 shrink-0" />
-}
-
-function CardPill({
-  className = '',
-  icon,
-  children,
-}: {
-  className?: string
-  icon: React.ReactNode
-  children: React.ReactNode
-}) {
-  return (
-    <div className={`absolute z-10 inline-flex items-center gap-3 bg-surface rounded-2xl px-3.5 py-2.5 shadow-themed ring-1 ring-line ${className}`}>
-      <div className="w-9 h-9 rounded-full bg-primary-50 text-primary-600 flex items-center justify-center shrink-0">
-        {icon}
+    <div className={`absolute aspect-square rounded-full ring-iridescent p-[2px] shadow-themed ${className}`}>
+      <div className="w-full h-full rounded-full bg-gradient-to-br from-white/85 via-primary-50/70 to-primary-200/40 backdrop-blur-sm relative overflow-hidden">
+        <div className="absolute top-[6%] start-[8%] w-[28%] h-[20%] rounded-full bg-white/60 blur-md" />
       </div>
-      <div className="min-w-0">{children}</div>
     </div>
-  )
-}
-
-function DashedConnectors() {
-  return (
-    <svg
-      className="absolute inset-0 w-full h-full pointer-events-none text-primary-300"
-      viewBox="0 0 600 700"
-      preserveAspectRatio="none"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeDasharray="3 7"
-      strokeLinecap="round"
-      opacity="0.55"
-    >
-      <path d="M 60 250 Q 100 100 280 90" />
-      <path d="M 410 60 Q 540 130 560 280" />
-      <path d="M 580 350 Q 600 480 510 580" />
-      <path d="M 110 530 Q 100 660 280 670" />
-      <path d="M 300 670 Q 430 700 540 620" />
-      <path d="M 230 360 Q 320 340 360 410" opacity="0.7" />
-    </svg>
   )
 }

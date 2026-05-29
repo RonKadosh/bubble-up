@@ -11,7 +11,7 @@
  */
 import type { ButtonHTMLAttributes, AnchorHTMLAttributes, ReactNode } from 'react'
 
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'cell'
 export type ButtonSize = 'xs' | 'sm' | 'md' | 'lg'
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {
@@ -22,10 +22,12 @@ const SIZE_CLASSES: Record<ButtonSize, string> = {
 }
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
-  primary: 'bg-brand-gradient-strong text-on-brand shadow-themed',
+  primary:   'bg-brand-gradient-strong text-on-brand shadow-themed',
   secondary: 'bg-surface text-base border border-line hover:border-line-strong',
-  ghost: 'text-secondary hover:bg-surface-hover',
-  danger: 'bg-danger-soft text-danger border border-line hover:brightness-95',
+  ghost:     'text-secondary hover:bg-surface-hover',
+  danger:    'bg-danger-soft text-danger border border-line hover:brightness-95',
+  /** Inside dark bento cells — matches the 🔗 link-button look: muted fill + subtle border. */
+  cell:      'bg-surface-muted text-base border border-line hover:bg-surface-hover hover:border-line-strong',
 }
 
 const BASE =

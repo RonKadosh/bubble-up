@@ -157,7 +157,7 @@ New destination = add to `WebSocketDestination`. Don't sprinkle string literals.
 **WebSocket auth model**
 - The HTTP handshake at `/ws` is `permitAll` so the upgrade happens. **JWT is enforced at the STOMP `CONNECT` frame** by `StompAuthChannelInterceptor` reading the `Authorization` header. Invalid/missing → ERROR frame, connection closes.
 - The Principal on the session is a `StompPrincipal(userId)` — `WebSocketPublisher.publishToUser(userId, ...)` routes correctly because `Principal.getName()` returns the UUID string.
-- `SUBSCRIBE` frames are gated per-destination by feature-owned `WsChannelInterceptor` beans. See [`chat/api/ChatTopicSubscribeInterceptor`](src/main/java/com/ronkadosh/studybuddy/chat/api/ChatTopicSubscribeInterceptor.java) for the pattern: implement `WsChannelInterceptor`, `@Component`, `@Order(2+)`, match the destination regex, look up membership via the relevant `internal/` service, throw `AppException` to reject.
+- `SUBSCRIBE` frames are gated per-destination by feature-owned `WsChannelInterceptor` beans. See [`chat/api/ChatTopicSubscribeInterceptor`](src/main/java/com/ronkadosh/bubbleup/chat/api/ChatTopicSubscribeInterceptor.java) for the pattern: implement `WsChannelInterceptor`, `@Component`, `@Order(2+)`, match the destination regex, look up membership via the relevant `internal/` service, throw `AppException` to reject.
 - **Do not** drop the `/ws/**` `permitAll` rule from `SecurityConfig` — the comment in that file explains why.
 
 **Config**
@@ -165,7 +165,7 @@ New destination = add to `WebSocketDestination`. Don't sprinkle string literals.
 @ConfigurationProperties(prefix = "app.notifications")
 public record NotificationProperties(boolean enabled, String fromAddress) {}
 ```
-Picked up automatically by `@ConfigurationPropertiesScan` on `StudyBuddyApplication`. Never `@Value("${...}")` in feature code.
+Picked up automatically by `@ConfigurationPropertiesScan` on `BubbleUpApplication`. Never `@Value("${...}")` in feature code.
 
 ---
 
@@ -217,7 +217,7 @@ Postgres via `docker-compose up postgres` (or full stack from repo root). Config
 
 ## Tests
 
-- Base class: [`support/IntegrationTest`](src/test/java/com/ronkadosh/studybuddy/support/IntegrationTest.java). Extend it for any controller test.
+- Base class: [`support/IntegrationTest`](src/test/java/com/ronkadosh/bubbleup/support/IntegrationTest.java). Extend it for any controller test.
 - `@SpringBootTest(webEnvironment = RANDOM_PORT)` + `@AutoConfigureMockMvc` + `@ActiveProfiles("test")`. Test DB is H2 in PostgreSQL compatibility mode (see `src/test/resources/application-test.yml`).
 - Helpers: `registerAndLogin()` returns `AuthedUser(id, email, jwt)`. `bearer(authed)` is a `RequestPostProcessor` for `mvc.perform(...).with(bearer(u))`.
 - Pattern: one happy + one negative test per public endpoint. Name files `*IT.java` — Surefire's includes picks them up alongside `*Test.java`.
@@ -231,7 +231,7 @@ Postgres via `docker-compose up postgres` (or full stack from repo root). Config
 - **`ChatBroadcastIT` is `@Disabled`**. Verifying HTTP-POST → STOMP-topic delivery in a MockMvc + RANDOM_PORT setup doesn't deliver to the in-process subscriber even though publish + subscribe both execute. Broadcast is verified by manual two-browser-tab walkthrough.
 - **Chat unread count is N+1 per room.** `ChatQueryService.getRoomsForUser` does one `countByRoomIdAndSentAtGreaterThan` per room. Cursors and cursor-messages are batched, but the count itself isn't. Fine at hub scale (a user has ~few groups × ~1 default room each); revisit if rooms-per-user grows.
 - **`ErrorCode.CHAT_MESSAGE_NOT_IN_ROOM` is defined but unused.** Reserved for if/when chat starts cross-validating link targets, message-edit, or pin endpoints that need to assert a message belongs to a specific room. Left in to avoid renaming if those land.
-- **Chat polish schema is dev/test only (H2 ddl-auto create-drop).** Prod Postgres needs `ALTER TABLE chat_messages ADD COLUMN message_type VARCHAR(16) NOT NULL DEFAULT 'TEXT'` + flip `sender_id` to nullable + add `subject_user_id UUID NULL`, `link_target_type VARCHAR(32) NULL`, `link_target_id UUID NULL`, plus index `idx_chat_messages_room_sent (room_id, sent_at DESC)` and create `message_read_cursors`. There's no migration tool wired up yet (Flyway / Liquibase iter 3+).
+- **Chat polish schema is dev/test only (H2 ddl-auto create-drop).** Prod Postgres needs `ALTER TABLE chat_messages ADD COLUMN message_type VARCHAR(32) NOT NULL DEFAULT 'TEXT'` + flip `sender_id` to nullable + add `subject_user_id UUID NULL`, `link_target_type VARCHAR(32) NULL`, `link_target_id UUID NULL`, plus index `idx_chat_messages_room_sent (room_id, sent_at DESC)` and create `message_read_cursors`. **Note**: `message_type` was originally provisioned at VARCHAR(16); the room-lifecycle iteration widened it to VARCHAR(32) to fit `SYSTEM_ROOM_END_SOON` / `SYSTEM_ROOM_EXTENDED` (20 chars each). Existing deploys need `ALTER TABLE chat_messages ALTER COLUMN message_type TYPE VARCHAR(32);`. H2 in PG-compat mode silently accepts VARCHAR overflow, so tests passed even with the old width — only real Postgres rejects. There's no migration tool wired up yet (Flyway / Liquibase iter 3+).
 - **`ChatInternalServiceImpl` injects `WebSocketPublisher` with `@Lazy`** to break a cycle (`WebSocketPublisher` → `WebSocketConfig` → `ChatTopicSubscribeInterceptor` → `ChatInternalService` → `ChatInternalServiceImpl` → `WebSocketPublisher`). Don't remove the `@Lazy`.
 - **No scheduled cleanup of expired/revoked refresh tokens** — iter 3+. Rows accumulate. See TODO in `RefreshTokenRepository`.
 - **Default chat room auto-create assumes the frontend uses it.** Hub ChatPanel picks the oldest room (the "general" one) for each group. If a feature wants per-channel rooms with no default, change `GroupCommandService.createGroup` and the hub together.

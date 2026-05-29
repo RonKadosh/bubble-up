@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:studybuddy}
-    username: ${DB_USERNAME:studybuddy}
-    password: ${DB_PASSWORD:studybuddy}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:bubbleup}
+    username: ${DB_USERNAME:bubbleup}
+    password: ${DB_PASSWORD:bubbleup}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -23,15 +23,58 @@ server:
 
 app:
   security:
-    jwt-secret: ${JWT_SECRET:studybuddy-dev-secret-key-change-this-in-production-must-be-at-least-256-bits}
+    jwt-secret: ${JWT_SECRET:bubbleup-dev-secret-key-change-this-in-production-must-be-at-least-256-bits}
     jwt-access-expiration-ms: ${JWT_ACCESS_EXPIRATION_MS:900000}
     refresh-token-expiration-ms: ${REFRESH_TOKEN_EXPIRATION_MS:2592000000}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
   file-storage:
     type: ${FILE_STORAGE_TYPE:local}
-    local-path: ${FILE_STORAGE_LOCAL_PATH:/tmp/studybuddy-files}
+    local-path: ${FILE_STORAGE_LOCAL_PATH:/tmp/bubbleup-files}
+  jitsi:
+    # JaaS (8x8.vc) credentials. Without these, room access throws JITSI_NOT_CONFIGURED.
+    # Set via env in prod; keep the private key OUT of source control.
+    app-id: ${APP_JITSI_APP_ID:}
+    kid: ${APP_JITSI_KID:}
+    private-key-pem: ${APP_JITSI_PRIVATE_KEY_PEM:}
+    server-url: ${APP_JITSI_SERVER_URL:https://8x8.vc}
+    token-ttl: ${APP_JITSI_TOKEN_TTL:PT2H}
+  demo:
+    seed:
+      # Boots 10 demo users + 3 Study Bubbles on first start. Idempotent.
+      # Turn off in any env that should not have shared credentials.
+      enabled: ${APP_DEMO_SEED_ENABLED:false}
   simulation:
     enabled: false
   agents:
     enabled: false
+  expert:
+    # When true (v1 default), expert applicants are auto-verified on apply.
+    # Flip to false to require admin approval via /admin/experts.
+    auto-verify: ${APP_EXPERT_AUTO_VERIFY:true}
+  matching:
+    credibility-threshold: 0.25
+    quiz-question-cap: 12
+    recommendation-limit: 5
+    candidate-limit-per-course: 200
+    weight-shift-day-start: 5
+    weight-shift-day-end: 14
+    quiz-weight-max: 0.70
+    quiz-weight-min: 0.20
+    # Minimum gap between consecutive quiz prompts to a single user. ISO-8601 duration.
+    # PT30S for quick demos; PT10M is the dev default; raise toward PT2H+ for production cadence.
+    quiz-cooldown: ${APP_MATCHING_QUIZ_COOLDOWN:PT10M}
+    targets:
+      leader: 0.55
+      planner: 0.60
+      expert: 0.60
+      creative: 0.50
+      communicator: 0.70
+      team-player: 0.70
+      challenger: 0.45
+    deltas:
+      created-group-leader: 0.10
+      added-member-leader: 0.06
+      created-calendar-event-planner: 0.08
+      uploaded-file-expert: 0.07
+      sent-message-communicator: 0.04

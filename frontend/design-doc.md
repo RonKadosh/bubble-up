@@ -73,6 +73,8 @@ to the same scale.
 | `--success`        | `#2fb36d`   | `#35d48a`   | Future use (no semantic green yet)     |
 | `--warning`        | `#d4a72c`   | `#e8bc4b`   | EXAM badge tint                        |
 | `--danger`         | `#d94f4f`   | `#ff7676`   | Destructive actions ("Pop")            |
+| `--bubble-magenta` | `#e8aed0`   | `#c47aaa`   | Iridescent bubble rim — magenta edge   |
+| `--bubble-green`   | `#9dcfaa`   | `#5fa870`   | Iridescent bubble rim — moss-green edge|
 
 ### Don't use raw Tailwind grays anywhere
 
@@ -84,6 +86,10 @@ If you find yourself reaching for `bg-gray-50`, `text-gray-500`, or
 - `text-base` / `text-secondary` / `text-muted`
 - `border-line` / `border-line-strong`
 - `text-danger`, `bg-danger-soft`
+- `border-bubble-magenta`, `border-bubble-green` — iridescent rim borders
+- `text-bubble-magenta`, `text-bubble-green` — iridescent accent text
+- `bg-bubble-magenta-soft`, `bg-bubble-green-soft` — very light iridescent fills
+- `ring-iridescent` — conic-gradient background (magenta → green → brand blue → magenta); **must be used as a wrapper div** with `p-[1.5px] rounded-full` around the circle element, not applied directly to the element itself (background-clip conflict). Used on `Avatar` when `ring`, `EmptyBubble`, `IconChip`, and logo circles.
 
 These automatically dark-mode-swap.
 
@@ -165,29 +171,55 @@ For fades (modals, tooltips): plain `transition-opacity` is fine.
 
 ## 6. Component inventory
 
-Everything below lives under [`src/components/`](./src/components/). Use these
-before hand-rolling new markup.
+### Generic UI — [`src/components/`](./src/components/)
+
+Used across multiple pages. Reach for these before hand-rolling new markup.
 
 | Component                | File                         | Use it for                                          |
 |--------------------------|------------------------------|-----------------------------------------------------|
 | `<Avatar id name size?>` | [`Avatar.tsx`](./src/components/Avatar.tsx)   | Initial-on-gradient circle. Stable color from `id`. |
-| `<Button variant size?>` | [`Button.tsx`](./src/components/Button.tsx)   | Pill button. Variants: primary / secondary / ghost / danger. Sizes: xs / sm / md / lg. |
+| `<Button variant size?>` | [`Button.tsx`](./src/components/Button.tsx)   | Pill button. Variants: primary / secondary / ghost / danger / **cell**. Sizes: xs / sm / md / lg. |
 | `<LinkButton>`           | [`Button.tsx`](./src/components/Button.tsx)   | Same look as `<Button>`, renders `<a>`.             |
-| `<IconButton size?>`     | [`Button.tsx`](./src/components/Button.tsx)   | Round icon-only button (chat send, calendar arrows).|
+| `<IconButton size?>`     | [`Button.tsx`](./src/components/Button.tsx)   | Round icon-only button. Also accepts all `Button` variants — use `variant="cell"` inside bento cells. |
+| `<BentoCell icon label>` | [`BentoCell.tsx`](./src/components/BentoCell.tsx) | Animated iridescent-ring panel for the GroupsPage bento grid. Pass `className` for grid placement (`row-span-2`, `col-span-2`, `max-h-*`). |
 | `<Card size? interactive?>` | [`Card.tsx`](./src/components/Card.tsx)    | Themed surface card. Sizes: sm / md / lg.           |
 | `<Layout>`               | [`Sidebar.tsx`](./src/components/Sidebar.tsx) | The whole shell — collapsible sidebar + `<Outlet />`. |
 | Icons (`BookIcon`, …)    | [`Icons.tsx`](./src/components/Icons.tsx)     | Centralized SVG set. `currentColor` + `className`.  |
+
+### Hub-scoped — [`src/pages/groups/`](./src/pages/groups/)
+
+Owned by [`GroupsPage`](./src/pages/GroupsPage.tsx). Don't import these from
+elsewhere — if you find a second consumer, that's the signal to lift into
+`src/components/`.
+
+| Component         | File                                                | Use it for                                          |
+|-------------------|-----------------------------------------------------|-----------------------------------------------------|
+| `<GroupSidebar>`  | [`GroupSidebar.tsx`](./src/pages/groups/GroupSidebar.tsx) | Left rail: collapsible create-Bubble form + group list with avatars, unread badges, and active-group iridescent capsule. |
+| `<GroupHeader>`   | [`GroupHeader.tsx`](./src/pages/groups/GroupHeader.tsx)   | Name + visibility pill + Hop in / Leave / Pop actions. |
+| `<ChatPanel>`     | [`ChatPanel.tsx`](./src/pages/groups/ChatPanel.tsx)       | Chat feed + composer + 🔗 link picker. Bundles `ChatMessageRow`, `CalendarLinkCard`, `LinkPickerModal` as private nested components. |
+| `<CalendarPanel>` | [`CalendarPanel.tsx`](./src/pages/groups/CalendarPanel.tsx) | Month nav + event CRUD + share-to-chat. |
+| `<FilesPanel>`    | [`FilesPanel.tsx`](./src/pages/groups/FilesPanel.tsx)     | Upload / list / delete. |
+| `<MembersPanel>`  | [`MembersPanel.tsx`](./src/pages/groups/MembersPanel.tsx) | Roster + add-member form + role transfer. |
+| `calendarFormat`  | [`calendarFormat.ts`](./src/pages/groups/calendarFormat.ts) | `TYPE_COLORS`, `fmtRange`, `monthRange`, `toLocalInput`, `fromLocalInput`. Used by both `CalendarPanel` and `ChatPanel`'s nested `CalendarLinkCard`. |
+
+### Shared helpers — `src/api/`
+
+| Helper            | File                                | Use it for                                          |
+|-------------------|-------------------------------------|-----------------------------------------------------|
+| `formatBytes`     | [`api/files.ts`](./src/api/files.ts) | Format `sizeBytes` → `"123 B" / "4.5 KB" / "2.1 MB"`. Co-located with `GroupFile`. |
+| `errorCode`, `errorBody`, `describeError` | [`api/errors.ts`](./src/api/errors.ts) | Unwrap the backend error envelope and map codes → i18n keys. Replaces hand-rolled `e?.response?.data?.error?.code` switches. |
 
 ### When to add a new component
 
 Three rules:
 
 1. **Used in 2+ places** today (not "might be useful eventually").
-2. The thing isn't already covered by `<Card>` / `<Button>` / `<Avatar>`.
+2. The thing isn't already covered by `<Card>` / `<Button>` / `<Avatar>` / a hub panel.
 3. Lifting it doesn't make the call site harder to read.
 
-If it's only in one page, keep it inline — see the inline `BubbleCollage`,
-`FeedCard`, `ChatPanel`, etc. They're tied to one page and don't need lifting.
+If it's only in one page, keep it inline (or under that page's folder — see
+`pages/groups/`). The inline `BubbleCollage` in LoginPage is the canonical
+example of "stays inline because it only renders once".
 
 ### When to vary button sizes
 
@@ -202,6 +234,9 @@ Don't homogenize.
 | Cancel, dismiss                     | `ghost`     | `sm` |
 | Leave, undo                         | `secondary` | `xs` |
 | Pop, destructive                    | `danger`    | `sm` |
+| **Any action inside a BentoCell**   | `cell`      | `xs` / `sm` |
+
+**The `cell` variant rule:** every `<Button>` and `<IconButton>` that lives inside a `<BentoCell>` must use `variant="cell"` (muted-fill + border pill, no gradient). The only exceptions are the chat ➤ send button (brand gradient, intentional primary anchor) and destructive actions which still use `variant="danger"`. This keeps dark cells visually clean — no gradient blobs competing with the iridescent border.
 
 ---
 
@@ -323,7 +358,130 @@ add-member UUID input.
 
 ---
 
-## 10. Pitfalls / open questions
+## 10. Responsive layout
+
+Bubble.up has three viewport tiers. Build every component to all three from
+the start — desktop-only is not a default we accept anymore.
+
+### The three tiers
+
+| Tier        | Range        | Behavior                                                                                          |
+|-------------|--------------|---------------------------------------------------------------------------------------------------|
+| **Phone**   | `<600px`     | Wide multi-pane layouts become vertically stacked / scrollable sections. **No horizontal scroll** (a deliberate inner-scroll inside a card is fine; the page itself never scrolls sideways). |
+| **Tablet**  | `600–1199px` | Collapse menus, rearrange components, allow grids to reflow.                                       |
+| **Desktop** | `≥1200px`    | Acts like a normal website — content stretches with the viewport.                                  |
+| **Ultrawide cap** | `≥1600px` | Stop stretching. Content anchors centered inside `.container-app` (`max-width: 1600px; margin-inline: auto`). |
+
+### Tailwind breakpoint names — `tablet:` / `desktop:` / `ultra:`
+
+These are defined in [`tailwind.config.js`](./tailwind.config.js) under
+`theme.extend.screens`:
+
+```js
+screens: {
+  tablet:  '600px',
+  desktop: '1200px',
+  ultra:   '1600px',
+}
+```
+
+**Use these names in all new code.** They read intent-first:
+
+```tsx
+<aside className="hidden desktop:block" />          // good
+<aside className="hidden lg:block" />               // don't — "lg" is ambiguous
+<div className="grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-3" />
+```
+
+Tailwind's default `sm`/`md`/`lg`/`xl`/`2xl` are still defined (we didn't
+override them), but **don't introduce new uses of them.** The handful of
+existing `sm:`/`lg:` usages on LoginPage will be migrated opportunistically.
+
+### The ultrawide anchor — `.container-app`
+
+`.container-app` (in [`index.css`](./src/index.css)) is the centered wrapper
+that caps content at 1600px. It's already applied to the outer wrapper of
+[`Sidebar.tsx`](./src/components/Sidebar.tsx), so every routed page inherits
+it automatically. **Don't re-apply it per page** — and **don't add a wider
+`max-w-[…]` higher up the tree.** `LoginPage` is outside the shell and
+manages its own `max-w-[1200px]`; that's the only exception.
+
+### Required layout patterns
+
+**The hub (`GroupsPage`)**:
+
+- **GroupSidebar (Bubbles list) is a slide-over drawer below `desktop`.** It's
+  hidden by default at phone/tablet widths, opened by a hamburger button in
+  `GroupHeader`. At `desktop:` and above it's a fixed inline rail (current
+  behavior). State lives in `GroupsPage`, passed in as `mobileOpen` /
+  `onMobileClose`.
+- **The bento grid becomes a tab strip below `tablet`.** Only the focused
+  panel renders on phone; a top tab bar lets the user switch between Chat /
+  Calendar / Files / Members. Reuse the existing `useBentoLayoutStore.focused`
+  value as the active-tab key — don't add separate phone-tab state.
+
+**The app shell (`Sidebar.tsx`)**:
+
+- **The left rail stays a left rail at every width** — phone, tablet, desktop,
+  ultra. It's the persistent app frame; users find it in the same place no
+  matter the device. The 4.5rem nav is narrow enough to coexist with content
+  even at 320px viewport. Don't replace it with a bottom bar or hide it behind
+  a hamburger.
+
+### Slide-overs and RTL
+
+Sliding panels (the GroupSidebar drawer is the only one today) **must use
+logical translate**:
+
+```tsx
+// Slide in from the inline-start edge — works in LTR and RTL.
+<aside className="fixed inset-y-0 start-0 z-40 w-[18rem]
+                  transition-transform duration-200
+                  -translate-x-full desktop:translate-x-0 desktop:static
+                  data-[open=true]:translate-x-0"
+       data-open={mobileOpen} />
+```
+
+(`-translate-x-full` flips automatically under `[dir="rtl"]` because the CSS
+transform is read against the document direction. Verify visually on every
+slide-over.)
+
+### Hard-coded widths
+
+Anything wider than ~360px in pixels is suspect on phone. Guard hardcoded
+pixel widths behind `tablet:` or use a percentage / `max-w-full`:
+
+| Don't | Do |
+|---|---|
+| `<div className="w-[400px]">` | `<div className="w-full tablet:w-[400px]">` |
+| `<input className="min-w-[20rem]">` | `<input className="w-full tablet:min-w-[20rem]">` |
+| `max-w-[60%]` on phone chat bubbles | `max-w-[85%] tablet:max-w-[60%]` |
+
+### Mandatory verification before shipping a new UI
+
+Resize the browser through these widths and confirm there's no horizontal
+scrollbar at any of them: **375 / 600 / 768 / 1024 / 1200 / 1600 / 2000**.
+Then toggle to Hebrew and repeat — if a slide-over flies off-screen or a
+sidebar lives on the wrong edge, you used a physical property somewhere.
+
+### Anti-patterns
+
+- ❌ Hard-coded pixel widths past 360px without a `tablet:` / `desktop:` guard.
+- ❌ New `sm:` / `md:` / `lg:` / `xl:` / `2xl:` prefixes in components. Use
+  `tablet:` / `desktop:` / `ultra:`.
+- ❌ `left-`/`right-`/`pl-`/`pr-`/`ml-`/`mr-`/`text-left`/`text-right`/
+  `border-l`/`border-r` anywhere (see §8 — same rule applies for responsive
+  utilities).
+- ❌ Re-applying `max-w-[1600px]` or `.container-app` per page. The shell
+  does it once.
+- ❌ Coupling `<Avatar>` / `<Button>` / `<Card>` size props to viewport. Their
+  `size="sm|md|lg"` is design-intent (a small button is *meant* to be small,
+  regardless of screen); responsive choices use breakpoint utilities, not
+  size props.
+
+---
+
+## 11. Pitfalls / open questions
 
 - **Browser native `confirm()` / `alert()`** is still used for destructive
   actions and Help/Report placeholders. They render in OS chrome and ignore our

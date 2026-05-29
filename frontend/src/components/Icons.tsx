@@ -178,3 +178,22 @@ export function GlobeIcon(p: IconProps) {
     </Svg>
   )
 }
+
+export function ShieldIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M12 2 4 5v6c0 5 3.5 9 8 11 4.5-2 8-6 8-11V5l-8-3z" />
+      <path d="m9 12 2 2 4-4" />
+    </Svg>
+  )
+}
+
+export function MenuIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <line x1="4" y1="7"  x2="20" y2="7" />
+      <line x1="4" y1="12" x2="20" y2="12" />
+      <line x1="4" y1="17" x2="20" y2="17" />
+    </Svg>
+  )
+}

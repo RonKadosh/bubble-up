@@ -12,10 +12,10 @@
   </parent>
 
   <groupId>com.ronkadosh</groupId>
-  <artifactId>studybuddy</artifactId>
+  <artifactId>bubbleup</artifactId>
   <version>0.0.1-SNAPSHOT</version>
-  <name>studybuddy</name>
-  <description>StudyBuddy backend</description>
+  <name>bubbleup</name>
+  <description>BubbleUp backend</description>
 
   <properties>
     <java.version>21</java.version>

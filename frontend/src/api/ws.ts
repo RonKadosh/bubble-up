@@ -1,17 +1,24 @@
 import { Client, StompSubscription } from '@stomp/stompjs'
-import client from './client'
+import client, { ApiSuccess } from './client'
 import { useAuthStore } from '../store/authStore'
-import type { ChatMessage } from './chat'
+import type { ChatMessage, PinUpdate } from './chat'
+import type { PresenceEntry } from './presence'
+import type { PollUpdate } from './polls'
+import type { ExcalidrawSnapshot, RoomLifecycleEvent } from './room'
+import type { WhiteboardWritersEvent } from './expert'
 
-type RoomHandler = (msg: ChatMessage) => void
-
-interface RoomSubscription {
-  handler: RoomHandler
+interface TopicSubscription {
+  destination: string
+  handler: (payload: unknown) => void
   subscription: StompSubscription | null
 }
 
 let stompClient: Client | null = null
-const roomSubscriptions = new Map<string, RoomSubscription[]>()
+/** Keyed by full STOMP destination string so the same topic can have multiple listeners. */
+const topicSubscriptions = new Map<string, TopicSubscription[]>()
+/** Fires every time the STOMP client reaches CONNECTED. Used by callers that need to
+ *  re-snapshot REST state once they know the WS is live (e.g. presence). */
+const connectListeners = new Set<() => void>()
 
 // Single-flight refresh shared with axios isn't accessible directly, so we run our own.
 // Worst case both fire — backend rotates the token either way.
@@ -34,13 +41,24 @@ async function refreshAccessToken(): Promise<string | null> {
   if (!rt) return null
   wsRefreshInFlight = (async () => {
     try {
-      const res = await client.post<{
-        success: boolean
-        data: { accessToken: string; refreshToken: string; userId: string; email: string; role: string }
-      }>('/auth/refresh', { refreshToken: rt }, { _isRefreshCall: true } as any)
+      const res = await client.post<ApiSuccess<{
+        accessToken: string
+        refreshToken: string
+        userId: string
+        email: string
+        role: string
+        displayName: string
+        avatarUrl: string | null
+      }>>(
+        '/auth/refresh', { refreshToken: rt }, { _isRefreshCall: true } as any
+      )
       const data = res.data.data
       useAuthStore.getState().setAuth(data.accessToken, data.refreshToken, {
-        id: data.userId, email: data.email, role: data.role,
+        id: data.userId,
+        email: data.email,
+        role: data.role,
+        displayName: data.displayName,
+        avatarUrl: data.avatarUrl,
       })
       return data.accessToken
     } catch {
@@ -73,12 +91,18 @@ function buildClient(): Client {
     },
     onConnect: () => {
       lastFailedToken = null
-      for (const [roomId, subs] of roomSubscriptions.entries()) {
-        const stompSub = c.subscribe(`/topic/chat/${roomId}`, (frame) => {
-          const payload = JSON.parse(frame.body) as ChatMessage
+      // Re-subscribe every live topic. Subscriptions survive reconnect.
+      for (const [destination, subs] of topicSubscriptions.entries()) {
+        const stompSub = c.subscribe(destination, (frame) => {
+          const payload = JSON.parse(frame.body)
           for (const s of subs) s.handler(payload)
         })
         for (const s of subs) s.subscription = stompSub
+      }
+      // Notify listeners that the WS is live — they typically re-fetch REST snapshots
+      // here to pick up state changes that occurred during the connect handshake.
+      for (const fn of connectListeners) {
+        try { fn() } catch (e) { console.warn('[ws] onConnect listener threw', e) }
       }
     },
     onStompError: async (frame) => {
@@ -125,13 +149,14 @@ function ensureStoreWatcher() {
 ensureStoreWatcher()
 
 export function disconnectWs(): void {
-  for (const subs of roomSubscriptions.values()) {
+  for (const subs of topicSubscriptions.values()) {
     for (const s of subs) {
       s.subscription?.unsubscribe()
       s.subscription = null
     }
   }
-  roomSubscriptions.clear()
+  topicSubscriptions.clear()
+  connectListeners.clear()
   if (stompClient?.active) {
     stompClient.deactivate()
   }
@@ -139,25 +164,79 @@ export function disconnectWs(): void {
   lastFailedToken = null
 }
 
-export function subscribeToRoom(roomId: string, handler: RoomHandler): () => void {
-  const entry: RoomSubscription = { handler, subscription: null }
-  const existing = roomSubscriptions.get(roomId) ?? []
+/** Internal: subscribe to an arbitrary STOMP topic. Auto-resubscribes on reconnect. */
+function subscribeToTopic<T>(destination: string, handler: (payload: T) => void): () => void {
+  const entry: TopicSubscription = {
+    destination,
+    handler: handler as (p: unknown) => void,
+    subscription: null,
+  }
+  const existing = topicSubscriptions.get(destination) ?? []
   existing.push(entry)
-  roomSubscriptions.set(roomId, existing)
+  topicSubscriptions.set(destination, existing)
 
   if (stompClient?.connected) {
-    entry.subscription = stompClient.subscribe(`/topic/chat/${roomId}`, (frame) => {
-      const payload = JSON.parse(frame.body) as ChatMessage
-      handler(payload)
+    entry.subscription = stompClient.subscribe(destination, (frame) => {
+      handler(JSON.parse(frame.body) as T)
     })
   }
 
   return () => {
     entry.subscription?.unsubscribe()
-    const list = roomSubscriptions.get(roomId)
+    const list = topicSubscriptions.get(destination)
     if (!list) return
     const idx = list.indexOf(entry)
     if (idx >= 0) list.splice(idx, 1)
-    if (list.length === 0) roomSubscriptions.delete(roomId)
+    if (list.length === 0) topicSubscriptions.delete(destination)
   }
+}
+
+/**
+ * Register a callback that fires every time the STOMP client reaches CONNECTED
+ * (including reconnects). Returns an unsubscribe function.
+ *
+ * Use this when REST state queried before the WS finishes connecting can be stale
+ * relative to live broadcasts that fire as part of the connect — presence is the
+ * canonical case: your own `SessionConnectedEvent` broadcast can race ahead of your
+ * SUBSCRIBE frame, so a re-snapshot here closes the gap.
+ */
+export function onWsConnect(handler: () => void): () => void {
+  connectListeners.add(handler)
+  // Fire immediately if we're already connected — caller doesn't have to special-case
+  // the "WS was up before I registered" path.
+  if (stompClient?.connected) {
+    queueMicrotask(() => { if (connectListeners.has(handler)) handler() })
+  }
+  return () => { connectListeners.delete(handler) }
+}
+
+export function subscribeToRoom(roomId: string, handler: (msg: ChatMessage) => void): () => void {
+  return subscribeToTopic<ChatMessage>(`/topic/chat/${roomId}`, handler)
+}
+
+export function subscribeToPresence(groupId: string, handler: (e: PresenceEntry) => void): () => void {
+  return subscribeToTopic<PresenceEntry>(`/topic/presence/${groupId}`, handler)
+}
+
+export function subscribeToRoomPins(roomId: string, handler: (e: PinUpdate) => void): () => void {
+  return subscribeToTopic<PinUpdate>(`/topic/chat/${roomId}/pins`, handler)
+}
+
+export function subscribeToRoomPolls(roomId: string, handler: (e: PollUpdate) => void): () => void {
+  return subscribeToTopic<PollUpdate>(`/topic/chat/${roomId}/polls`, handler)
+}
+
+export function subscribeToRoomWhiteboard(roomId: string, handler: (snap: ExcalidrawSnapshot) => void): () => void {
+  return subscribeToTopic<ExcalidrawSnapshot>(`/topic/rooms/${roomId}/whiteboard`, handler)
+}
+
+export function subscribeToRoomLifecycle(roomId: string, handler: (e: RoomLifecycleEvent) => void): () => void {
+  return subscribeToTopic<RoomLifecycleEvent>(`/topic/rooms/${roomId}/lifecycle`, handler)
+}
+
+export function subscribeToExpertSessionWriters(
+  sessionId: string,
+  handler: (e: WhiteboardWritersEvent) => void,
+): () => void {
+  return subscribeToTopic<WhiteboardWritersEvent>(`/topic/expert-sessions/${sessionId}/writers`, handler)
 }

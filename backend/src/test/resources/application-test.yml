@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:h2:mem:studybuddy_test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    url: jdbc:h2:mem:bubbleup_test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
     username: sa
     password:
     driver-class-name: org.h2.Driver
@@ -27,7 +27,7 @@ app:
     allowed-origins: http://localhost:3000
   file-storage:
     type: local
-    local-path: /tmp/studybuddy-test-files
+    local-path: /tmp/bubbleup-test-files
   simulation:
     enabled: false
   agents:

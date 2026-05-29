@@ -4,11 +4,12 @@ import { useTranslation } from 'react-i18next'
 import { Group, getGroups } from '../api/groups'
 import { ChatMessage, getMessages, getRooms } from '../api/chat'
 import { CalendarEvent, CalendarEventType, listEvents } from '../api/calendar'
-import { GroupFile, getFiles } from '../api/files'
+import { GroupFile, formatBytes, getFiles } from '../api/files'
 import { useAuthStore } from '../store/authStore'
 import { Avatar } from '../components/Avatar'
 import { Card } from '../components/Card'
 import { LinkButton } from '../components/Button'
+import { renderBubbleContent } from '../components/BubbleEmojis'
 
 function relTime(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime()
@@ -24,14 +25,9 @@ function relTime(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
-function formatBytes(n: number): string {
-  if (n < 1024) return `${n} B`
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`
-  return `${(n / (1024 * 1024)).toFixed(1)} MB`
-}
-
 const TYPE_BADGE: Record<CalendarEventType, string> = {
   STUDY_SESSION: 'bg-primary-100 text-primary-700',
+  EXPERT_SESSION: 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-200',
   MEETING: 'bg-primary-50 text-primary-700',
   DEADLINE: 'bg-danger-soft text-danger',
   EXAM: 'bg-amber-100 text-amber-800',
@@ -67,7 +63,7 @@ export default function DashboardPage() {
 
         const groupById = new Map(groups.map((g) => [g.id, g] as const))
         const scopedRooms = rooms
-          .filter((r) => groupById.has(r.groupId))
+          .filter((r) => r.groupId !== null && groupById.has(r.groupId))
           .slice(0, GROUP_LIMIT)
         const scopedGroups = groups.slice(0, GROUP_LIMIT)
 
@@ -96,6 +92,7 @@ export default function DashboardPage() {
         const feed: FeedItem[] = []
 
         for (const bucket of msgBuckets) {
+          if (!bucket.room.groupId) continue
           const group = groupById.get(bucket.room.groupId)
           if (!group) continue
           for (const m of bucket.msgs) {
@@ -128,11 +125,11 @@ export default function DashboardPage() {
 
   return (
     <div className="flex-1 overflow-y-auto">
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
+      <div className="max-w-2xl mx-auto px-4 tablet:px-6 desktop:px-8 py-6 tablet:py-8">
         <header className="mb-6">
           <div className="flex items-center gap-3 mb-1">
-            <div className="w-2.5 h-2.5 rounded-full bg-brand-gradient-strong shadow-sm" />
-            <div className="w-1.5 h-1.5 rounded-full bg-primary-300" />
+            <div className="w-2.5 h-2.5 rounded-full bg-bubble-magenta shadow-sm" />
+            <div className="w-1.5 h-1.5 rounded-full bg-bubble-green" />
             <h1 className="text-2xl font-bold text-base">{t('dashboard.title')}</h1>
           </div>
           <p className="text-sm text-muted ms-[1.6rem]">{t('dashboard.subtitle')}</p>
@@ -142,8 +139,10 @@ export default function DashboardPage() {
 
         {!loading && items.length === 0 && (
           <Card size="lg" className="px-6 py-14 text-center shadow-bubble">
-            <div className="mx-auto w-20 h-20 rounded-full bg-brand-gradient-soft flex items-center justify-center text-3xl mb-5 shadow-sm ring-on-brand">
-              🫧
+            <div className="ring-iridescent p-[2px] rounded-full w-fit mx-auto mb-5 shadow-sm">
+              <div className="w-20 h-20 rounded-full bg-brand-gradient-soft flex items-center justify-center text-3xl">
+                🫧
+              </div>
             </div>
             <p className="text-base font-semibold">{t('dashboard.emptyHeading')}</p>
             <p className="text-sm text-muted mt-1.5 mb-6">
@@ -213,7 +212,7 @@ function FeedBody({ item, meId }: { item: FeedItem; meId: string | null }) {
               <span className="font-mono" dir="ltr">{author}</span> {t('dashboard.kind.sharedEvent')}
             </p>
             {m.content && (
-              <p className="text-sm text-secondary mt-1 italic">"{m.content}"</p>
+              <p className="text-sm text-secondary mt-1 italic">"{renderBubbleContent(m.content)}"</p>
             )}
             <div className="mt-2 inline-flex items-center gap-2 bg-primary-50 text-primary-700 text-xs px-2.5 py-1 rounded-lg border border-primary-100">
               🔗 {t('dashboard.linkedEvent')}
@@ -227,7 +226,7 @@ function FeedBody({ item, meId }: { item: FeedItem; meId: string | null }) {
             <span className="font-mono" dir="ltr">{author}</span> {t('dashboard.kind.sentMessage')}
           </p>
           <p className="text-sm text-secondary mt-1.5 line-clamp-3 whitespace-pre-wrap">
-            {m.content}
+            {renderBubbleContent(m.content)}
           </p>
         </>
       )

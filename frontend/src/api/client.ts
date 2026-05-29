@@ -1,11 +1,23 @@
 import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
 import { useAuthStore } from '../store/authStore'
+import { useLanguageStore } from '../store/languageStore'
 
 declare module 'axios' {
   export interface InternalAxiosRequestConfig {
     _isRefreshCall?: boolean
     _retried?: boolean
   }
+}
+
+/**
+ * Backend success envelope. Every endpoint that returns 2xx returns this shape
+ * around its payload. Use as `client.get<ApiSuccess<MyType>>(...)`, then peel
+ * `res.data.data`. Errors are surfaced by axios throwing on non-2xx — see
+ * `errors.ts` for the failure envelope.
+ */
+export interface ApiSuccess<T> {
+  success: true
+  data: T
 }
 
 const client = axios.create({
@@ -17,6 +29,7 @@ client.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
+  config.headers['Accept-Language'] = useLanguageStore.getState().lang
   return config
 })
 
@@ -24,15 +37,24 @@ let refreshInFlight: Promise<string> | null = null
 
 async function performRefresh(refreshToken: string): Promise<string> {
   const config = { _isRefreshCall: true } as Partial<InternalAxiosRequestConfig>
-  const res = await client.post<{
-    success: boolean
-    data: { accessToken: string; refreshToken: string; userId: string; email: string; role: string }
-  }>('/auth/refresh', { refreshToken }, config)
+  const res = await client.post<ApiSuccess<{
+    accessToken: string
+    refreshToken: string
+    userId: string
+    email: string
+    role: string
+    displayName: string
+    avatarUrl: string | null
+  }>>(
+    '/auth/refresh', { refreshToken }, config
+  )
   const data = res.data.data
   useAuthStore.getState().setAuth(data.accessToken, data.refreshToken, {
     id: data.userId,
     email: data.email,
     role: data.role,
+    displayName: data.displayName,
+    avatarUrl: data.avatarUrl,
   })
   return data.accessToken
 }

@@ -16,7 +16,7 @@ export const useThemeStore = create<ThemeState>()(
       setTheme: (theme) => set({ theme }),
       toggle: () => set({ theme: get().theme === 'light' ? 'dark' : 'light' }),
     }),
-    { name: 'studybuddy-theme' }
+    { name: 'bubbleup-theme' }
   )
 )
 

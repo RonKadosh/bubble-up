@@ -2,6 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Houdini custom property — lets us animate the conic-gradient angle. */
+@property --ring-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes ring-spin {
+  to { --ring-angle: 360deg; }
+}
+
 @layer base {
   :root {
     /* ===== BUBBLE.UP BRAND — light blue ===== */
@@ -38,6 +49,12 @@
     --silver: #cfdae3;
     --silver-soft: #e6ecf1;
 
+    /* Bubble iridescence — light mode: soft pastel rim colours. */
+    --bubble-magenta: #e8aed0;
+    --bubble-green:   #9dcfaa;
+    /* Middle stop in the ring gradient — acts as the "blue" specular highlight. */
+    --bubble-blue:    #8acdf6;
+
     --shadow:
       0 2px 8px rgba(13, 71, 116, 0.05),
       0 8px 24px rgba(56, 154, 224, 0.10);
@@ -69,6 +86,12 @@
     --silver: #2a3540;
     --silver-soft: #1f2932;
 
+    /* Dark mode iridescence — match real soap bubbles on dark backgrounds:
+       deep amethyst edge, dark teal edge, deep navy specular. All muted, never neon. */
+    --bubble-magenta: #5a2e68;
+    --bubble-green:   #145e52;
+    --bubble-blue:    #0e3350;
+
     --shadow:
       0 2px 8px rgba(0,0,0,0.35),
       0 0 24px rgba(56, 154, 224, 0.10);
@@ -95,6 +118,14 @@
 }
 
 @layer utilities {
+  /* Ultrawide anchor — keeps content from stretching past 1600px on huge
+     monitors. Applied at the app shell (Sidebar.tsx). See design-doc §10. */
+  .container-app {
+    margin-inline: auto;
+    width: 100%;
+    max-width: 1600px;
+  }
+
   /* Semantic neutral tokens — auto dark-mode via CSS variable swap. */
   .bg-base { background-color: var(--bg); }
   .bg-base-secondary { background-color: var(--bg-secondary); }
@@ -116,7 +147,83 @@
   .text-success { color: var(--success); }
   .text-warning { color: var(--warning); }
   .text-danger  { color: var(--danger); }
+  .bg-success { background-color: var(--success); }
+  .bg-line { background-color: var(--border); }
   .bg-danger-soft { background-color: color-mix(in srgb, var(--danger) 12%, transparent); }
+
+  /* Bubble iridescence — magenta + moss-green for borders and accents. */
+  .border-bubble-magenta { border-color: var(--bubble-magenta); }
+  .border-bubble-green   { border-color: var(--bubble-green); }
+  .text-bubble-magenta   { color: var(--bubble-magenta); }
+  .text-bubble-green     { color: var(--bubble-green); }
+  .bg-bubble-magenta-soft { background-color: color-mix(in srgb, var(--bubble-magenta) 12%, transparent); }
+  .bg-bubble-green-soft   { background-color: color-mix(in srgb, var(--bubble-green)   12%, transparent); }
+  /* Organic asymmetric corners for bento cells — slightly uneven so they read as fluid, not rigid. */
+  .bento-cell-radius       { border-radius: 2.5rem 2rem 2.5rem 2rem; }
+  .bento-cell-inner-radius { border-radius: calc(2.5rem - 2px) calc(2rem - 2px) calc(2.5rem - 2px) calc(2rem - 2px); }
+
+  /* Pulsing green glow on avatar wrappers — indicates a group with unread messages. */
+  @keyframes pulse-ring-live {
+    0%, 100% { box-shadow: 0 0 0 0 transparent; }
+    50%       { box-shadow: 0 0 0 4px color-mix(in srgb, var(--bubble-green) 45%, transparent); }
+  }
+  .avatar-live {
+    border-radius: 9999px;
+    animation: pulse-ring-live 2.5s ease-in-out infinite;
+  }
+
+  /* Iridescent focus ring for text inputs — replaces the flat primary-400 outline. */
+  .focus-bubble:focus {
+    outline: none;
+    border-color: var(--bubble-magenta);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--bubble-magenta) 22%, transparent);
+  }
+
+  /* Danger glow — used on destructive action buttons like Pop. */
+  .glow-danger { transition: box-shadow 200ms; }
+  .glow-danger:hover {
+    box-shadow:
+      0 0 10px 2px color-mix(in srgb, var(--danger) 30%, transparent),
+      0 0 0 1px color-mix(in srgb, var(--danger) 20%, transparent);
+  }
+
+  /* Subtle ring on hover for icon buttons like month-nav arrows. */
+  .hover-ring-bubble { transition: box-shadow 200ms; }
+  .hover-ring-bubble:hover {
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--bubble-magenta) 45%, transparent);
+  }
+
+  /* Background for the bento grid area. */
+  .bg-bento-grid {
+    /* Light mode: whisper of brand colour, barely perceptible. */
+    background-image:
+      radial-gradient(ellipse at 15% 25%, color-mix(in srgb, var(--bubble-magenta) 7%, transparent), transparent 55%),
+      radial-gradient(ellipse at 80% 70%, color-mix(in srgb, var(--bubble-blue)    5%, transparent), transparent 50%);
+    background-color: var(--bg-secondary);
+  }
+  /* Dark mode: deep navy at top-right, faint dark-purple at bottom-left —
+     matches the reference bubble photograph background. No colour inside the cells. */
+  .dark .bg-bento-grid {
+    background-image:
+      radial-gradient(ellipse at 78% 8%,  rgba(8, 18, 48, 0.95), transparent 55%),
+      radial-gradient(ellipse at 22% 92%, rgba(22, 6, 38, 0.80), transparent 55%);
+    background-color: var(--bg);
+  }
+
+  /* Iridescent ring — slowly-rotating conic gradient wrapping a rounded child.
+     Uses --bubble-blue as the specular midpoint so it dims correctly in dark mode. */
+  .ring-iridescent {
+    --ring-angle: 0deg;
+    background: conic-gradient(
+      from var(--ring-angle),
+      var(--bubble-magenta),
+      var(--bubble-blue),
+      var(--bubble-green),
+      var(--bubble-blue),
+      var(--bubble-magenta)
+    );
+    animation: ring-spin 8s linear infinite;
+  }
 
   .shadow-themed { box-shadow: var(--shadow); }
   .shadow-bubble { box-shadow: var(--shadow-bubble); }

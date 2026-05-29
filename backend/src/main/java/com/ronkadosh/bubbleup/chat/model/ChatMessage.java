@@ -1,0 +1,80 @@
+package com.ronkadosh.bubbleup.chat.model;
+
+import jakarta.persistence.*;
+import lombok.*;
+
+import java.time.Instant;
+import java.util.UUID;
+
+@Entity
+@Table(
+        name = "chat_messages",
+        indexes = @Index(name = "idx_chat_messages_room_sent", columnList = "room_id, sent_at DESC")
+)
+@Getter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class ChatMessage {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
+
+    @Column(name = "room_id", nullable = false)
+    private UUID roomId;
+
+    /** Null for SYSTEM_* messages. */
+    @Column(name = "sender_id")
+    private UUID senderId;
+
+    @Column(nullable = false, columnDefinition = "TEXT")
+    private String content;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "message_type", nullable = false, length = 32)
+    private ChatMessageType messageType;
+
+    /** SYSTEM_JOIN/SYSTEM_LEAVE: the user who joined/left. Null otherwise. */
+    @Column(name = "subject_user_id")
+    private UUID subjectUserId;
+
+    /** LINK: target type. Null otherwise. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "link_target_type", length = 32)
+    private ChatLinkTargetType linkTargetType;
+
+    /** LINK: target id. Null otherwise. */
+    @Column(name = "link_target_id")
+    private UUID linkTargetId;
+
+    /**
+     * Optional parent message this one is a reply to. Soft reference (no FK) to keep
+     * cascading delete behaviour simple; orphaned ids render as "Quoted message
+     * unavailable" on the client.
+     */
+    @Column(name = "reply_to_message_id")
+    private UUID replyToMessageId;
+
+    /** Pinned state — sidecar columns; pin/unpin doesn't change the message kind. */
+    @lombok.Setter
+    @Column(nullable = false)
+    private boolean pinned;
+
+    @lombok.Setter
+    @Column(name = "pinned_at")
+    private Instant pinnedAt;
+
+    @lombok.Setter
+    @Column(name = "pinned_by_user_id")
+    private UUID pinnedByUserId;
+
+    @Column(name = "sent_at", nullable = false, updatable = false)
+    private Instant sentAt;
+
+    @PrePersist
+    protected void onCreate() {
+        if (sentAt == null) sentAt = Instant.now();
+        if (messageType == null) messageType = ChatMessageType.TEXT;
+    }
+}

@@ -13,11 +13,14 @@
     "share": "Share",
     "loading": "Loading…",
     "comingSoon": "Coming soon.",
-    "you": "you"
+    "you": "you",
+    "close": "Close"
   },
   "nav": {
     "home": "Home",
     "myBubbles": "My Bubbles",
+    "academy": "Academy",
+    "experts": "Experts",
     "help": "Help",
     "report": "Report",
     "logout": "Logout",
@@ -26,7 +29,35 @@
     "collapse": "Collapse sidebar",
     "expand": "Expand sidebar",
     "signedIn": "Signed in",
-    "language": "Language"
+    "language": "Language",
+    "dashboard": "Dashboard",
+    "profile": "Profile"
+  },
+  "profile": {
+    "title": "Your profile",
+    "titleOther": "Profile",
+    "displayNameLabel": "Display name",
+    "displayNamePlaceholder": "How you appear to others",
+    "bioLabel": "Bio",
+    "bioPlaceholder": "Say something about yourself (optional)",
+    "affiliationLabel": "Affiliation",
+    "universityLabel": "University",
+    "departmentLabel": "Department",
+    "selectDepartment": "Choose a department",
+    "enrollmentYearLabel": "Year of study",
+    "uploadAvatar": "Change photo",
+    "removeAvatar": "Remove photo",
+    "saveButton": "Save changes",
+    "savingButton": "Saving…",
+    "joinedAt": "Joined {{date}}",
+    "cannotView": "🫧 You don't share a Bubble with this user yet.",
+    "errorLoad": "Couldn't load profile.",
+    "errorSave": "Couldn't save profile.",
+    "errorAvatarType": "Avatar must be PNG, JPEG, WebP, or GIF.",
+    "errorAvatarTooLarge": "Avatar must be under 5 MB.",
+    "errorAvatarGeneric": "Couldn't upload avatar.",
+    "noBio": "—",
+    "noAffiliation": "—"
   },
   "login": {
     "headingSignIn": "Welcome back",
@@ -48,16 +79,41 @@
     "switchToRegisterAction": "Create one",
     "switchToSignInPrompt": "Already have an account?",
     "switchToSignInAction": "Sign in",
+    "displayName": "Display name",
+    "displayNamePlaceholder": "Your name",
+    "displayNameRequired": "Display name is required.",
     "errorInvalidCredentials": "Email or password is incorrect.",
     "errorEmailExists": "That email is already registered.",
     "errorRegisterGeneric": "Registration failed.",
-    "errorSignInGeneric": "Sign-in failed.",
-    "collage": {
-      "focusLearnGrow": ["Focus", "Learn", "Grow"],
-      "shareIdeas": "Share ideas",
-      "shareIdeasSub": "Achieve more",
-      "studyTogether": "Study together",
-      "studyTogetherSub": "Stay motivated"
+    "errorSignInGeneric": "Sign-in failed."
+  },
+  "academy": {
+    "title": "Academy",
+    "subtitle": "Browse departments and courses at your university.",
+    "term": {
+      "label": "Term",
+      "all": "All terms",
+      "current": "Current term"
+    },
+    "column": {
+      "departments": "Departments",
+      "courses": "Courses",
+      "detail": "Course details"
+    },
+    "empty": {
+      "departments": "No departments to show.",
+      "courses": "Pick a department to see its courses.",
+      "detail": "Pick a course to see its details."
+    },
+    "detail": {
+      "code": "Code",
+      "credits": "Credits",
+      "description": "Description",
+      "departments": "Departments",
+      "offerings": "Offered in"
+    },
+    "error": {
+      "load": "Failed to load the course catalog."
     }
   },
   "dashboard": {
@@ -85,11 +141,16 @@
     "newBubble": "+ New Bubble",
     "emptyList": "No Bubbles yet. Pop one open with",
     "pickFromSidebar": "🫧 Pick a Bubble from the sidebar.",
+    "openBubbleList": "Open Bubble list",
+    "openBubbleListAria": "Open Bubble list",
     "createForm": {
       "bubbleName": "Bubble name",
       "descriptionOptional": "Description (optional)",
       "public": "Public",
       "private": "Private",
+      "universityLabel": "University",
+      "selectDepartment": "Select a department",
+      "selectCourse": "Select a course",
       "submit": "Float it up 🫧"
     },
     "header": {
@@ -107,16 +168,31 @@
     "tabs": {
       "chat": "Chat",
       "calendar": "Calendar",
-      "files": "Files",
-      "members": "Members"
+      "files": "Files"
+    },
+    "bento": {
+      "maximize": "Maximize"
     },
     "members": {
       "empty": "No members yet.",
       "youSuffix": "(you)",
+      "manage": "Manage",
+      "modalTitle": "Manage members",
       "makeOwner": "Make owner",
       "remove": "Remove",
       "addPlaceholder": "User UUID to add",
-      "addButton": "+ Add"
+      "addButton": "+ Add",
+      "onlineNow": "online now",
+      "lastSeen": "last seen {{rel}}",
+      "lastSeenUnknown": "not seen yet",
+      "relJustNow": "just now",
+      "relMinutes_one": "{{count}}m ago",
+      "relMinutes_other": "{{count}}m ago",
+      "relHours_one": "{{count}}h ago",
+      "relHours_other": "{{count}}h ago",
+      "relDays_one": "{{count}}d ago",
+      "relDays_other": "{{count}}d ago",
+      "relOn": "on {{date}}"
     },
     "chat": {
       "joinPrompt": "Join this Bubble to view and send messages.",
@@ -131,10 +207,64 @@
       "sendAria": "Send",
       "linkAria": "Share a link",
       "linkTitle": "Share a calendar event",
-      "modalTitle": "Share a calendar event",
+      "emoji": {
+        "pickerAria": "Open bubble emoji picker",
+        "pickerTitle": "Bubble emojis",
+        "smiling": "Smiling Bubble",
+        "sad": "Sad Bubble",
+        "approving": "Approving Bubble",
+        "disapproving": "Disapproving Bubble",
+        "laughing": "Laughing Bubble",
+        "crying": "Crying Bubble",
+        "loving": "Loving Bubble"
+      },
+      "modalTitle": "Share to chat",
       "modalEmpty": "No upcoming events in this Bubble.",
-      "modalLoading": "Loading events…",
-      "captionPlaceholder": "Optional caption…"
+      "modalLoading": "Loading…",
+      "captionPlaceholder": "Optional caption…",
+      "linkPicker": {
+        "calendarTab": "Calendar",
+        "filesTab": "Files"
+      },
+      "reply": {
+        "button": "Reply",
+        "replyingTo": "Replying to {{name}}",
+        "cancel": "Cancel reply",
+        "jumpTitle": "Click to jump to original",
+        "parentUnavailable": "Quoted message ({{id}}…) — click to load",
+        "unknownAuthor": "system"
+      },
+      "pin": {
+        "button": "Pin",
+        "unpin": "Unpin"
+      },
+      "pinned": {
+        "strip_one": "{{count}} pinned",
+        "strip_other": "{{count}} pinned",
+        "viewAll": "view all",
+        "jumpTitle": "Jump to pinned message",
+        "modalTitle": "Pinned messages",
+        "empty": "No pinned messages."
+      },
+      "poll": {
+        "openComposer": "Create poll",
+        "composerTitle": "Create a poll",
+        "questionPlaceholder": "Ask something…",
+        "optionPlaceholder": "Option {{n}}",
+        "addOption": "+ Add option",
+        "removeOption": "Remove option",
+        "allowMultiple": "Allow multiple choices",
+        "create": "Create poll",
+        "multiSelect": "Multiple choice",
+        "submitVote": "Vote",
+        "totalVotes_one": "{{count}} vote",
+        "totalVotes_other": "{{count}} votes",
+        "closed": "Closed",
+        "closePoll": "Close poll",
+        "confirmClose": "Close this poll? Voters can no longer change their picks.",
+        "loadingPoll": "Loading poll…",
+        "pollUnavailable": "📊 Poll unavailable"
+      }
     },
     "calendar": {
       "newEvent": "+ New event",
@@ -146,15 +276,37 @@
       "descriptionPlaceholder": "Description (optional)",
       "shareToChat": "Share to chat",
       "shareToChatTitle": "Share this event to the Bubble chat",
-      "confirmDelete": "Delete this event?"
+      "confirmDelete": "Delete this event?",
+      "noUpcoming": "No upcoming events.",
+      "moreEvents_one": "{{count}} more event — maximize to see all",
+      "moreEvents_other": "{{count}} more events — maximize to see all",
+      "today": "Today",
+      "prevMonth": "Previous month",
+      "nextMonth": "Next month"
     },
     "files": {
       "uploadHint": "Max 25 MB. No executables.",
-      "uploadButton": "+ Upload file",
+      "uploadButton": "+ Upload",
       "uploading": "Uploading…",
       "empty": "No files shared yet.",
+      "emptyFolder": "This folder is empty.",
       "downloadTitle": "Click to download",
-      "confirmDelete": "Delete \"{{name}}\"?"
+      "previewTitle": "Click to preview",
+      "confirmDelete": "Delete \"{{name}}\"?",
+      "confirmDeleteFolder": "Delete folder \"{{name}}\"? It must be empty.",
+      "newFolder": "+ Folder",
+      "newFolderPlaceholder": "Folder name",
+      "root": "Files",
+      "moreFiles_one": "{{count}} more file — maximize to see all",
+      "moreFiles_other": "{{count}} more files — maximize to see all",
+      "viewerLoading": "Loading…",
+      "viewerLoadFailed": "Couldn't load the file.",
+      "viewerUnsupported": "Preview not supported for this file type.",
+      "viewerFullscreen": "Fullscreen",
+      "viewerExitFullscreen": "Exit fullscreen",
+      "viewerDownload": "Download",
+      "viewerPrevPage": "Previous page",
+      "viewerNextPage": "Next page"
     },
     "confirm": {
       "popBubble": "Pop this Bubble? This removes all chat rooms, messages, files, and events.",
@@ -163,6 +315,7 @@
     "error": {
       "loadList": "Failed to load Bubbles.",
       "create": "Failed to create Bubble.",
+      "loadCatalog": "Failed to load the course catalog.",
       "join": "Failed to join Bubble.",
       "leaveOwner": "You are the owner. Transfer ownership before leaving.",
       "leave": "Failed to leave Bubble.",
@@ -177,6 +330,10 @@
       "loadOlder": "Failed to load older messages.",
       "send": "Failed to send.",
       "shareLink": "Failed to share link.",
+      "pin": "Failed to pin or unpin message.",
+      "pollCreate": "Failed to create poll.",
+      "pollVote": "Failed to record vote.",
+      "pollClose": "Failed to close poll.",
       "notMember": "You aren't a member of this Bubble.",
       "loadEvents": "Failed to load events.",
       "invalidTimeRange": "End must be after start.",
@@ -192,7 +349,272 @@
       "uploadGeneric": "Failed to upload file.",
       "downloadGeneric": "Failed to download file.",
       "deleteFileForbidden": "Only the uploader or Bubble owner can delete this.",
-      "deleteFileGeneric": "Failed to delete file."
+      "deleteFileGeneric": "Failed to delete file.",
+      "loadFolders": "Failed to load folders.",
+      "folderGone": "That folder no longer exists.",
+      "folderNameTaken": "A folder with that name already exists here.",
+      "folderNameInvalid": "Folder name can't be empty or contain slashes.",
+      "folderCreateGeneric": "Failed to create folder.",
+      "folderNotEmpty": "Folder must be empty before deleting.",
+      "folderDeleteForbidden": "Only the folder creator or Bubble owner can delete this.",
+      "folderDeleteGeneric": "Failed to delete folder.",
+      "openRoom": "Couldn't open the Bubble Room.",
+      "roomNotFound": "This room no longer exists.",
+      "roomNotYetOpen": "Session hasn't opened yet — try again 15 min before it starts.",
+      "roomEnded": "This session has ended.",
+      "jitsiNotConfigured": "Video service isn't configured on the server.",
+      "extendRoom": "Couldn't extend the session.",
+      "scheduleConflictExpert": "Your Bubble is already enrolled in an expert session during that time.",
+      "extendConflictExpert": "Can't extend — your Bubble is enrolled in an expert session in that next slot."
     }
+  },
+  "room": {
+    "title": "Bubble Room",
+    "openBubble": "↗ Open Bubble",
+    "openBubbleTitle": "Open the Study Bubble (call keeps running, video shrinks to picture-in-picture)",
+    "leave": "Leave",
+    "backToBubbles": "Back to your Bubbles",
+    "dismiss": "dismiss",
+    "video": "Video",
+    "whiteboard": "Whiteboard",
+    "chat": "Chat",
+    "focusVideo": "Focus video",
+    "focusWhiteboard": "Focus whiteboard",
+    "focusChat": "Focus chat",
+    "loadingWhiteboard": "Loading whiteboard…",
+    "videoNotConfigured": "Video service is not configured. Set APP_JITSI_* env vars on the backend.",
+    "errorLoadChat": "Could not load chat.",
+    "errorLoadGeneric": "Could not load the room.",
+    "status": {
+      "starts": "Starts {{when}}",
+      "ended": "Ended {{when}}",
+      "liveEnds": "Live · ends {{when}}"
+    },
+    "rel": {
+      "in_one": "in {{count}} min",
+      "in_other": "in {{count}} min",
+      "at": "at {{time}}",
+      "justNow": "just now",
+      "minAgo_one": "{{count}} min ago",
+      "minAgo_other": "{{count}} min ago",
+      "hAgo_one": "{{count}}h ago",
+      "hAgo_other": "{{count}}h ago"
+    },
+    "pip": {
+      "label": "🎥 Bubble Room",
+      "return": "↗ Return to Room",
+      "returnAria": "Return to Bubble Room"
+    },
+    "liveBanner": {
+      "fallback": "Live session",
+      "fallbackExpert": "Expert session is live",
+      "started": "Started {{when}}",
+      "opensIn_one": "Opens in {{count}} min",
+      "opensIn_other": "Opens in {{count}} min",
+      "join": "Join"
+    },
+    "schedule": {
+      "title": "🎥 Schedule a Room",
+      "start": "Start",
+      "duration": "Duration",
+      "explainer": "Members can enter the room from 15 minutes before the start time. It auto-closes at the end.",
+      "defaultDescription": "Study session — {{groupName}}",
+      "submit": "Schedule",
+      "submitting": "Scheduling…",
+      "duration30": "30 min",
+      "duration45": "45 min",
+      "duration60": "1 hour",
+      "duration90": "1.5 hours",
+      "duration120": "2 hours"
+    }
+  },
+  "expertRoom": {
+    "openProfile": "↗ Expert profile",
+    "openProfileTitle": "Open the expert's public profile (call keeps running in picture-in-picture)",
+    "loadingSession": "Loading session…",
+    "backToDirectory": "Back to experts",
+    "systemOpenFallback": "Expert session is opening — chat & whiteboard are live.",
+    "linkCard": {
+      "enterButton": "Enter session",
+      "loading": "Loading session link…",
+      "unavailable": "Link unavailable"
+    },
+    "videoCountdown": {
+      "headline": "Video opens at the scheduled start",
+      "opens": "Opens {{when}}",
+      "absoluteHint": "Scheduled for {{time}}"
+    },
+    "host": {
+      "button": "Manage room",
+      "heading": "Manage room",
+      "close": "Close",
+      "intro": "Toggle whiteboard write per participant.",
+      "loadError": "Couldn't load the participant list.",
+      "noneYet": "No participants yet.",
+      "hostBadge": "Host",
+      "canDraw": "Can draw",
+      "grant": "Grant",
+      "granting": "Granting…",
+      "revoke": "Revoke",
+      "revoking": "Revoking…",
+      "errorGrant": "Couldn't grant whiteboard write.",
+      "errorRevoke": "Couldn't revoke whiteboard write."
+    },
+    "chat": {
+      "joined": "joined the session",
+      "left": "left the session"
+    }
+  },
+  "expert": {
+    "hubNav": "Expert hub",
+    "onboarding": {
+      "title": "Become an expert",
+      "subtitle": "Tell students what you can help with. You'll be able to schedule open sessions and accept private booking requests from groups once you finish.",
+      "headlineLabel": "Headline",
+      "headlinePlaceholder": "e.g. Linear Algebra TA at BGU",
+      "bioLabel": "Bio",
+      "bioPlaceholder": "Background, courses you've taught, what you love teaching…",
+      "tagsLabel": "Expertise tags",
+      "tagsPlaceholder": "comma-separated, e.g. linear-algebra, proofs, calculus",
+      "tagsHint": "Up to 20 tags.",
+      "submit": "Apply",
+      "submitting": "Submitting…",
+      "errorGeneric": "Could not submit the application. Please try again."
+    },
+    "dashboard": {
+      "title": "Expert hub",
+      "editProfile": "Edit profile",
+      "bookingsHeading": "Booking requests",
+      "noPendingRequests": "No pending requests.",
+      "sessionsHeading": "My sessions",
+      "noSessions": "No upcoming sessions yet. Click Schedule to open a slot.",
+      "schedule": "+ Schedule",
+      "enter": "Enter",
+      "cancel": "Cancel",
+      "reject": "Reject",
+      "accept": "Accept",
+      "groupsCount": "{{count}}/{{capacity}} groups",
+      "confirmCancel": "Cancel this session? Enrolled groups will be unenrolled.",
+      "errorCancel": "Could not cancel the session.",
+      "errorAccept": "Could not accept the request.",
+      "errorReject": "Could not reject the request."
+    },
+    "schedule": {
+      "title": "Schedule a new session",
+      "titleLabel": "Title",
+      "descriptionLabel": "Description",
+      "startLabel": "Start",
+      "endLabel": "End",
+      "capacityLabel": "Max groups",
+      "cancel": "Cancel",
+      "create": "Create",
+      "creating": "Creating…",
+      "errorBadRange": "End must be after start.",
+      "errorNotVerified": "Your expert profile is not verified.",
+      "errorGeneric": "Could not create the session."
+    },
+    "profileEdit": {
+      "title": "Edit expert profile",
+      "headlineLabel": "Headline",
+      "bioLabel": "Bio",
+      "tagsLabel": "Expertise tags",
+      "tagsPlaceholder": "comma-separated",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving…",
+      "errorSave": "Could not save the profile."
+    },
+    "directory": {
+      "title": "Experts",
+      "becomeLink": "Become an expert →",
+      "searchPlaceholder": "Search headline, bio, or tag…",
+      "noMatches": "No experts match your search.",
+      "verifiedBadge": "Verified",
+      "openSessionsHeading": "Open sessions",
+      "noOpenSessions": "No open sessions right now.",
+      "expertsHeading": "Experts",
+      "enrollButton": "Enroll a group",
+      "pickGroup": "Choose a group",
+      "noOwnedGroups": "You need to own a group to enroll. Create one in My Bubbles.",
+      "groupsCount": "{{count}}/{{capacity}} groups",
+      "enrolledOk": "Enrolled — see it in your group calendar.",
+      "errorAlreadyEnrolled": "That group is already enrolled.",
+      "errorCapacity": "This session is already full.",
+      "errorNotGroupOwner": "You need to own that group to enroll it.",
+      "errorEnrollmentClosed": "Enrollment closed — sessions lock 5 minutes before they start.",
+      "errorScheduleConflict": "That group already has a Bubble Room scheduled during this time.",
+      "errorEnrollGeneric": "Could not enroll."
+    },
+    "room": {
+      "notYetOpen": "Session opens 15 minutes before it starts at {{time}}. Come back then.",
+      "notYetOpenNoTime": "Session hasn't opened yet — try again 15 min before it starts.",
+      "ended": "This session has ended.",
+      "forbidden": "You don't have access to this room."
+    },
+    "publicProfile": {
+      "verifiedBadge": "Verified",
+      "requestButton": "Request a session",
+      "needGroupToBook": "You need to own a group to book.",
+      "notFound": "Expert not found.",
+      "backToDirectory": "Back to directory",
+      "yourOpenSessions": "Your open sessions",
+      "noOpenSessions": "No open sessions. Schedule one from your Expert hub.",
+      "enrollLabel": "Enroll:",
+      "groupsCount": "{{count}}/{{capacity}} groups",
+      "infoEnrolled": "Your group is enrolled.",
+      "infoRequestSent": "Booking request sent.",
+      "errorAlreadyEnrolled": "That group is already enrolled.",
+      "errorCapacity": "This session is already full.",
+      "errorNotGroupOwner": "You need to own that group to enroll it.",
+      "errorEnrollmentClosed": "Enrollment closed — sessions lock 5 minutes before they start.",
+      "errorScheduleConflict": "That group already has a Bubble Room scheduled during this time.",
+      "errorEnrollGeneric": "Could not enroll."
+    },
+    "booking": {
+      "title": "Request a session",
+      "needsGroupOwner": "You need to own a group to request a booking. Create one in My Bubbles first.",
+      "loadingGroups": "Loading your groups…",
+      "groupLabel": "Group",
+      "startLabel": "Start",
+      "endLabel": "End",
+      "messageLabel": "Message",
+      "messagePlaceholder": "What you need help with…",
+      "cancel": "Cancel",
+      "send": "Send request",
+      "sending": "Sending…",
+      "errorBadRange": "End must be after start.",
+      "errorNotGroupOwner": "You must own the selected group.",
+      "errorNotVerified": "This expert is not currently verified.",
+      "errorGeneric": "Could not send the request."
+    },
+    "requests": {
+      "title": "Booking requests",
+      "tabInbound": "Inbound (as expert)",
+      "tabOutbound": "My outbound",
+      "empty": "No requests yet.",
+      "reject": "Reject",
+      "accept": "Accept",
+      "withdraw": "Withdraw",
+      "errorLoad": "Could not load requests.",
+      "errorAction": "Action failed."
+    },
+    "hostControls": {
+      "button": "🛠 Host controls",
+      "heading": "Host controls",
+      "intro": "Whiteboard is host-only by default. Paste a user id to allow them to draw.",
+      "userIdPlaceholder": "user-uuid",
+      "grant": "Grant",
+      "writersCount": "Granted writers ({{count}}):",
+      "noneYet": "none yet",
+      "revoke": "revoke",
+      "close": "Close",
+      "errorGrant": "Could not grant access.",
+      "errorRevoke": "Could not revoke access."
+    }
+  },
+  "matching": {
+    "title": "Quick check-in",
+    "submitting": "Saving…",
+    "error": "Couldn't save your answer. Try again."
   }
 }
