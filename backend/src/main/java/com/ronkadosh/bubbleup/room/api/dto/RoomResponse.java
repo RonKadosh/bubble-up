@@ -34,9 +34,12 @@ public record RoomResponse(
          * whiteboard open 5 min earlier, video opens at start.
          */
         Instant videoOpensAt,
+        /** How many users are currently in the video call — seeds the live "N in call" pill. */
+        int participantCount,
         Instant createdAt
 ) {
-    public static RoomResponse of(Room room, CalendarEventSummary event, JitsiProperties jitsi, String jwt, Instant videoOpensAt) {
+    public static RoomResponse of(Room room, CalendarEventSummary event, JitsiProperties jitsi, String jwt,
+                                  Instant videoOpensAt, int participantCount) {
         return new RoomResponse(
                 room.getId(),
                 room.getScope(),
@@ -52,6 +55,7 @@ public record RoomResponse(
                 event != null ? event.startsAt() : null,
                 event != null ? event.endsAt() : null,
                 videoOpensAt,
+                participantCount,
                 room.getCreatedAt()
         );
     }

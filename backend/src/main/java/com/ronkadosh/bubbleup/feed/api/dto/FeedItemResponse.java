@@ -28,6 +28,7 @@ public record FeedItemResponse(
         Integer unreadCount,
         Integer matchPercent,
         Integer memberCount,
+        Integer participantCount,
         FeedCta cta
 ) {
     /** Builder-ish factory keeps source call sites readable despite the wide record. */
@@ -48,6 +49,7 @@ public record FeedItemResponse(
         private Integer unreadCount;
         private Integer matchPercent;
         private Integer memberCount;
+        private Integer participantCount;
         private FeedCta cta;
 
         private Builder(String kind) { this.kind = kind; }
@@ -62,6 +64,7 @@ public record FeedItemResponse(
         public Builder unreadCount(Integer n) { this.unreadCount = n; return this; }
         public Builder matchPercent(Integer n) { this.matchPercent = n; return this; }
         public Builder memberCount(Integer n) { this.memberCount = n; return this; }
+        public Builder participantCount(Integer n) { this.participantCount = n; return this; }
         public Builder cta(String type, UUID targetId) {
             this.cta = new FeedCta(type, targetId == null ? null : targetId.toString());
             return this;
@@ -69,7 +72,8 @@ public record FeedItemResponse(
 
         public FeedItemResponse build() {
             return new FeedItemResponse(kind, groupId, groupName, ts, title, subtitle,
-                    startsAt, endsAt, eventType, unreadCount, matchPercent, memberCount, cta);
+                    startsAt, endsAt, eventType, unreadCount, matchPercent, memberCount,
+                    participantCount, cta);
         }
     }
 }

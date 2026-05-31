@@ -37,6 +37,7 @@ public class LiveGroupRoomSource implements FeedSource {
                         .ts(r.startsAt())
                         .startsAt(r.startsAt())
                         .endsAt(r.endsAt())
+                        .participantCount(r.participantCount())
                         .cta(FeedCtaType.JOIN_ROOM, r.roomId())
                         .build())
                 .toList();

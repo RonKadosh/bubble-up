@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { createEvent } from '../../api/calendar'
 import { describeError } from '../../api/errors'
 import { Button } from '../../components/Button'
-import { fromLocalInput, toLocalDateStr, toLocalInput } from './calendarFormat'
+import { fromLocalInput, toLocalInput } from './calendarFormat'
 
 interface Props {
   groupId: string
@@ -56,7 +56,9 @@ export function ScheduleRoomModal({ groupId, groupName, onClose, onScheduled, on
       onError(describeError(err, t,
         {
           INVALID_EVENT_TIME_RANGE: 'groups.error.invalidTimeRange',
+          EVENT_STARTS_IN_PAST: 'groups.error.eventInPast',
           NOT_GROUP_MEMBER: 'groups.error.notMember',
+          GROUP_SCHEDULE_CONFLICT: 'groups.error.scheduleConflictLive',
         },
         'groups.error.saveEvent'))
     } finally {
@@ -83,7 +85,7 @@ export function ScheduleRoomModal({ groupId, groupName, onClose, onScheduled, on
               type="datetime-local"
               value={startsAtInput}
               onChange={(e) => setStartsAtInput(e.target.value)}
-              min={`${toLocalDateStr(new Date())}T00:00`}
+              min={toLocalInput(new Date().toISOString())}
               className="border border-line bg-surface rounded-xl px-3 py-2 focus:outline-none focus:border-primary-400"
               required
             />

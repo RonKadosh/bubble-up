@@ -59,6 +59,8 @@ public enum ErrorCode {
     CALENDAR_EVENT_NOT_FOUND(ErrorCategory.NOT_FOUND, HttpStatus.NOT_FOUND),
     NOT_EVENT_AUTHOR_OR_OWNER(ErrorCategory.FORBIDDEN, HttpStatus.FORBIDDEN),
     INVALID_EVENT_TIME_RANGE(ErrorCategory.VALIDATION, HttpStatus.BAD_REQUEST),
+    EVENT_STARTS_IN_PAST(ErrorCategory.VALIDATION, HttpStatus.BAD_REQUEST),
+    EVENT_ALREADY_STARTED(ErrorCategory.FORBIDDEN, HttpStatus.FORBIDDEN),
 
     // Catalog (universities / departments / courses / terms / offerings)
     UNIVERSITY_NOT_FOUND(ErrorCategory.NOT_FOUND, HttpStatus.NOT_FOUND),

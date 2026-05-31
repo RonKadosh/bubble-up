@@ -33,6 +33,7 @@ import { ChatPanel } from './groups/ChatPanel'
 import { ScheduleRoomModal } from './groups/ScheduleRoomModal'
 import { LiveSessionBanner } from './groups/LiveSessionBanner'
 import { CalendarEvent, listEvents } from '../api/calendar'
+import { getLiveGroupIds } from '../api/room'
 
 /**
  * Merge a fresh REST snapshot into the live presence map, keeping live deltas that
@@ -127,6 +128,8 @@ export default function GroupsPage() {
   const [manageMembersOpen, setManageMembersOpen] = useState(false)
   /** Currently-live STUDY_SESSION event for the selected bubble (in the open window), or null. */
   const [liveSession, setLiveSession] = useState<CalendarEvent | null>(null)
+  /** Group IDs that are live now (Bubble Room or expert session). Drives the sidebar red marker. */
+  const [liveGroupIds, setLiveGroupIds] = useState<Set<string>>(new Set())
   /**
    * When a user clicks a FileLinkCard in chat, we focus the Files tile and hand
    * the file id down to FilesPanel so it can navigate + open the viewer. The
@@ -237,6 +240,24 @@ export default function GroupsPage() {
     const interval = window.setInterval(tick, 30_000)
     return () => { cancelled = true; window.clearInterval(interval) }
   }, [selectedId, isMember])
+
+  // Poll which of my bubbles are live now (Bubble Room or expert session) for the
+  // sidebar red marker. One cheap call covers every group, so it's independent of
+  // the selected bubble. 30s cadence matches the live-session banner poll.
+  useEffect(() => {
+    let cancelled = false
+    const tick = async () => {
+      try {
+        const ids = await getLiveGroupIds()
+        if (!cancelled) setLiveGroupIds(new Set(ids))
+      } catch {
+        // Transient — keep the last known set; the marker just won't update this tick.
+      }
+    }
+    tick()
+    const interval = window.setInterval(tick, 30_000)
+    return () => { cancelled = true; window.clearInterval(interval) }
+  }, [])
 
   // Presence: seed snapshot + live subscribe whenever the selected group changes.
   // Membership is enforced server-side (GET 403 + STOMP SUBSCRIBE rejected for non-members),
@@ -441,6 +462,7 @@ export default function GroupsPage() {
         selectedId={selectedId}
         meId={me?.id ?? null}
         unreadByGroup={unreadByGroup}
+        liveGroupIds={liveGroupIds}
         onSelect={setSelectedId}
         onCreate={handleCreate}
         mobileOpen={mobileSidebarOpen}

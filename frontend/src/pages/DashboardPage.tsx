@@ -32,27 +32,36 @@ interface Rendered {
 }
 
 const ITEM_RENDERERS: Record<FeedItemKind, (item: FeedItem, t: Translate) => Rendered> = {
-  liveSession: (item, t) => ({
-    body: (
-      <>
-        <p className="font-semibold text-base truncate">🎥 {item.title}</p>
-        <p className="text-sm text-muted truncate">
-          {liveLabel(item, t)}{item.groupName ? ` · ${item.groupName}` : ''}
-        </p>
-      </>
-    ),
-    ctaLabel: t('dashboard.cta.joinSession'),
-  }),
+  liveSession: (item, t) => {
+    const n = item.participantCount ?? 0
+    return {
+      body: (
+        <>
+          <p className="font-semibold text-base truncate">🎥 {item.title}</p>
+          <p className="text-sm text-muted truncate">
+            {n > 0 ? t('dashboard.live.roomParticipants', { count: n }) : liveLabel(item, t)}
+            {item.groupName ? ` · ${item.groupName}` : ''}
+          </p>
+        </>
+      ),
+      ctaLabel: n > 0 ? t('dashboard.cta.hopIn') : t('dashboard.cta.joinSession'),
+    }
+  },
 
-  liveGroupRoom: (item, t) => ({
-    body: (
-      <>
-        <p className="font-semibold text-base truncate">🟢 {t('dashboard.live.roomLiveNow')}</p>
-        <p className="text-sm text-muted truncate">{item.groupName}</p>
-      </>
-    ),
-    ctaLabel: t('dashboard.cta.joinRoom'),
-  }),
+  liveGroupRoom: (item, t) => {
+    const n = item.participantCount ?? 0
+    return {
+      body: (
+        <>
+          <p className="font-semibold text-base truncate">
+            🟢 {n > 0 ? t('dashboard.live.roomParticipants', { count: n }) : t('dashboard.live.roomLiveNow')}
+          </p>
+          <p className="text-sm text-muted truncate">{item.groupName}</p>
+        </>
+      ),
+      ctaLabel: n > 0 ? t('dashboard.cta.hopIn') : t('dashboard.cta.joinRoom'),
+    }
+  },
 
   upcomingEvent: (item, t) => ({
     body: (

@@ -25,6 +25,8 @@ interface GroupSidebarProps {
   meId: string | null
   /** Per-group unread count for badge rendering. */
   unreadByGroup: Record<string, number>
+  /** Group IDs that are live right now (Bubble Room or expert session) — red marker. */
+  liveGroupIds: Set<string>
   onSelect: (id: string) => void
   onCreate: (input: CreateGroupInput) => Promise<void>
   /** Drawer-open state below `desktop`. Ignored at desktop+ where the sidebar is always inline. */
@@ -40,7 +42,7 @@ interface GroupSidebarProps {
  * Below `desktop` (1200px) this renders as a slide-over drawer anchored to the
  * inline-start edge with a backdrop. At desktop+ it's a normal inline aside.
  */
-export function GroupSidebar({ groups, selectedId, meId, unreadByGroup, onSelect, onCreate, mobileOpen, onMobileClose }: GroupSidebarProps) {
+export function GroupSidebar({ groups, selectedId, meId, unreadByGroup, liveGroupIds, onSelect, onCreate, mobileOpen, onMobileClose }: GroupSidebarProps) {
   const { t } = useTranslation()
   const [showCreate, setShowCreate] = useState(false)
   const [newName, setNewName] = useState('')
@@ -220,12 +222,19 @@ export function GroupSidebar({ groups, selectedId, meId, unreadByGroup, onSelect
           const active = g.id === selectedId
           const youAreOwner = meId === g.ownerId
           const unread = unreadByGroup[g.id] ?? 0
-          const hasLive = unread > 0 && !active
+          const isLive = liveGroupIds.has(g.id)
+          const hasUnread = unread > 0 && !active
 
           const content = (
             <>
-              <div className={hasLive ? 'avatar-live' : ''}>
+              <div className={`relative ${isLive ? 'avatar-live-red' : hasUnread ? 'avatar-live' : ''}`}>
                 <Avatar id={g.id} name={g.name} size="md" />
+                {isLive && (
+                  <span className="absolute -top-0.5 -end-0.5 flex h-3 w-3" aria-label={t('groups.liveNow')} title={t('groups.liveNow')}>
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500 ring-2 ring-surface" />
+                  </span>
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold truncate">{g.name}</p>

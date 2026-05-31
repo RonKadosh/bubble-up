@@ -157,11 +157,13 @@
     "live": {
       "startsIn": "Starts in {{count}} min",
       "liveNow": "Live now",
-      "roomLiveNow": "Study room is live now"
+      "roomLiveNow": "Study room is live now",
+      "roomParticipants": "{{count}} already in the room"
     },
     "cta": {
       "joinSession": "Join session",
       "joinRoom": "Join room",
+      "hopIn": "Hop in",
       "viewEvent": "View event",
       "viewBubble": "View Bubble",
       "open": "Open"
@@ -217,6 +219,7 @@
     "ownerBadge": "Owner",
     "publicBadge": "Public",
     "privateBadge": "Private",
+    "liveNow": "Live now",
     "tabs": {
       "chat": "Chat",
       "calendar": "Calendar",
@@ -259,6 +262,13 @@
       "sendAria": "Send",
       "linkAria": "Share a link",
       "linkTitle": "Share a calendar event",
+      "menu": {
+        "openAria": "Share & more",
+        "openTitle": "Share & more",
+        "menuAria": "Share menu",
+        "share": "Share calendar or file",
+        "poll": "Create a poll"
+      },
       "emoji": {
         "pickerAria": "Open bubble emoji picker",
         "pickerTitle": "Bubble emojis",
@@ -323,6 +333,7 @@
       "noEvents": "No events this month.",
       "editEvent": "Edit event",
       "newEventHeading": "New event",
+      "lockedNote": "This event has already started — it's locked and can no longer be edited.",
       "start": "Start",
       "end": "End",
       "descriptionPlaceholder": "Description (optional)",
@@ -389,6 +400,8 @@
       "notMember": "You aren't a member of this Bubble.",
       "loadEvents": "Failed to load events.",
       "invalidTimeRange": "End must be after start.",
+      "eventInPast": "You can't schedule an event in the past.",
+      "eventLocked": "This event has already started and can no longer be edited.",
       "notEventAuthor": "You can only edit your own events.",
       "notEventAuthorDelete": "You can only delete your own events.",
       "saveEvent": "Failed to save event.",
@@ -417,11 +430,13 @@
       "jitsiNotConfigured": "Video service isn't configured on the server.",
       "extendRoom": "Couldn't extend the session.",
       "scheduleConflictExpert": "Your Bubble is already enrolled in an expert session during that time.",
+      "scheduleConflictLive": "Your Bubble already has a live or scheduled session at that time. Only one Live Bubble can run at once.",
       "extendConflictExpert": "Can't extend — your Bubble is enrolled in an expert session in that next slot."
     }
   },
   "room": {
-    "title": "Bubble Room",
+    "title": "Live Bubble",
+    "inCall": "{{count}} in call",
     "openBubble": "↗ Open Bubble",
     "openBubbleTitle": "Open the Study Bubble (call keeps running, video shrinks to picture-in-picture)",
     "leave": "Leave",
@@ -453,9 +468,9 @@
       "hAgo_other": "{{count}}h ago"
     },
     "pip": {
-      "label": "🎥 Bubble Room",
-      "return": "↗ Return to Room",
-      "returnAria": "Return to Bubble Room"
+      "label": "🎥 Live Bubble",
+      "return": "↗ Return to Live Bubble",
+      "returnAria": "Return to Live Bubble"
     },
     "liveBanner": {
       "fallback": "Live session",
@@ -466,13 +481,14 @@
       "join": "Join"
     },
     "schedule": {
-      "title": "🎥 Schedule a Room",
+      "button": "🎥 Go Live Bubble",
+      "title": "🎥 Go Live Bubble",
       "start": "Start",
       "duration": "Duration",
-      "explainer": "Members can enter the room from 15 minutes before the start time. It auto-closes at the end.",
+      "explainer": "Members can join the Live Bubble from 15 minutes before the start time. It auto-closes at the end.",
       "defaultDescription": "Study session — {{groupName}}",
-      "submit": "Schedule",
-      "submitting": "Scheduling…",
+      "submit": "Go Live",
+      "submitting": "Going live…",
       "duration30": "30 min",
       "duration45": "45 min",
       "duration60": "1 hour",

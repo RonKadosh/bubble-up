@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -27,6 +28,17 @@ public class RoomController {
     private final RoomCommandService commands;
     private final RoomQueryService queries;
     private final CurrentUserProvider currentUserProvider;
+
+    /**
+     * Group IDs (among the caller's groups) that currently have a live Bubble Room or
+     * a joinable enrolled expert session. Drives the red "live" marker on the My
+     * Bubbles sidebar. Polled by the hub; cheap (in-memory window checks).
+     */
+    @GetMapping("/live-groups")
+    public ApiResponse<List<UUID>> liveGroups() {
+        CurrentUser me = currentUserProvider.get();
+        return ApiResponse.success(queries.findLiveGroupIds(me.id()));
+    }
 
     @GetMapping("/{roomId}")
     public ApiResponse<RoomResponse> getRoom(@PathVariable UUID roomId) {

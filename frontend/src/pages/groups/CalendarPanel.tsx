@@ -335,9 +335,15 @@ function EventModal({
 
   const isEdit = mode === 'edit' && !!initialEvent
   const canMutate = isEdit && initialEvent ? (meId === initialEvent.createdBy || isOwner) : false
+  // Once an event's start time has passed it's fixated — the backend rejects edits
+  // (EVENT_ALREADY_STARTED), so we lock the form to match.
+  const isStarted = isEdit && initialEvent ? new Date(initialEvent.startsAt).getTime() <= Date.now() : false
+  // Can't pick a start in the past; mirrors the backend EVENT_STARTS_IN_PAST guard.
+  const minStart = toLocalInput(new Date().toISOString())
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (isStarted) return
     try {
       if (mode === 'edit' && initialEvent) {
         await updateEvent(initialEvent.id, {
@@ -361,6 +367,8 @@ function EventModal({
       onError(describeError(err, t,
         {
           INVALID_EVENT_TIME_RANGE: 'groups.error.invalidTimeRange',
+          EVENT_STARTS_IN_PAST: 'groups.error.eventInPast',
+          EVENT_ALREADY_STARTED: 'groups.error.eventLocked',
           NOT_GROUP_MEMBER: 'groups.error.notMember',
           NOT_EVENT_AUTHOR_OR_OWNER: 'groups.error.notEventAuthor',
           GROUP_SCHEDULE_CONFLICT: 'groups.error.scheduleConflictExpert',
@@ -377,7 +385,10 @@ function EventModal({
       onSaved()
     } catch (err) {
       onError(describeError(err, t,
-        { NOT_EVENT_AUTHOR_OR_OWNER: 'groups.error.notEventAuthorDelete' },
+        {
+          NOT_EVENT_AUTHOR_OR_OWNER: 'groups.error.notEventAuthorDelete',
+          EVENT_ALREADY_STARTED: 'groups.error.eventLocked',
+        },
         'groups.error.deleteEvent'))
     }
   }
@@ -430,10 +441,16 @@ function EventModal({
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2">
+          {isStarted && (
+            <p className="text-xs text-muted bg-surface-muted rounded-xl px-3 py-2">
+              {t('groups.calendar.lockedNote')}
+            </p>
+          )}
           <select
             value={eventType}
             onChange={(e) => setEventType(e.target.value as CalendarEventType)}
-            className="border border-line bg-surface rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary-400"
+            disabled={isStarted}
+            className="border border-line bg-surface rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary-400 disabled:opacity-60"
           >
             {EVENT_TYPES.map((et) => (
               <option key={et} value={et}>{et.replace('_', ' ')}</option>
@@ -446,7 +463,9 @@ function EventModal({
                 type="datetime-local"
                 value={startsAt}
                 onChange={(e) => setStartsAt(e.target.value)}
-                className="border border-line bg-surface rounded-xl px-3 py-2 focus:outline-none focus:border-primary-400"
+                min={minStart}
+                disabled={isStarted}
+                className="border border-line bg-surface rounded-xl px-3 py-2 focus:outline-none focus:border-primary-400 disabled:opacity-60"
                 required
               />
             </label>
@@ -456,7 +475,9 @@ function EventModal({
                 type="datetime-local"
                 value={endsAt}
                 onChange={(e) => setEndsAt(e.target.value)}
-                className="border border-line bg-surface rounded-xl px-3 py-2 focus:outline-none focus:border-primary-400"
+                min={startsAt || minStart}
+                disabled={isStarted}
+                className="border border-line bg-surface rounded-xl px-3 py-2 focus:outline-none focus:border-primary-400 disabled:opacity-60"
                 required
               />
             </label>
@@ -465,7 +486,8 @@ function EventModal({
             placeholder={t('groups.calendar.descriptionPlaceholder')}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="border border-line bg-surface rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary-400"
+            disabled={isStarted}
+            className="border border-line bg-surface rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary-400 disabled:opacity-60"
             rows={3}
           />
         </div>
@@ -501,7 +523,7 @@ function EventModal({
               {t('groups.calendar.shareToChat')}
             </Button>
           )}
-          {canMutate && (
+          {canMutate && !isStarted && (
             <Button type="button" variant="danger" size="sm" onClick={handleDelete}>
               {t('common.delete')}
             </Button>
@@ -510,9 +532,11 @@ function EventModal({
           <Button type="button" variant="ghost" size="sm" onClick={onClose}>
             {t('common.cancel')}
           </Button>
-          <Button type="submit" size="sm">
-            {isEdit ? t('common.save') : t('common.create')}
-          </Button>
+          {!isStarted && (
+            <Button type="submit" size="sm">
+              {isEdit ? t('common.save') : t('common.create')}
+            </Button>
+          )}
         </div>
       </form>
     </div>

@@ -8,9 +8,11 @@ import { fmtRelative } from './timeFormat'
 
 interface Props {
   room: BubbleRoom
+  /** Live count of users currently in the video call. */
+  inCall?: number
 }
 
-export function RoomHeader({ room }: Props) {
+export function RoomHeader({ room, inCall = 0 }: Props) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const [now, setNow] = useState(() => Date.now())
@@ -31,7 +33,15 @@ export function RoomHeader({ room }: Props) {
   return (
     <div className="flex items-center justify-between gap-3 px-4 py-3 bg-surface border-b border-line">
       <div className="flex flex-col min-w-0">
-        <h1 className="text-base font-semibold truncate">{t('room.title')}</h1>
+        <div className="flex items-center gap-2 min-w-0">
+          <h1 className="text-base font-semibold truncate">{t('room.title')}</h1>
+          {inCall > 0 && (
+            <span className="shrink-0 inline-flex items-center gap-1 text-xs font-semibold text-rose-600 bg-rose-500/10 rounded-full px-2 py-0.5">
+              <span className="inline-flex h-1.5 w-1.5 rounded-full bg-rose-500" />
+              {t('room.inCall', { count: inCall })}
+            </span>
+          )}
+        </div>
         {timeLabel && <span className="text-xs text-muted truncate">{timeLabel}</span>}
       </div>
       <div className="flex items-center gap-2">

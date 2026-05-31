@@ -1,5 +1,8 @@
 package com.ronkadosh.bubbleup.calendar;
 
+import com.ronkadosh.bubbleup.calendar.model.CalendarEvent;
+import com.ronkadosh.bubbleup.calendar.model.CalendarEventType;
+import com.ronkadosh.bubbleup.calendar.model.CalendarOwnerType;
 import com.ronkadosh.bubbleup.calendar.persistence.CalendarEventRepository;
 import com.ronkadosh.bubbleup.support.IntegrationTest;
 import org.junit.jupiter.api.Test;
@@ -79,6 +82,96 @@ class CalendarEventIT extends IntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.length()").value(1))
                 .andExpect(jsonPath("$.data[0].eventType").value("STUDY_SESSION"));
+    }
+
+    @Test
+    void second_overlapping_study_session_rejected() throws Exception {
+        AuthedUser owner = registerAndLogin();
+        UUID groupId = createGroup(owner);
+        // First Live Bubble: [+1h, +2h].
+        createEvent(owner, groupId, "STUDY_SESSION", futurePlus(1), futurePlus(2));
+
+        // A second STUDY_SESSION overlapping the first must be rejected — otherwise
+        // it spawns a "ghost" Live Bubble in the same window.
+        mvc.perform(post("/api/calendars/events")
+                        .with(bearer(owner))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createEventBody(groupId, "STUDY_SESSION", futurePlus(1), futurePlus(2))))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("GROUP_SCHEDULE_CONFLICT"));
+    }
+
+    @Test
+    void non_overlapping_study_session_allowed() throws Exception {
+        AuthedUser owner = registerAndLogin();
+        UUID groupId = createGroup(owner);
+        createEvent(owner, groupId, "STUDY_SESSION", futurePlus(1), futurePlus(2));
+
+        // A later, non-overlapping STUDY_SESSION is fine — the rule is "one at a
+        // time", not "one ever".
+        mvc.perform(post("/api/calendars/events")
+                        .with(bearer(owner))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createEventBody(groupId, "STUDY_SESSION", futurePlus(3), futurePlus(4))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.eventType").value("STUDY_SESSION"));
+    }
+
+    @Test
+    void create_event_in_past_rejected() throws Exception {
+        AuthedUser owner = registerAndLogin();
+        UUID groupId = createGroup(owner);
+
+        // The calendar is fixated: you can't schedule an event whose start is
+        // already behind "now".
+        mvc.perform(post("/api/calendars/events")
+                        .with(bearer(owner))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createEventBody(groupId, "MEETING", futurePlus(-2), futurePlus(-1))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("EVENT_STARTS_IN_PAST"));
+    }
+
+    @Test
+    void update_already_started_event_rejected() throws Exception {
+        AuthedUser owner = registerAndLogin();
+        UUID groupId = createGroup(owner);
+        // Seed a past event directly (the create endpoint refuses past starts).
+        UUID eventId = eventRepository.save(CalendarEvent.builder()
+                .ownerType(CalendarOwnerType.GROUP)
+                .ownerId(groupId)
+                .createdBy(owner.id())
+                .eventType(CalendarEventType.MEETING)
+                .startsAt(futurePlus(-2))
+                .endsAt(futurePlus(-1))
+                .build()).getId();
+
+        // Once its start has passed the event is fixated — even its author can't edit it.
+        mvc.perform(patch("/api/calendars/events/{id}", eventId)
+                        .with(bearer(owner))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"description\":\"too late\"}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("EVENT_ALREADY_STARTED"));
+    }
+
+    @Test
+    void delete_already_started_event_rejected() throws Exception {
+        AuthedUser owner = registerAndLogin();
+        UUID groupId = createGroup(owner);
+        UUID eventId = eventRepository.save(CalendarEvent.builder()
+                .ownerType(CalendarOwnerType.GROUP)
+                .ownerId(groupId)
+                .createdBy(owner.id())
+                .eventType(CalendarEventType.MEETING)
+                .startsAt(futurePlus(-2))
+                .endsAt(futurePlus(-1))
+                .build()).getId();
+
+        // A fixated (already-started) event can't be deleted either.
+        mvc.perform(delete("/api/calendars/events/{id}", eventId).with(bearer(owner)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("EVENT_ALREADY_STARTED"));
     }
 
     @Test

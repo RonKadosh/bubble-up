@@ -56,7 +56,7 @@ export function GroupHeader({ group, isOwner, isMember, onJoin, onLeave, onDelet
       <div className="flex gap-2 shrink-0 items-center flex-wrap">
         {isMember && (
           <Button size="sm" onClick={onScheduleRoom}>
-            🎥 Schedule Room
+            {t('room.schedule.button')}
           </Button>
         )}
         {!isMember && group.visibility === 'PUBLIC' && (

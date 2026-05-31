@@ -4,6 +4,7 @@ import { Navigate, useParams } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { useActiveRoomStore } from '../store/activeRoomStore'
 import { BubbleRoom, getRoom } from '../api/room'
+import { subscribeToRoomPresence } from '../api/ws'
 import { errorCode } from '../api/errors'
 import { RoomHeader } from './room/RoomHeader'
 import { RoomBentoShell } from './room/RoomBentoShell'
@@ -18,6 +19,8 @@ export default function BubbleRoomPage() {
   const [room, setRoom] = useState<BubbleRoom | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [transientError, setTransientError] = useState<string | null>(null)
+  /** Live count of users in the video call: seeded from the room, updated over WS. */
+  const [inCall, setInCall] = useState(0)
 
   useEffect(() => {
     if (!roomId) return
@@ -48,6 +51,13 @@ export default function BubbleRoomPage() {
     if (!room?.groupId) return
     useActiveRoomStore.getState().setActive(room.id, room.groupId)
   }, [room?.id, room?.groupId])
+
+  // Live "N in call" — seed from the room snapshot, then track the broadcast.
+  useEffect(() => {
+    if (!room) return
+    setInCall(room.participantCount)
+    return subscribeToRoomPresence(room.id, (e) => setInCall(e.count))
+  }, [room?.id])
 
   if (!roomId) return <Navigate to="/groups" replace />
 
@@ -86,7 +96,7 @@ export default function BubbleRoomPage() {
 
   return (
     <RoomBentoShell
-      header={<RoomHeader room={room} />}
+      header={<RoomHeader room={room} inCall={inCall} />}
       errorBanner={transientError ? (
         <div className="px-4 py-2 text-xs bg-warning/15 text-warning border-b border-line">
           {transientError}

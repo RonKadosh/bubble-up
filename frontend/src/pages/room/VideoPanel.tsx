@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { BubbleRoom } from '../../api/room'
+import { publishToRoomPresence } from '../../api/ws'
 import { useAuthStore } from '../../store/authStore'
 
 /** Minimal shape we touch on the global Jitsi API loaded via <script>. */
@@ -51,7 +52,7 @@ export function VideoPanel({ room }: Props) {
   useEffect(() => {
     if (!containerRef.current) return
     if (!room.jitsiAppId || !room.jitsiJwt) return
-    let api: { dispose: () => void } | null = null
+    let api: { dispose: () => void; addListener: (event: string, fn: (...args: unknown[]) => void) => void } | null = null
     let cancelled = false
 
     const host = (() => {
@@ -113,14 +114,21 @@ export function VideoPanel({ room }: Props) {
             MOBILE_APP_PROMO: false,
           },
         })
+        // Report call presence off Jitsi's own conference events so the room
+        // shows a live "N in call" count. Crash/tab-close is covered server-side
+        // by the WebSocket disconnect cleanup.
+        api.addListener('videoConferenceJoined', () => publishToRoomPresence(room.id, 'JOIN'))
+        api.addListener('videoConferenceLeft', () => publishToRoomPresence(room.id, 'LEAVE'))
       })
       .catch((e) => console.error('[VideoPanel] Jitsi load failed', e))
 
     return () => {
       cancelled = true
+      // Backstop LEAVE in case videoConferenceLeft didn't fire before teardown.
+      publishToRoomPresence(room.id, 'LEAVE')
       try { api?.dispose() } catch (e) { console.warn('[VideoPanel] dispose failed', e) }
     }
-  }, [room.jitsiAppId, room.jitsiJwt, room.jitsiRoomName, room.jitsiServerUrl, user])
+  }, [room.id, room.jitsiAppId, room.jitsiJwt, room.jitsiRoomName, room.jitsiServerUrl, user])
 
   if (!room.jitsiAppId || !room.jitsiJwt) {
     return (

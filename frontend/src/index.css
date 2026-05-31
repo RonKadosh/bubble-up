@@ -172,6 +172,17 @@
     animation: pulse-ring-live 2.5s ease-in-out infinite;
   }
 
+  /* Pulsing red glow on avatar wrappers — indicates a Bubble that is LIVE right now
+     (Bubble Room or expert session joinable). Distinct from the green unread pulse. */
+  @keyframes pulse-ring-live-red {
+    0%, 100% { box-shadow: 0 0 0 0 transparent; }
+    50%       { box-shadow: 0 0 0 4px color-mix(in srgb, var(--danger) 45%, transparent); }
+  }
+  .avatar-live-red {
+    border-radius: 9999px;
+    animation: pulse-ring-live-red 2s ease-in-out infinite;
+  }
+
   /* Iridescent focus ring for text inputs — replaces the flat primary-400 outline. */
   .focus-bubble:focus {
     outline: none;

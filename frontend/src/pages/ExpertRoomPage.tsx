@@ -5,7 +5,7 @@ import { useAuthStore } from '../store/authStore'
 import { useActiveRoomStore } from '../store/activeRoomStore'
 import { getRoomForEvent, type BubbleRoom } from '../api/room'
 import { getExpertSession, type ExpertSession } from '../api/expert'
-import { subscribeToExpertSessionWriters } from '../api/ws'
+import { subscribeToExpertSessionWriters, subscribeToRoomPresence } from '../api/ws'
 import { errorCode } from '../api/errors'
 import { ExpertRoomHeader } from './room/ExpertRoomHeader'
 import { RoomBentoShell } from './room/RoomBentoShell'
@@ -32,6 +32,8 @@ export default function ExpertRoomPage() {
   const [transientError, setTransientError] = useState<string | null>(null)
   /** Live-synced writer set so isWriter recomputes when the host grants/revokes. */
   const [writers, setWriters] = useState<Set<string>>(() => new Set())
+  /** Live count of users in the video call: seeded from the room, updated over WS. */
+  const [inCall, setInCall] = useState(0)
   /** Ticks every 30s so the videoOpen check + the header countdown stay current. */
   const [now, setNow] = useState(() => Date.now())
 
@@ -77,6 +79,13 @@ export default function ExpertRoomPage() {
     const id = setInterval(() => setNow(Date.now()), 30000)
     return () => clearInterval(id)
   }, [])
+
+  // Live "N in call" — seed from the room snapshot, then track the broadcast.
+  useEffect(() => {
+    if (!room) return
+    setInCall(room.participantCount)
+    return subscribeToRoomPresence(room.id, (e) => setInCall(e.count))
+  }, [room?.id])
 
   const videoOpensAtMs = room?.videoOpensAt ? new Date(room.videoOpensAt).getTime() : 0
   const videoOpen = !room?.videoOpensAt || now >= videoOpensAtMs
@@ -131,7 +140,7 @@ export default function ExpertRoomPage() {
 
   return (
     <RoomBentoShell
-      header={<ExpertRoomHeader session={session} room={room} />}
+      header={<ExpertRoomHeader session={session} room={room} inCall={inCall} />}
       errorBanner={transientError ? (
         <div className="px-4 py-2 text-xs bg-warning/15 text-warning border-b border-line">
           {transientError}

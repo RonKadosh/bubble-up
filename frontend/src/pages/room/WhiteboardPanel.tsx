@@ -2,7 +2,7 @@ import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ExcalidrawSnapshot } from '../../api/room'
 import { getWhiteboard, pushWhiteboard } from '../../api/room'
-import { subscribeToRoomWhiteboard, onWsConnect } from '../../api/ws'
+import { subscribeToRoomWhiteboard, publishToRoomWhiteboard, onWsConnect } from '../../api/ws'
 
 // Excalidraw v0.17+ ships its CSS as a separate file you must import or the
 // toolbar UI renders as bare HTML on top of the canvas (broken layout, raw
@@ -91,9 +91,13 @@ export function WhiteboardPanel({ roomId, isWriter = true }: Props) {
     if (pendingPushRef.current) window.clearTimeout(pendingPushRef.current)
     pendingPushRef.current = window.setTimeout(() => {
       pendingPushRef.current = null
-      pushWhiteboard(roomId, { elements: [...elements], appState: {} }).catch((e) => {
-        console.warn('[Whiteboard] push failed', e)
-      })
+      const snap = { elements: [...elements], appState: {} }
+      // Prefer the open WebSocket; fall back to HTTP only when it isn't connected.
+      if (!publishToRoomWhiteboard(roomId, snap)) {
+        pushWhiteboard(roomId, snap).catch((e) => {
+          console.warn('[Whiteboard] push failed', e)
+        })
+      }
     }, DEBOUNCE_MS)
   }
 

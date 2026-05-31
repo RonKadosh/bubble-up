@@ -11,7 +11,10 @@ import com.ronkadosh.bubbleup.common.error.AppException;
 import com.ronkadosh.bubbleup.common.error.ErrorCode;
 import com.ronkadosh.bubbleup.expert.internal.ExpertInternalService;
 import com.ronkadosh.bubbleup.groups.internal.GroupInternalService;
+import com.ronkadosh.bubbleup.groups.internal.dto.GroupSummary;
 import com.ronkadosh.bubbleup.room.api.dto.RoomResponse;
+import com.ronkadosh.bubbleup.room.internal.RoomInternalService;
+import com.ronkadosh.bubbleup.room.internal.dto.LiveRoomSummary;
 import com.ronkadosh.bubbleup.room.model.Room;
 import com.ronkadosh.bubbleup.room.model.RoomScope;
 import com.ronkadosh.bubbleup.room.persistence.RoomRepository;
@@ -21,7 +24,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -36,6 +43,8 @@ public class RoomQueryService {
     public static final Duration OPEN_BEFORE = GROUP_OPEN_BEFORE;
 
     private final RoomRepository roomRepository;
+    private final RoomInternalService roomInternalService;
+    private final RoomCallPresenceService roomCallPresenceService;
     private final GroupInternalService groupInternalService;
     private final ExpertInternalService expertInternalService;
     private final CalendarInternalService calendarInternalService;
@@ -44,6 +53,37 @@ public class RoomQueryService {
     private final JitsiProperties jitsiProperties;
     private final WhiteboardRelay whiteboardRelay;
     private final TimeProvider timeProvider;
+
+    /**
+     * Group IDs (among the caller's groups) that are "live" right now — i.e. have
+     * something joinable in their window. Two contributors, mirroring the dashboard
+     * feed's LIVE section:
+     *   - a GROUP study room in its join window (Bubble Room live), and
+     *   - an enrolled expert session starting within the next 15 min or running.
+     * Drives the red live marker on the My Bubbles sidebar.
+     */
+    @Transactional(readOnly = true)
+    public List<UUID> findLiveGroupIds(UUID userId) {
+        Set<UUID> groupIds = groupInternalService.getGroupsForUser(userId).stream()
+                .map(GroupSummary::id)
+                .collect(Collectors.toSet());
+        if (groupIds.isEmpty()) return List.of();
+
+        Instant now = timeProvider.now();
+        Set<UUID> live = new HashSet<>();
+        // Bubble Rooms (GROUP study sessions) live now.
+        for (LiveRoomSummary r : roomInternalService.findLiveGroupRoomsForGroups(groupIds, now)) {
+            live.add(r.groupId());
+        }
+        // Expert sessions joinable now (mirrors LiveExpertSessionSource's 15-min window).
+        Instant until = now.plus(GROUP_OPEN_BEFORE);
+        for (UUID groupId : groupIds) {
+            if (!expertInternalService.findActiveSessionsOverlappingForGroup(groupId, now, until).isEmpty()) {
+                live.add(groupId);
+            }
+        }
+        return List.copyOf(live);
+    }
 
     @Transactional(readOnly = true)
     public RoomResponse getRoom(UUID roomId, CurrentUser requester) {
@@ -104,7 +144,8 @@ public class RoomQueryService {
                     hardExpiry
             );
         }
-        return RoomResponse.of(room, event, jitsiProperties, jwt, videoOpensAt);
+        return RoomResponse.of(room, event, jitsiProperties, jwt, videoOpensAt,
+                roomCallPresenceService.count(room.getId()));
     }
 
     /**

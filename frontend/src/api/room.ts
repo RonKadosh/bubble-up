@@ -26,6 +26,8 @@ export interface BubbleRoom {
    * window opening (startsAt - 15min). EXPERT_SESSION rooms: startsAt.
    */
   videoOpensAt: string | null
+  /** How many users are currently in the video call — seeds the live "N in call" pill. */
+  participantCount: number
   createdAt: string
 }
 
@@ -41,6 +43,16 @@ export interface ExcalidrawSnapshot {
 
 export async function getRoom(roomId: string): Promise<BubbleRoom> {
   const res = await client.get<ApiSuccess<BubbleRoom>>(`/rooms/${roomId}`)
+  return res.data.data
+}
+
+/**
+ * Group IDs (among the caller's groups) that are live right now — a Bubble Room in
+ * its join window or a joinable enrolled expert session. Drives the red live marker
+ * on the My Bubbles sidebar.
+ */
+export async function getLiveGroupIds(): Promise<string[]> {
+  const res = await client.get<ApiSuccess<string[]>>('/rooms/live-groups')
   return res.data.data
 }
 
@@ -69,4 +81,10 @@ export interface RoomLifecycleEvent {
   event: 'ENDED' | 'EXTENDED'
   roomId: string
   endsAt: string | null
+}
+
+/** Call-presence count broadcast on /topic/rooms/{id}/presence as people join/leave. */
+export interface RoomPresenceEvent {
+  roomId: string
+  count: number
 }

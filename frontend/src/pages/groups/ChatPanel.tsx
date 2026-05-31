@@ -83,6 +83,8 @@ export function ChatPanel({ groupId, room, meId, isMember, onError, onUnreadChan
   const [loadingOlder, setLoadingOlder] = useState(false)
   const [showLinkPicker, setShowLinkPicker] = useState(false)
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  /** The consolidated "share & more" popover (calendar/file share + create poll). */
+  const [showComposerMenu, setShowComposerMenu] = useState(false)
   const editorRef = useRef<HTMLDivElement | null>(null)
   /** Currently composing a reply to this message — drives the reply preview bar above the input. */
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null)
@@ -550,29 +552,28 @@ export function ChatPanel({ groupId, room, meId, isMember, onError, onUnreadChan
       )}
       <form
         onSubmit={handleSend}
-        className="bg-surface border-t border-line px-5 py-3 flex gap-2 items-center"
+        className="bg-surface border-t border-line px-5 py-3 flex gap-2 items-center min-w-0"
       >
-        <IconButton
-          variant="cell"
-          size="md"
-          type="button"
-          onClick={() => setShowLinkPicker(true)}
-          aria-label={t('groups.chat.linkAria')}
-          title={t('groups.chat.linkTitle')}
-        >
-          🔗
-        </IconButton>
-        <IconButton
-          variant="cell"
-          size="md"
-          type="button"
-          onClick={() => setShowPollComposer(true)}
-          aria-label={t('groups.chat.poll.openComposer')}
-          title={t('groups.chat.poll.openComposer')}
-        >
-          📊
-        </IconButton>
-        <div className="relative">
+        <div className="relative shrink-0">
+          <IconButton
+            variant="cell"
+            size="md"
+            type="button"
+            onClick={() => setShowComposerMenu((v) => !v)}
+            aria-label={t('groups.chat.menu.openAria')}
+            title={t('groups.chat.menu.openTitle')}
+          >
+            ＋
+          </IconButton>
+          {showComposerMenu && (
+            <ComposerMenuPopover
+              onShareLink={() => { setShowComposerMenu(false); setShowLinkPicker(true) }}
+              onCreatePoll={() => { setShowComposerMenu(false); setShowPollComposer(true) }}
+              onClose={() => setShowComposerMenu(false)}
+            />
+          )}
+        </div>
+        <div className="relative shrink-0">
           <IconButton
             variant="cell"
             size="md"
@@ -591,7 +592,7 @@ export function ChatPanel({ groupId, room, meId, isMember, onError, onUnreadChan
             />
           )}
         </div>
-        <div className="relative flex-1">
+        <div className="relative flex-1 min-w-0">
           <div
             ref={editorRef}
             contentEditable
@@ -613,7 +614,7 @@ export function ChatPanel({ groupId, room, meId, isMember, onError, onUnreadChan
               const text = e.clipboardData.getData('text/plain')
               document.execCommand('insertText', false, text)
             }}
-            className="w-full border border-line bg-surface-muted text-base rounded-3xl px-5 py-2.5 text-sm focus-bubble transition-shadow min-h-[2.75rem] max-h-40 overflow-y-auto whitespace-pre-wrap break-words leading-snug outline-none"
+            className="w-full border border-line bg-surface-muted text-base rounded-3xl px-5 py-2.5 text-sm focus-bubble transition-shadow h-[2.75rem] overflow-y-auto whitespace-pre-wrap break-words leading-snug outline-none"
           />
           {!content && (
             <span
@@ -626,7 +627,7 @@ export function ChatPanel({ groupId, room, meId, isMember, onError, onUnreadChan
         </div>
         <button
           type="submit"
-          className="bg-brand-gradient-strong text-on-brand rounded-full w-12 h-12 flex items-center justify-center shadow-themed bubble-pop rtl:rotate-180"
+          className="bg-brand-gradient-strong text-on-brand rounded-full w-12 h-12 shrink-0 flex items-center justify-center shadow-themed bubble-pop rtl:rotate-180"
           aria-label={t('groups.chat.sendAria')}
         >
           ➤
@@ -845,7 +846,7 @@ function ChatMessageRow({
             mine={mine}
           />
         ) : (
-          <p className="leading-snug whitespace-pre-wrap">{renderBubbleContent(m.content)}</p>
+          <p className="leading-snug whitespace-pre-wrap break-words">{renderBubbleContent(m.content)}</p>
         )}
       </div>
       {!mine && actions}
@@ -1774,6 +1775,73 @@ function BubbleEmojiPopover({ onPick, onClose }: BubbleEmojiPopoverProps) {
           <BubbleEmoji def={def} className="w-7 h-7" />
         </button>
       ))}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Private: "share & more" popover above the input. Consolidates the share-a-link
+// and create-a-poll actions that used to be separate icon buttons in the
+// composer row (emoji stays standalone). Click-outside / Esc dismiss mirrors
+// BubbleEmojiPopover.
+// ---------------------------------------------------------------------------
+
+interface ComposerMenuPopoverProps {
+  onShareLink: () => void
+  onCreatePoll: () => void
+  onClose: () => void
+}
+
+function ComposerMenuPopover({ onShareLink, onCreatePoll, onClose }: ComposerMenuPopoverProps) {
+  const { t } = useTranslation()
+  const ref = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    function onDocMouseDown(e: MouseEvent) {
+      const node = ref.current
+      if (!node) return
+      // The trigger button shares the wrapping `.relative` div with the popover,
+      // so a click on it bubbles through that wrapper — walk up from the popover.
+      const wrapper = node.parentElement
+      if (wrapper && wrapper.contains(e.target as Node)) return
+      onClose()
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('mousedown', onDocMouseDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDocMouseDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [onClose])
+
+  return (
+    <div
+      ref={ref}
+      role="menu"
+      aria-label={t('groups.chat.menu.menuAria')}
+      className="absolute bottom-full mb-2 start-0 z-30 bg-surface border border-line rounded-2xl shadow-bubble p-1.5 flex flex-col gap-1 min-w-[12rem]"
+    >
+      <button
+        type="button"
+        role="menuitem"
+        onClick={onShareLink}
+        className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-surface-muted text-sm text-start bubble-pop"
+      >
+        <span aria-hidden>🔗</span>
+        <span>{t('groups.chat.menu.share')}</span>
+      </button>
+      <button
+        type="button"
+        role="menuitem"
+        onClick={onCreatePoll}
+        className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-surface-muted text-sm text-start bubble-pop"
+      >
+        <span aria-hidden>📊</span>
+        <span>{t('groups.chat.menu.poll')}</span>
+      </button>
     </div>
   )
 }

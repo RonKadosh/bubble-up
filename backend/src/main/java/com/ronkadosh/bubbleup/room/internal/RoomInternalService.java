@@ -58,4 +58,7 @@ public interface RoomInternalService {
      * "Live" section. Rooms with no resolvable calendar event are skipped.
      */
     List<LiveRoomSummary> findLiveGroupRoomsForGroups(Set<UUID> groupIds, Instant now);
+
+    /** How many users are currently in the room's video call (0 if none/unknown). */
+    int callParticipantCount(UUID roomId);
 }

@@ -35,6 +35,7 @@ public class RoomInternalServiceImpl implements RoomInternalService {
     private final CalendarInternalService calendarInternalService;
     private final WhiteboardRelay whiteboardRelay;
     private final WhiteboardWriterRegistry whiteboardWriterRegistry;
+    private final RoomCallPresenceService roomCallPresenceService;
 
     @Override
     @Transactional
@@ -158,9 +159,15 @@ public class RoomInternalServiceImpl implements RoomInternalService {
                     room.getGroupId(),
                     room.getCalendarEventId(),
                     event.startsAt(),
-                    event.endsAt()));
+                    event.endsAt(),
+                    roomCallPresenceService.count(room.getId())));
         }
         return out;
+    }
+
+    @Override
+    public int callParticipantCount(UUID roomId) {
+        return roomCallPresenceService.count(roomId);
     }
 
     private RoomSummary toSummary(Room room) {

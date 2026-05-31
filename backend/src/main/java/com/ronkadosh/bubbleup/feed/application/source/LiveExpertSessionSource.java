@@ -7,6 +7,8 @@ import com.ronkadosh.bubbleup.feed.application.FeedCtaType;
 import com.ronkadosh.bubbleup.feed.application.FeedSection;
 import com.ronkadosh.bubbleup.feed.application.spi.FeedContext;
 import com.ronkadosh.bubbleup.feed.application.spi.FeedSource;
+import com.ronkadosh.bubbleup.room.internal.RoomInternalService;
+import com.ronkadosh.bubbleup.room.internal.dto.RoomSummary;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -31,6 +33,7 @@ public class LiveExpertSessionSource implements FeedSource {
     private static final Duration JOIN_WINDOW = Duration.ofMinutes(15);
 
     private final ExpertInternalService expertInternalService;
+    private final RoomInternalService roomInternalService;
 
     @Override
     public FeedSection section() {
@@ -46,12 +49,17 @@ public class LiveExpertSessionSource implements FeedSource {
                     .findActiveSessionsOverlappingForGroup(groupId, ctx.now(), ctx.now().plus(JOIN_WINDOW));
             for (ExpertSessionSummary s : sessions) {
                 if (!seenSessions.add(s.id())) continue;   // a session shared by two of my groups shows once
+                int participants = roomInternalService.findRoomForExpertSession(s.id())
+                        .map(RoomSummary::id)
+                        .map(roomInternalService::callParticipantCount)
+                        .orElse(0);
                 out.add(FeedItemResponse.of("liveSession")
                         .group(groupId, ctx.groupName(groupId))
                         .title(s.title())
                         .ts(s.startsAt())
                         .startsAt(s.startsAt())
                         .endsAt(s.endsAt())
+                        .participantCount(participants)
                         .cta(FeedCtaType.JOIN_SESSION, s.id())
                         .build());
                 if (out.size() >= ctx.fetchLimit()) return out;

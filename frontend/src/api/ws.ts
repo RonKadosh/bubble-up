@@ -4,7 +4,7 @@ import { useAuthStore } from '../store/authStore'
 import type { ChatMessage, PinUpdate } from './chat'
 import type { PresenceEntry } from './presence'
 import type { PollUpdate } from './polls'
-import type { ExcalidrawSnapshot, RoomLifecycleEvent } from './room'
+import type { ExcalidrawSnapshot, RoomLifecycleEvent, RoomPresenceEvent } from './room'
 import type { WhiteboardWritersEvent } from './expert'
 
 interface TopicSubscription {
@@ -230,8 +230,43 @@ export function subscribeToRoomWhiteboard(roomId: string, handler: (snap: Excali
   return subscribeToTopic<ExcalidrawSnapshot>(`/topic/rooms/${roomId}/whiteboard`, handler)
 }
 
+/**
+ * Send a whiteboard snapshot over the open STOMP connection (write path), avoiding an
+ * HTTP POST per drawing burst. Auth + relay + broadcast happen server-side in the
+ * `/app/rooms/{id}/whiteboard` handler. Returns false when the client isn't connected
+ * so the caller can fall back to the HTTP endpoint.
+ */
+export function publishToRoomWhiteboard(roomId: string, snap: ExcalidrawSnapshot): boolean {
+  if (!stompClient?.connected) return false
+  stompClient.publish({
+    destination: `/app/rooms/${roomId}/whiteboard`,
+    body: JSON.stringify(snap),
+  })
+  return true
+}
+
 export function subscribeToRoomLifecycle(roomId: string, handler: (e: RoomLifecycleEvent) => void): () => void {
   return subscribeToTopic<RoomLifecycleEvent>(`/topic/rooms/${roomId}/lifecycle`, handler)
+}
+
+/** Live "N in call" count for a room (video-call presence). Distinct from
+ *  `subscribeToPresence(groupId)`, which is bubble-online presence. */
+export function subscribeToRoomPresence(roomId: string, handler: (e: RoomPresenceEvent) => void): () => void {
+  return subscribeToTopic<RoomPresenceEvent>(`/topic/rooms/${roomId}/presence`, handler)
+}
+
+/**
+ * Report that we joined/left a room's video call, off Jitsi's conference events.
+ * The backend updates its in-memory presence map and broadcasts the new count.
+ * No-op (returns false) when the STOMP client isn't connected.
+ */
+export function publishToRoomPresence(roomId: string, event: 'JOIN' | 'LEAVE'): boolean {
+  if (!stompClient?.connected) return false
+  stompClient.publish({
+    destination: `/app/rooms/${roomId}/presence`,
+    body: JSON.stringify({ event }),
+  })
+  return true
 }
 
 export function subscribeToExpertSessionWriters(

@@ -157,11 +157,13 @@
     "live": {
       "startsIn": "מתחיל בעוד {{count}} דק׳",
       "liveNow": "משודר עכשיו",
-      "roomLiveNow": "חדר לימוד פעיל עכשיו"
+      "roomLiveNow": "חדר לימוד פעיל עכשיו",
+      "roomParticipants": "{{count}} כבר בחדר"
     },
     "cta": {
       "joinSession": "הצטרף למפגש",
       "joinRoom": "הצטרף לחדר",
+      "hopIn": "הצטרף",
       "viewEvent": "צפה באירוע",
       "viewBubble": "צפה בבועה",
       "open": "פתח"
@@ -217,6 +219,7 @@
     "ownerBadge": "בעלים",
     "publicBadge": "ציבורי",
     "privateBadge": "פרטי",
+    "liveNow": "משודר עכשיו",
     "tabs": {
       "chat": "צ׳אט",
       "calendar": "יומן",
@@ -259,6 +262,13 @@
       "sendAria": "שלח",
       "linkAria": "שיתוף קישור",
       "linkTitle": "שתף אירוע יומן",
+      "menu": {
+        "openAria": "שיתוף ועוד",
+        "openTitle": "שיתוף ועוד",
+        "menuAria": "תפריט שיתוף",
+        "share": "שיתוף אירוע יומן או קובץ",
+        "poll": "יצירת סקר"
+      },
       "emoji": {
         "pickerAria": "פתח בורר בועות-אימוג'י",
         "pickerTitle": "בועות אימוג'י",
@@ -323,6 +333,7 @@
       "noEvents": "אין אירועים החודש.",
       "editEvent": "עריכת אירוע",
       "newEventHeading": "אירוע חדש",
+      "lockedNote": "האירוע כבר התחיל — הוא נעול ולא ניתן עוד לעריכה.",
       "start": "התחלה",
       "end": "סיום",
       "descriptionPlaceholder": "תיאור (לא חובה)",
@@ -389,6 +400,8 @@
       "notMember": "אינך חבר/ה בבועה זו.",
       "loadEvents": "טעינת האירועים נכשלה.",
       "invalidTimeRange": "זמן הסיום חייב להיות לאחר זמן ההתחלה.",
+      "eventInPast": "לא ניתן לקבוע אירוע בעבר.",
+      "eventLocked": "האירוע כבר התחיל ולא ניתן עוד לעריכה.",
       "notEventAuthor": "ניתן לערוך רק אירועים שיצרת.",
       "notEventAuthorDelete": "ניתן למחוק רק אירועים שיצרת.",
       "saveEvent": "שמירת האירוע נכשלה.",
@@ -417,11 +430,13 @@
       "jitsiNotConfigured": "שירות הווידאו לא מוגדר בשרת.",
       "extendRoom": "הארכת המפגש נכשלה.",
       "scheduleConflictExpert": "הבועה שלך כבר רשומה למפגש מומחה באותו זמן.",
+      "scheduleConflictLive": "לבועה שלך כבר יש מפגש חי או מתוזמן באותו זמן. רק בועה חיה אחת יכולה לפעול בכל רגע.",
       "extendConflictExpert": "אי אפשר להאריך — הבועה שלך רשומה למפגש מומחה בסלוט הבא."
     }
   },
   "room": {
-    "title": "חדר הבועה",
+    "title": "בועה חיה",
+    "inCall": "{{count}} בשיחה",
     "openBubble": "↗ פתח את הבועה",
     "openBubbleTitle": "פתיחת בועת הלמידה (השיחה ממשיכה, הווידאו מתכווץ לתצוגת תמונה-בתוך-תמונה)",
     "leave": "עזיבה",
@@ -453,9 +468,9 @@
       "hAgo_other": "לפני {{count}} שעות"
     },
     "pip": {
-      "label": "🎥 חדר הבועה",
-      "return": "↗ חזרה לחדר",
-      "returnAria": "חזרה לחדר הבועה"
+      "label": "🎥 בועה חיה",
+      "return": "↗ חזרה לבועה החיה",
+      "returnAria": "חזרה לבועה החיה"
     },
     "liveBanner": {
       "fallback": "מפגש משודר",
@@ -466,13 +481,14 @@
       "join": "הצטרפות"
     },
     "schedule": {
-      "title": "🎥 תזמון חדר",
+      "button": "🎥 בועה בשידור חי",
+      "title": "🎥 בועה בשידור חי",
       "start": "התחלה",
       "duration": "משך",
-      "explainer": "חברים יכולים להיכנס לחדר עד 15 דקות לפני זמן ההתחלה. הוא נסגר אוטומטית בסיום.",
+      "explainer": "חברים יכולים להצטרף לבועה החיה עד 15 דקות לפני זמן ההתחלה. היא נסגרת אוטומטית בסיום.",
       "defaultDescription": "מפגש לימוד — {{groupName}}",
-      "submit": "תזמון",
-      "submitting": "מתזמן…",
+      "submit": "צאו לשידור",
+      "submitting": "יוצא לשידור…",
       "duration30": "30 דקות",
       "duration45": "45 דקות",
       "duration60": "שעה",

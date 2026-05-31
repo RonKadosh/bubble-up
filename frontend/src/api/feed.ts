@@ -44,6 +44,8 @@ export interface FeedItem {
   unreadCount?: number
   matchPercent?: number
   memberCount?: number
+  /** Users currently in the live room's video call (liveGroupRoom / liveSession). */
+  participantCount?: number
   cta?: FeedCta
 }
 

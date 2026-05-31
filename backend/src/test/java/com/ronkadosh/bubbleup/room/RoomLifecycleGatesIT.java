@@ -1,10 +1,13 @@
 package com.ronkadosh.bubbleup.room;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.ronkadosh.bubbleup.calendar.model.CalendarEvent;
+import com.ronkadosh.bubbleup.calendar.model.CalendarEventType;
+import com.ronkadosh.bubbleup.calendar.model.CalendarOwnerType;
 import com.ronkadosh.bubbleup.calendar.persistence.CalendarEventRepository;
 import com.ronkadosh.bubbleup.chat.model.ChatMessageType;
 import com.ronkadosh.bubbleup.chat.persistence.ChatMessageRepository;
 import com.ronkadosh.bubbleup.room.application.RoomLifecycleScheduler;
+import com.ronkadosh.bubbleup.room.internal.RoomInternalService;
 import com.ronkadosh.bubbleup.room.model.Room;
 import com.ronkadosh.bubbleup.room.persistence.RoomRepository;
 import com.ronkadosh.bubbleup.support.IntegrationTest;
@@ -40,6 +43,7 @@ class RoomLifecycleGatesIT extends IntegrationTest {
     @Autowired CalendarEventRepository eventRepository;
     @Autowired ChatMessageRepository chatMessageRepository;
     @Autowired RoomLifecycleScheduler scheduler;
+    @Autowired RoomInternalService roomInternalService;
 
     // ---------- Time-window gate ----------
 
@@ -212,18 +216,25 @@ class RoomLifecycleGatesIT extends IntegrationTest {
         return UUID.fromString(om.readTree(json).get("data").get("id").asText());
     }
 
-    private UUID createEvent(AuthedUser u, UUID groupId, String type, Instant from, Instant to) throws Exception {
-        String body = String.format(
-                "{\"ownerType\":\"GROUP\",\"ownerId\":\"%s\",\"eventType\":\"%s\",\"startsAt\":\"%s\",\"endsAt\":\"%s\"}",
-                groupId, type, from, to);
-        String json = mvc.perform(post("/api/calendars/events")
-                        .with(bearer(u))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(body))
-                .andExpect(status().isCreated())
-                .andReturn().getResponse().getContentAsString();
-        JsonNode data = om.readTree(json).get("data");
-        return UUID.fromString(data.get("id").asText());
+    /**
+     * Seeds a STUDY_SESSION event + its room directly via the repository / room
+     * internal service, then returns the event id. We can't use the create
+     * endpoint here: it now rejects past starts (EVENT_STARTS_IN_PAST), and these
+     * lifecycle gates need rooms whose event window is already in progress or
+     * past — which in production arise from an event created earlier whose time
+     * has since passed, exactly what seeding-via-repo models.
+     */
+    private UUID createEvent(AuthedUser u, UUID groupId, String type, Instant from, Instant to) {
+        UUID eventId = eventRepository.save(CalendarEvent.builder()
+                .ownerType(CalendarOwnerType.GROUP)
+                .ownerId(groupId)
+                .createdBy(u.id())
+                .eventType(CalendarEventType.valueOf(type))
+                .startsAt(from)
+                .endsAt(to)
+                .build()).getId();
+        roomInternalService.createRoomForCalendarEvent(eventId, u.id());
+        return eventId;
     }
 
     @SuppressWarnings("unused")
