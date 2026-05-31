@@ -13,6 +13,7 @@
     "share": "Share",
     "loading": "Loading…",
     "comingSoon": "Coming soon.",
+    "retry": "Try again",
     "you": "you",
     "close": "Close"
   },
@@ -111,7 +112,9 @@
       "title": "My Courses",
       "empty": "No courses yet — enroll below to start.",
       "openCourse": "Open course →",
-      "unenrollAria": "Unenroll"
+      "unenrollAria": "Unenroll",
+      "scrollPrev": "Previous courses",
+      "scrollNext": "More courses"
     },
     "detail": {
       "code": "Code",
@@ -138,6 +141,47 @@
       "affiliationRequired": "Set your university and department in your profile first.",
       "enrollGeneric": "Could not enroll. Please try again.",
       "unenrollGeneric": "Could not unenroll. Please try again."
+    }
+  },
+  "course": {
+    "back": "Academy",
+    "enrolledBadge": "Enrolled",
+    "credits": "{{count}} credits",
+    "gated": {
+      "title": "Enroll to step inside",
+      "body": "Study groups, shared materials, and the course feed open up once you join for this term.",
+      "enroll": "Enroll for current term",
+      "enrolling": "Enrolling…"
+    },
+    "info": {
+      "title": "Course materials",
+      "body": "Syllabus, instructors, and shared resources land here.",
+      "badge": "Soon"
+    },
+    "groups": {
+      "title": "Study groups",
+      "subtitle": "This term · {{count}} open",
+      "search": "Search by name",
+      "allVisibilities": "All groups",
+      "public": "Public",
+      "private": "Private",
+      "joinedOnly": "Joined only",
+      "members_one": "{{count}} member",
+      "members_other": "{{count}} members",
+      "join": "Join",
+      "joined": "Joined",
+      "open": "Open in My Bubbles",
+      "emptyTitle": "No groups yet",
+      "emptyBody": "Be the first — spin one up from the My Bubbles hub.",
+      "emptyFiltered": "No groups match these filters."
+    },
+    "error": {
+      "load": "Couldn't load this course. Please try again.",
+      "join": "Couldn't join that group. Please try again.",
+      "noCurrentOffering": "This course is not offered in the current term.",
+      "noCurrentTerm": "No active term right now — try again later.",
+      "affiliationRequired": "Set your university and department in your profile first.",
+      "enrollGeneric": "Could not enroll. Please try again."
     }
   },
   "dashboard": {

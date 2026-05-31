@@ -150,6 +150,11 @@
   .bg-success { background-color: var(--success); }
   .bg-line { background-color: var(--border); }
   .bg-danger-soft { background-color: color-mix(in srgb, var(--danger) 12%, transparent); }
+  /* Warning banner tints — paired with .text-warning. Used by inline action
+     errors on the Academy + Course flows. (Tailwind's `warning/NN` slash-opacity
+     doesn't exist here: `warning` isn't a theme color, only a hand-rolled utility.) */
+  .bg-warning-soft { background-color: color-mix(in srgb, var(--warning) 15%, transparent); }
+  .border-warning-soft { border-color: color-mix(in srgb, var(--warning) 35%, transparent); }
 
   /* Bubble iridescence — magenta + moss-green for borders and accents. */
   .border-bubble-magenta { border-color: var(--bubble-magenta); }
@@ -238,6 +243,10 @@
 
   .shadow-themed { box-shadow: var(--shadow); }
   .shadow-bubble { box-shadow: var(--shadow-bubble); }
+
+  /* Hide the scrollbar on horizontal card sliders while keeping scroll/swipe. */
+  .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
 
   /* Brand gradients: light-blue → silver. The signature Bubble.up look. */
   .bg-brand-gradient {

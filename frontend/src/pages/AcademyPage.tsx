@@ -1,9 +1,25 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Card } from '../components/Card'
 import { Button, IconButton } from '../components/Button'
-import { Avatar } from '../components/Avatar'
+import { gradientFor } from '../components/Avatar'
+import {
+  AtomIcon,
+  BeakerIcon,
+  BookIcon,
+  BulbIcon,
+  CapIcon,
+  ChevronIcon,
+  CloseIcon,
+  CodeIcon,
+  GlobeIcon,
+  LeafIcon,
+  PaletteIcon,
+  ScaleIcon,
+  SigmaIcon,
+  TrendIcon,
+} from '../components/Icons'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import {
   Course,
@@ -202,20 +218,24 @@ export default function AcademyPage() {
 
   return (
     <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-      <header className="px-4 tablet:px-6 desktop:px-8 pt-6 tablet:pt-8 pb-4 shrink-0">
-        <div className="flex items-center gap-3 mb-1">
-          <div className="w-2.5 h-2.5 rounded-full bg-bubble-magenta shadow-sm" />
-          <div className="w-1.5 h-1.5 rounded-full bg-bubble-green" />
-          <h1 className="text-2xl font-bold text-base">{t('academy.title')}</h1>
-          {university && (
-            <span className="ms-2 text-xs px-2 py-0.5 rounded-md bg-surface-muted text-secondary border border-line">
-              {university.shortCode}
+      <header className="px-4 tablet:px-6 desktop:px-8 pt-6 tablet:pt-8 pb-4 shrink-0 flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2.5 mb-1">
+            <span className="flex items-center gap-1" aria-hidden="true">
+              <span className="w-2.5 h-2.5 rounded-full bg-bubble-magenta shadow-sm" />
+              <span className="w-1.5 h-1.5 rounded-full bg-bubble-green" />
             </span>
-          )}
+            <h1 className="text-2xl tablet:text-3xl font-bold tracking-tight text-base">{t('academy.title')}</h1>
+            {university && (
+              <span className="ms-1 text-xs font-medium px-2 py-0.5 rounded-md bg-surface-muted text-secondary border border-line">
+                {university.shortCode}
+              </span>
+            )}
+          </div>
+          <p className="text-sm text-muted">{t('academy.subtitle')}</p>
         </div>
-        <p className="text-sm text-muted ms-[1.6rem]">{t('academy.subtitle')}</p>
 
-        <div className="mt-4 ms-[1.6rem] flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 shrink-0">
           <label className="text-xs text-muted" htmlFor="academy-term">
             {t('academy.term.label')}
           </label>
@@ -242,7 +262,7 @@ export default function AcademyPage() {
         )}
 
         {actionError && (
-          <div className="mb-3 ms-[1.6rem] px-4 py-2 text-xs bg-warning/15 text-warning border border-warning/30 rounded-xl flex items-center gap-3">
+          <div className="mb-4 px-4 py-2 text-xs bg-warning-soft text-warning border border-warning-soft rounded-xl flex items-center gap-3">
             <span className="flex-1">{actionError}</span>
             <button onClick={() => setActionError(null)} className="underline shrink-0">
               {t('common.close')}
@@ -258,11 +278,11 @@ export default function AcademyPage() {
           busy={enrollBusy}
         />
 
-        <section className="mt-4">
-          <h2 className="text-sm font-semibold text-secondary mb-2 ms-[1.6rem]">
+        <section className="mt-6">
+          <h2 className="text-sm font-semibold text-secondary mb-2">
             {t('academy.browseHeading')}
           </h2>
-          <div className="h-[42rem] tablet:h-[36rem] grid grid-cols-1 tablet:grid-cols-[16rem_minmax(0,20rem)_minmax(0,1fr)] gap-3 min-h-0">
+          <div className="h-[clamp(28rem,60vh,40rem)] grid grid-cols-1 tablet:grid-cols-[16rem_minmax(0,20rem)_minmax(0,1fr)] gap-3 min-h-0">
             <Pane title={t('academy.column.departments')}>
               {loadingShell ? (
                 <PaneSkeleton />
@@ -303,9 +323,10 @@ export default function AcademyPage() {
                         <div className="text-xs font-mono text-muted">{c.code}</div>
                         <div className="font-medium truncate">{c.name}</div>
                         {enrolledCourseIds.has(c.id) && (
-                          <div className="text-[10px] text-primary-600 font-semibold mt-0.5">
+                          <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-md bg-bubble-green-soft text-bubble-green">
+                            <span className="w-1.5 h-1.5 rounded-full bg-success" />
                             {t('academy.enrolledBadge')}
-                          </div>
+                          </span>
                         )}
                       </RowButton>
                     </li>
@@ -366,23 +387,83 @@ function MyCoursesSection({
   busy: boolean
 }) {
   const { t } = useTranslation()
+  const scrollerRef = useRef<HTMLUListElement>(null)
+  const [canPrev, setCanPrev] = useState(false)
+  const [canNext, setCanNext] = useState(false)
+
+  const updateArrows = useCallback(() => {
+    const el = scrollerRef.current
+    if (!el) return
+    const max = el.scrollWidth - el.clientWidth
+    const pos = Math.abs(el.scrollLeft)
+    setCanPrev(pos > 4)
+    setCanNext(pos < max - 4)
+  }, [])
+
+  useEffect(() => {
+    updateArrows()
+    window.addEventListener('resize', updateArrows)
+    return () => window.removeEventListener('resize', updateArrows)
+  }, [updateArrows, enrollments.length])
+
+  function scrollByDir(dir: 1 | -1) {
+    const el = scrollerRef.current
+    if (!el) return
+    const rtl = getComputedStyle(el).direction === 'rtl'
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    el.scrollBy({
+      left: el.clientWidth * 0.8 * dir * (rtl ? -1 : 1),
+      behavior: reduce ? 'auto' : 'smooth',
+    })
+  }
+
+  const showArrows = canPrev || canNext
+
   return (
-    <section className="ms-[1.6rem]">
-      <div className="flex items-baseline gap-2 mb-2">
-        <h2 className="text-sm font-semibold text-secondary">{t('academy.myCourses.title')}</h2>
-        {currentTerm && (
-          <span className="text-xs text-muted">· {currentTerm.name} {currentTerm.academicYear}</span>
+    <section>
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <div className="flex items-baseline gap-2 min-w-0">
+          <h2 className="text-base font-bold text-base">{t('academy.myCourses.title')}</h2>
+          {currentTerm && (
+            <span className="text-xs text-muted truncate">· {currentTerm.name} {currentTerm.academicYear}</span>
+          )}
+        </div>
+        {showArrows && (
+          <div className="hidden tablet:flex items-center gap-1.5 shrink-0">
+            <IconButton
+              size="sm"
+              variant="secondary"
+              onClick={() => scrollByDir(-1)}
+              disabled={!canPrev}
+              aria-label={t('academy.myCourses.scrollPrev')}
+            >
+              <ChevronIcon className="w-4 h-4 rtl:rotate-180" />
+            </IconButton>
+            <IconButton
+              size="sm"
+              variant="secondary"
+              onClick={() => scrollByDir(1)}
+              disabled={!canNext}
+              aria-label={t('academy.myCourses.scrollNext')}
+            >
+              <ChevronIcon className="w-4 h-4 rotate-180 rtl:rotate-0" />
+            </IconButton>
+          </div>
         )}
       </div>
       {enrollments.length === 0 ? (
-        <p className="text-sm text-muted mb-3">{t('academy.myCourses.empty')}</p>
+        <p className="text-sm text-muted">{t('academy.myCourses.empty')}</p>
       ) : (
-        <ul className="grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-3 gap-2 mb-3">
+        <ul
+          ref={scrollerRef}
+          onScroll={updateArrows}
+          className="flex gap-3 overflow-x-auto snap-x snap-mandatory no-scrollbar -mx-2 px-2 -my-2 py-3"
+        >
           {enrollments.map((e) => (
-            <li key={e.id}>
-              <Card size="md" className="p-3 flex flex-col h-full">
+            <li key={e.id} className="snap-start shrink-0 w-[15rem] tablet:w-64">
+              <Card size="md" interactive className="p-4 flex flex-col h-full">
                 <div className="flex items-start gap-3">
-                  <Avatar id={e.courseId ?? e.id} name={e.courseCode ?? '?'} size="md" />
+                  <CourseGlyph id={e.courseId ?? e.id} label={e.courseName ?? e.courseCode ?? ''} />
                   <button
                     type="button"
                     onClick={() => e.courseId && onOpenCourse(e.courseId)}
@@ -390,7 +471,12 @@ function MyCoursesSection({
                     className="text-start flex-1 min-w-0"
                   >
                     <div className="text-xs font-mono text-muted">{e.courseCode ?? '—'}</div>
-                    <div className="font-medium text-base truncate">{e.courseName ?? '—'}</div>
+                    <div className="font-semibold text-base leading-snug line-clamp-2">{e.courseName ?? '—'}</div>
+                    {e.termCode && (
+                      <span className="inline-block mt-1.5 text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-surface-muted text-secondary border border-line">
+                        {e.termCode}
+                      </span>
+                    )}
                   </button>
                   <IconButton
                     size="sm"
@@ -399,10 +485,10 @@ function MyCoursesSection({
                     aria-label={t('academy.myCourses.unenrollAria')}
                     className="text-muted hover:text-danger shrink-0"
                   >
-                    ✕
+                    <CloseIcon className="w-4 h-4" />
                   </IconButton>
                 </div>
-                <div className="mt-2 flex justify-end">
+                <div className="mt-3 flex justify-end">
                   <Button
                     size="xs"
                     onClick={() => e.courseId && onOpenCourse(e.courseId)}
@@ -417,6 +503,50 @@ function MyCoursesSection({
         </ul>
       )}
     </section>
+  )
+}
+
+/**
+ * A course "tile": brand-gradient square (stable per course id) stamped with a
+ * subject glyph instead of a meaningless code initial ("3" for course 372…).
+ * The glyph is matched from the course name when we recognise the subject, and
+ * otherwise falls back to a stable pick so each course keeps the same face.
+ */
+type GlyphIcon = React.ComponentType<{ className?: string }>
+
+const SUBJECT_GLYPHS: Array<[RegExp, GlyphIcon]> = [
+  [/math|calcul|algebra|linear|geometr|statist|probab|discrete/i, SigmaIcon],
+  [/program|comput|software|algorithm|data struct|coding|cyber|web|network/i, CodeIcon],
+  [/physic|mechanic|quantum|electro|thermo|optic/i, AtomIcon],
+  [/chem|organic|molecul|reaction/i, BeakerIcon],
+  [/bio|genet|ecolog|life scien|botan|zoolog|medic|anatom/i, LeafIcon],
+  [/econ|financ|account|market|business|manage|entrepre/i, TrendIcon],
+  [/law|legal|justice|constitut|ethic/i, ScaleIcon],
+  [/art|design|paint|sculpt|visual|music|architect/i, PaletteIcon],
+  [/histor|philosoph|literat|languag|linguist|writ|cultur/i, BookIcon],
+  [/geograph|geolog|environ|climat|earth|astronom/i, GlobeIcon],
+  [/psych|cognit|neuro|social|educat/i, BulbIcon],
+]
+
+const FALLBACK_GLYPHS: GlyphIcon[] = [CapIcon, AtomIcon, BookIcon, SigmaIcon, GlobeIcon, BulbIcon]
+
+function glyphFor(label: string, id: string): GlyphIcon {
+  const text = label.toLowerCase()
+  for (const [re, Icon] of SUBJECT_GLYPHS) if (re.test(text)) return Icon
+  let h = 0
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0
+  return FALLBACK_GLYPHS[Math.abs(h) % FALLBACK_GLYPHS.length]
+}
+
+function CourseGlyph({ id, label }: { id: string; label: string }) {
+  const Icon = glyphFor(label, id)
+  return (
+    <div
+      className={`w-12 h-12 rounded-2xl ${gradientFor(id)} ring-on-brand flex items-center justify-center text-white shrink-0 shadow-sm`}
+      aria-hidden="true"
+    >
+      <Icon className="w-6 h-6" />
+    </div>
   )
 }
 
@@ -466,8 +596,11 @@ function RowButton({
 
 function PaneEmpty({ label }: { label: string }) {
   return (
-    <div className="h-full flex items-center justify-center text-sm text-muted px-4 text-center">
-      {label}
+    <div className="h-full flex flex-col items-center justify-center gap-2.5 text-sm text-muted px-6 text-center">
+      <span className="w-10 h-10 rounded-2xl bg-surface-muted text-muted flex items-center justify-center">
+        <CapIcon className="w-5 h-5" />
+      </span>
+      <span className="max-w-[24ch] leading-relaxed">{label}</span>
     </div>
   )
 }
