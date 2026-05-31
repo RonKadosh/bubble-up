@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import {
   acceptBookingRequest,
   cancelExpertSession,
@@ -13,6 +13,9 @@ import {
   type ExpertSession,
 } from '../../api/expert'
 import { ScheduleExpertSessionModal } from './ScheduleExpertSessionModal'
+import { Card } from '../../components/Card'
+import { Button } from '../../components/Button'
+import { ConfirmDialog } from '../../components/ConfirmDialog'
 
 function formatRange(startsAt: string | null, endsAt: string | null): string {
   if (!startsAt || !endsAt) return ''
@@ -36,6 +39,9 @@ export default function ExpertDashboardPage() {
   const [loading, setLoading] = useState(true)
   const [showSchedule, setShowSchedule] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
+  /** session id awaiting cancel confirmation, or null. */
+  const [pendingCancel, setPendingCancel] = useState<string | null>(null)
+  const [cancelBusy, setCancelBusy] = useState(false)
 
   async function refresh() {
     try {
@@ -60,13 +66,16 @@ export default function ExpertDashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  async function handleCancel(sessionId: string) {
-    if (!window.confirm(t('expert.dashboard.confirmCancel'))) return
+  async function performCancel(sessionId: string) {
+    setCancelBusy(true)
     try {
       await cancelExpertSession(sessionId)
       await refresh()
     } catch {
       setActionError(t('expert.dashboard.errorCancel'))
+    } finally {
+      setCancelBusy(false)
+      setPendingCancel(null)
     }
   }
 
@@ -100,7 +109,7 @@ export default function ExpertDashboardPage() {
       <div className="max-w-4xl mx-auto space-y-6">
 
         {/* Profile snippet */}
-        <section className="bg-surface rounded-2xl shadow-themed border border-line p-5 flex items-start justify-between gap-4">
+        <Card size="md" className="p-5 flex items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <h1 className="text-lg font-bold text-base">{profile?.headline}</h1>
@@ -125,18 +134,20 @@ export default function ExpertDashboardPage() {
               </div>
             )}
           </div>
-          <Link
-            to="/expert/profile/edit"
-            className="shrink-0 px-3 py-1.5 rounded-full text-xs text-base hover:bg-surface-hover transition border border-line"
+          <Button
+            variant="secondary"
+            size="xs"
+            className="shrink-0"
+            onClick={() => navigate('/expert/profile/edit')}
           >
             {t('expert.dashboard.editProfile')}
-          </Link>
-        </section>
+          </Button>
+        </Card>
 
         {actionError && (
-          <div className="px-4 py-2 text-xs bg-warning/15 text-warning border border-warning/30 rounded-lg">
-            {actionError}
-            <button onClick={() => setActionError(null)} className="ml-3 underline">dismiss</button>
+          <div className="px-4 py-2 text-xs bg-warning/15 text-warning border border-warning/30 rounded-xl flex items-center gap-3">
+            <span className="flex-1">{actionError}</span>
+            <button onClick={() => setActionError(null)} className="underline shrink-0">{t('common.close')}</button>
           </div>
         )}
 
@@ -152,27 +163,23 @@ export default function ExpertDashboardPage() {
           ) : (
             <ul className="space-y-2">
               {pendingRequests.map((r) => (
-                <li key={r.id} className="bg-surface rounded-xl border border-line p-4 flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm text-base">
-                      {new Date(r.proposedStartsAt).toLocaleString()} → {new Date(r.proposedEndsAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                <li key={r.id}>
+                  <Card size="md" className="p-4 flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm text-base">
+                        {new Date(r.proposedStartsAt).toLocaleString()} → {new Date(r.proposedEndsAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                      {r.message && <p className="text-sm text-muted mt-1 truncate">{r.message}</p>}
                     </div>
-                    {r.message && <p className="text-sm text-muted mt-1 truncate">{r.message}</p>}
-                  </div>
-                  <div className="shrink-0 flex gap-2">
-                    <button
-                      onClick={() => handleReject(r.id)}
-                      className="px-3 py-1.5 rounded-full text-xs text-base hover:bg-surface-hover transition border border-line"
-                    >
-                      {t('expert.dashboard.reject')}
-                    </button>
-                    <button
-                      onClick={() => handleAccept(r.id)}
-                      className="px-3 py-1.5 rounded-full bg-primary-600 text-white text-xs font-medium hover:bg-primary-700 transition"
-                    >
-                      {t('expert.dashboard.accept')}
-                    </button>
-                  </div>
+                    <div className="shrink-0 flex gap-2">
+                      <Button variant="secondary" size="xs" onClick={() => handleReject(r.id)}>
+                        {t('expert.dashboard.reject')}
+                      </Button>
+                      <Button size="xs" onClick={() => handleAccept(r.id)}>
+                        {t('expert.dashboard.accept')}
+                      </Button>
+                    </div>
+                  </Card>
                 </li>
               ))}
             </ul>
@@ -183,56 +190,48 @@ export default function ExpertDashboardPage() {
         <section>
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-lg font-bold text-base">{t('expert.dashboard.sessionsHeading')}</h2>
-            <button
-              type="button"
-              onClick={() => setShowSchedule(true)}
-              className="px-4 py-2 rounded-full bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 transition"
-            >
+            <Button size="sm" onClick={() => setShowSchedule(true)}>
               {t('expert.dashboard.schedule')}
-            </button>
+            </Button>
           </div>
           {activeSessions.length === 0 ? (
             <p className="text-sm text-muted">{t('expert.dashboard.noSessions')}</p>
           ) : (
             <ul className="space-y-2">
               {activeSessions.map((s) => (
-                <li key={s.id} className="bg-surface rounded-xl border border-line p-4 flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-medium text-base truncate">{s.title}</span>
-                      <span
-                        className={`text-xs px-2 py-0.5 rounded-full ${
-                          s.status === 'OPEN'
-                            ? 'bg-success/15 text-success'
-                            : s.status === 'FULL'
-                            ? 'bg-primary-600/15 text-primary-600'
-                            : 'bg-surface-hover text-muted'
-                        }`}
-                      >
-                        {s.status}
-                      </span>
-                      <span className="text-xs text-muted">
-                        {t('expert.dashboard.groupsCount', { count: s.enrolledGroupCount, capacity: s.capacity })}
-                      </span>
+                <li key={s.id}>
+                  <Card size="md" className="p-4 flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-sm font-medium text-base truncate">{s.title}</span>
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded-full ${
+                            s.status === 'OPEN'
+                              ? 'bg-success/15 text-success'
+                              : s.status === 'FULL'
+                              ? 'bg-primary-600/15 text-primary-600'
+                              : 'bg-surface-hover text-muted'
+                          }`}
+                        >
+                          {s.status}
+                        </span>
+                        <span className="text-xs text-muted">
+                          {t('expert.dashboard.groupsCount', { count: s.enrolledGroupCount, capacity: s.capacity })}
+                        </span>
+                      </div>
+                      <div className="text-xs text-muted">{formatRange(s.startsAt, s.endsAt)}</div>
                     </div>
-                    <div className="text-xs text-muted">{formatRange(s.startsAt, s.endsAt)}</div>
-                  </div>
-                  <div className="shrink-0 flex gap-2">
-                    {s.roomId && (
-                      <Link
-                        to={`/sessions/${s.id}`}
-                        className="px-3 py-1.5 rounded-full bg-primary-600 text-white text-xs font-medium hover:bg-primary-700 transition"
-                      >
-                        {t('expert.dashboard.enter')}
-                      </Link>
-                    )}
-                    <button
-                      onClick={() => handleCancel(s.id)}
-                      className="px-3 py-1.5 rounded-full text-xs text-base hover:bg-surface-hover transition border border-line"
-                    >
-                      {t('expert.dashboard.cancel')}
-                    </button>
-                  </div>
+                    <div className="shrink-0 flex gap-2">
+                      {s.roomId && (
+                        <Button size="xs" onClick={() => navigate(`/sessions/${s.id}`)}>
+                          {t('expert.dashboard.enter')}
+                        </Button>
+                      )}
+                      <Button variant="secondary" size="xs" onClick={() => setPendingCancel(s.id)}>
+                        {t('expert.dashboard.cancel')}
+                      </Button>
+                    </div>
+                  </Card>
                 </li>
               ))}
             </ul>
@@ -244,6 +243,17 @@ export default function ExpertDashboardPage() {
         open={showSchedule}
         onClose={() => setShowSchedule(false)}
         onCreated={refresh}
+      />
+
+      <ConfirmDialog
+        open={pendingCancel !== null}
+        title={t('expert.dashboard.confirmCancelTitle')}
+        body={t('expert.dashboard.confirmCancel')}
+        confirmLabel={t('expert.dashboard.confirmCancelConfirm')}
+        cancelLabel={t('common.cancel')}
+        busy={cancelBusy}
+        onConfirm={() => pendingCancel && performCancel(pendingCancel)}
+        onClose={() => setPendingCancel(null)}
       />
     </div>
   )

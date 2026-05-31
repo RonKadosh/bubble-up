@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { getMyExpertProfile, updateMyExpertProfile } from '../../api/expert'
+import { Card } from '../../components/Card'
+import { Button } from '../../components/Button'
 
 export default function ExpertProfileEditPage() {
   const { t } = useTranslation()
@@ -53,8 +55,13 @@ export default function ExpertProfileEditPage() {
   return (
     <div className="flex-1 overflow-y-auto p-8">
       <div className="max-w-2xl mx-auto">
-        <h1 className="text-2xl font-bold text-base mb-6">{t('expert.profileEdit.title')}</h1>
-        <form onSubmit={handleSubmit} className="bg-surface rounded-2xl shadow-themed border border-line p-6 space-y-4">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-2.5 h-2.5 rounded-full bg-bubble-magenta shadow-sm" />
+          <div className="w-1.5 h-1.5 rounded-full bg-bubble-green" />
+          <h1 className="text-2xl font-bold text-base">{t('expert.profileEdit.title')}</h1>
+        </div>
+        <Card size="lg" className="p-6">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <label className="block">
             <span className="block text-sm font-medium text-base mb-1">{t('expert.profileEdit.headlineLabel')}</span>
             <input
@@ -87,22 +94,15 @@ export default function ExpertProfileEditPage() {
           </label>
           {error && <div className="text-sm text-warning">{error}</div>}
           <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => navigate('/expert')}
-              className="px-4 py-2 rounded-full text-sm text-base hover:bg-surface-hover transition"
-            >
+            <Button type="button" variant="ghost" size="sm" onClick={() => navigate('/expert')}>
               {t('expert.profileEdit.cancel')}
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="px-5 py-2 rounded-full bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 disabled:bg-primary-300 transition"
-            >
+            </Button>
+            <Button type="submit" size="sm" disabled={submitting}>
               {submitting ? t('expert.profileEdit.saving') : t('expert.profileEdit.save')}
-            </button>
+            </Button>
           </div>
         </form>
+        </Card>
       </div>
     </div>
   )

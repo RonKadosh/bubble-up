@@ -12,6 +12,9 @@ import { errorCode } from '../api/errors'
 import { getGroups, type Group } from '../api/groups'
 import { useAuthStore } from '../store/authStore'
 import { RequestBookingModal } from './expert/RequestBookingModal'
+import { Card } from '../components/Card'
+import { Button } from '../components/Button'
+import { Avatar } from '../components/Avatar'
 
 /**
  * `/experts/:userId` — public view of an expert: headline / bio / tags + the
@@ -92,40 +95,45 @@ export default function ExpertPublicProfilePage() {
   return (
     <div className="flex-1 overflow-y-auto p-6 sm:p-8">
       <div className="max-w-3xl mx-auto space-y-6">
-        <section className="bg-surface rounded-2xl shadow-themed border border-line p-6">
-          <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-2xl font-bold text-base">{profile.headline}</h1>
-            {profile.verificationStatus === 'VERIFIED' && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-success/15 text-success">{t('expert.publicProfile.verifiedBadge')}</span>
-            )}
+        <Card size="lg" className="p-6">
+          <div className="flex items-start gap-4">
+            <Avatar id={profile.userId} name={profile.headline} size="lg" ring />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <h1 className="text-2xl font-bold text-base">{profile.headline}</h1>
+                {profile.verificationStatus === 'VERIFIED' && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-success/15 text-success">{t('expert.publicProfile.verifiedBadge')}</span>
+                )}
+              </div>
+              {profile.bio && <p className="text-sm text-base mt-2 whitespace-pre-wrap">{profile.bio}</p>}
+              {profile.expertiseTags.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-3">
+                  {profile.expertiseTags.map((tag) => (
+                    <span key={tag} className="text-xs px-2 py-0.5 rounded-full bg-surface-hover text-base">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {!viewingSelf && (
+                <div className="mt-5 flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => { setActionError(null); setActionInfo(null); setShowBooking(true) }}
+                    disabled={myGroups.length === 0}
+                    title={myGroups.length === 0 ? t('expert.publicProfile.needGroupToBook') : ''}
+                  >
+                    {t('expert.publicProfile.requestButton')}
+                  </Button>
+                </div>
+              )}
+
+              {actionInfo && <div className="mt-3 text-sm text-success">{actionInfo}</div>}
+              {actionError && <div className="mt-3 text-sm text-warning">{actionError}</div>}
+            </div>
           </div>
-          {profile.bio && <p className="text-sm text-base mt-2 whitespace-pre-wrap">{profile.bio}</p>}
-          {profile.expertiseTags.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-3">
-              {profile.expertiseTags.map((tag) => (
-                <span key={tag} className="text-xs px-2 py-0.5 rounded-full bg-surface-hover text-base">
-                  {tag}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {!viewingSelf && (
-            <div className="mt-5 flex flex-wrap gap-2">
-              <button
-                onClick={() => { setActionError(null); setActionInfo(null); setShowBooking(true) }}
-                disabled={myGroups.length === 0}
-                title={myGroups.length === 0 ? t('expert.publicProfile.needGroupToBook') : ''}
-                className="px-4 py-2 rounded-full bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 disabled:bg-primary-300 transition"
-              >
-                {t('expert.publicProfile.requestButton')}
-              </button>
-            </div>
-          )}
-
-          {actionInfo && <div className="mt-3 text-sm text-success">{actionInfo}</div>}
-          {actionError && <div className="mt-3 text-sm text-warning">{actionError}</div>}
-        </section>
+        </Card>
 
         {viewingSelf && ownSessions && (
           <section>
@@ -135,28 +143,30 @@ export default function ExpertPublicProfilePage() {
             ) : (
               <ul className="space-y-2">
                 {ownSessions.filter((s) => s.status === 'OPEN').map((s) => (
-                  <li key={s.id} className="bg-surface rounded-xl border border-line p-4">
-                    <div className="text-sm font-medium text-base">{s.title}</div>
-                    {s.startsAt && (
-                      <div className="text-xs text-muted">
-                        {new Date(s.startsAt).toLocaleString()} · {t('expert.publicProfile.groupsCount', { count: s.enrolledGroupCount, capacity: s.capacity })}
-                      </div>
-                    )}
-                    {myGroups.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        <span className="text-xs text-muted mr-1 self-center">{t('expert.publicProfile.enrollLabel')}</span>
-                        {myGroups.map((g) => (
-                          <button
-                            key={g.id}
-                            type="button"
-                            onClick={() => handleEnroll(s.id, g.id)}
-                            className="text-xs px-2 py-1 rounded-full border border-line text-base hover:bg-surface-hover transition"
-                          >
-                            {g.name}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                  <li key={s.id}>
+                    <Card size="md" className="p-4">
+                      <div className="text-sm font-medium text-base">{s.title}</div>
+                      {s.startsAt && (
+                        <div className="text-xs text-muted">
+                          {new Date(s.startsAt).toLocaleString()} · {t('expert.publicProfile.groupsCount', { count: s.enrolledGroupCount, capacity: s.capacity })}
+                        </div>
+                      )}
+                      {myGroups.length > 0 && (
+                        <div className="mt-2 flex flex-wrap items-center gap-1">
+                          <span className="text-xs text-muted me-1">{t('expert.publicProfile.enrollLabel')}</span>
+                          {myGroups.map((g) => (
+                            <Button
+                              key={g.id}
+                              variant="secondary"
+                              size="xs"
+                              onClick={() => handleEnroll(s.id, g.id)}
+                            >
+                              {g.name}
+                            </Button>
+                          ))}
+                        </div>
+                      )}
+                    </Card>
                   </li>
                 ))}
               </ul>

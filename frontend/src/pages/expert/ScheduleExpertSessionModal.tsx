@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { createExpertSession } from '../../api/expert'
 import { errorCode } from '../../api/errors'
+import { Button } from '../../components/Button'
 
 interface Props {
   open: boolean
@@ -68,15 +69,18 @@ export function ScheduleExpertSessionModal({ open, onClose, onCreated }: Props) 
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 tablet:p-4"
       onClick={onClose}
     >
       <div
-        className="bg-surface rounded-2xl shadow-bubble border border-line p-6 w-full max-w-lg"
+        className="bg-surface rounded-3xl shadow-bubble border border-line w-full max-w-lg max-h-[85vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-lg font-bold text-base mb-4">{t('expert.schedule.title')}</h2>
-        <form onSubmit={handleSubmit} className="space-y-3">
+        <div className="px-5 py-3 border-b border-line flex items-center justify-between shrink-0">
+          <h3 className="font-semibold text-base">{t('expert.schedule.title')}</h3>
+          <button type="button" onClick={onClose} aria-label={t('common.close')} className="text-muted hover:text-secondary text-xl leading-none">×</button>
+        </div>
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 space-y-3">
           <label className="block">
             <span className="block text-sm font-medium text-base mb-1">{t('expert.schedule.titleLabel')} *</span>
             <input
@@ -134,20 +138,12 @@ export function ScheduleExpertSessionModal({ open, onClose, onCreated }: Props) 
           </label>
           {error && <div className="text-sm text-warning">{error}</div>}
           <div className="flex justify-end gap-2 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 rounded-full text-sm text-base hover:bg-surface-hover transition"
-            >
+            <Button type="button" variant="ghost" size="sm" onClick={onClose}>
               {t('expert.schedule.cancel')}
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="px-5 py-2 rounded-full bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 disabled:bg-primary-300 transition"
-            >
+            </Button>
+            <Button type="submit" size="sm" disabled={submitting}>
               {submitting ? t('expert.schedule.creating') : t('expert.schedule.create')}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

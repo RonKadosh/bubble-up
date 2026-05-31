@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Card } from '../components/Card'
+import { Button, IconButton } from '../components/Button'
+import { Avatar } from '../components/Avatar'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 import {
   Course,
   Department,
@@ -22,7 +25,7 @@ import {
   listMyCurrentEnrollments,
   unenroll as unenrollApi,
 } from '../api/enrollment'
-import { errorCode } from '../api/errors'
+import { describeError } from '../api/errors'
 
 const TERM_ALL = '__all__'
 
@@ -43,11 +46,14 @@ export default function AcademyPage() {
 
   const [myEnrollments, setMyEnrollments] = useState<Enrollment[]>([])
   const [enrollBusy, setEnrollBusy] = useState(false)
+  /** enrollment id awaiting unenroll confirmation, or null. */
+  const [pendingUnenroll, setPendingUnenroll] = useState<string | null>(null)
 
   const [loadingShell, setLoadingShell] = useState(true)
   const [loadingCourses, setLoadingCourses] = useState(false)
   const [loadingDetail, setLoadingDetail] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
 
   const termsById = useMemo(() => {
     const m = new Map<string, Term>()
@@ -165,35 +171,32 @@ export default function AcademyPage() {
 
   async function handleEnroll(courseId: string) {
     setEnrollBusy(true)
+    setActionError(null)
     try {
       await enrollInCourse(courseId)
       await refreshEnrollments()
     } catch (e) {
-      const code = errorCode(e)
-      alert(
-        code === 'ENROLLMENT_NO_CURRENT_OFFERING'
-          ? 'This course is not offered in the current term.'
-          : code === 'CURRENT_TERM_NOT_FOUND'
-          ? 'No active term right now — try again later.'
-          : code === 'USER_AFFILIATION_REQUIRED'
-          ? 'Set your university and department in your profile first.'
-          : 'Could not enroll. Please try again.'
-      )
+      setActionError(describeError(e, t, {
+        ENROLLMENT_NO_CURRENT_OFFERING: 'academy.error.noCurrentOffering',
+        CURRENT_TERM_NOT_FOUND: 'academy.error.noCurrentTerm',
+        USER_AFFILIATION_REQUIRED: 'academy.error.affiliationRequired',
+      }, 'academy.error.enrollGeneric'))
     } finally {
       setEnrollBusy(false)
     }
   }
 
-  async function handleUnenroll(enrollmentId: string) {
-    if (!confirm('Unenroll from this course?')) return
+  async function performUnenroll(enrollmentId: string) {
     setEnrollBusy(true)
+    setActionError(null)
     try {
       await unenrollApi(enrollmentId)
       await refreshEnrollments()
-    } catch {
-      alert('Could not unenroll. Please try again.')
+    } catch (e) {
+      setActionError(describeError(e, t, {}, 'academy.error.unenrollGeneric'))
     } finally {
       setEnrollBusy(false)
+      setPendingUnenroll(null)
     }
   }
 
@@ -238,17 +241,26 @@ export default function AcademyPage() {
           <p className="mb-3 text-sm text-danger">{error}</p>
         )}
 
+        {actionError && (
+          <div className="mb-3 ms-[1.6rem] px-4 py-2 text-xs bg-warning/15 text-warning border border-warning/30 rounded-xl flex items-center gap-3">
+            <span className="flex-1">{actionError}</span>
+            <button onClick={() => setActionError(null)} className="underline shrink-0">
+              {t('common.close')}
+            </button>
+          </div>
+        )}
+
         <MyCoursesSection
           enrollments={myEnrollments}
           currentTerm={currentTerm}
           onOpenCourse={(id) => navigate(`/courses/${id}`)}
-          onUnenroll={handleUnenroll}
+          onUnenroll={(id) => setPendingUnenroll(id)}
           busy={enrollBusy}
         />
 
         <section className="mt-4">
           <h2 className="text-sm font-semibold text-secondary mb-2 ms-[1.6rem]">
-            Browse & enroll
+            {t('academy.browseHeading')}
           </h2>
           <div className="h-[42rem] tablet:h-[36rem] grid grid-cols-1 tablet:grid-cols-[16rem_minmax(0,20rem)_minmax(0,1fr)] gap-3 min-h-0">
             <Pane title={t('academy.column.departments')}>
@@ -291,8 +303,8 @@ export default function AcademyPage() {
                         <div className="text-xs font-mono text-muted">{c.code}</div>
                         <div className="font-medium truncate">{c.name}</div>
                         {enrolledCourseIds.has(c.id) && (
-                          <div className="text-[10px] text-indigo-600 font-medium mt-0.5">
-                            ENROLLED
+                          <div className="text-[10px] text-primary-600 font-semibold mt-0.5">
+                            {t('academy.enrolledBadge')}
                           </div>
                         )}
                       </RowButton>
@@ -317,7 +329,7 @@ export default function AcademyPage() {
                   enrollment={enrolledCourseIds.get(course.id) ?? null}
                   enrollBusy={enrollBusy}
                   onEnroll={() => handleEnroll(course.id)}
-                  onUnenroll={(eid) => handleUnenroll(eid)}
+                  onUnenroll={(eid) => setPendingUnenroll(eid)}
                   onOpenCourse={() => navigate(`/courses/${course.id}`)}
                 />
               )}
@@ -325,6 +337,17 @@ export default function AcademyPage() {
           </div>
         </section>
       </div>
+
+      <ConfirmDialog
+        open={pendingUnenroll !== null}
+        title={t('academy.confirmUnenroll.title')}
+        body={t('academy.confirmUnenroll.body')}
+        confirmLabel={t('academy.confirmUnenroll.confirm')}
+        cancelLabel={t('common.cancel')}
+        busy={enrollBusy}
+        onConfirm={() => pendingUnenroll && performUnenroll(pendingUnenroll)}
+        onClose={() => setPendingUnenroll(null)}
+      />
     </div>
   )
 }
@@ -342,52 +365,53 @@ function MyCoursesSection({
   onUnenroll: (enrollmentId: string) => void
   busy: boolean
 }) {
+  const { t } = useTranslation()
   return (
     <section className="ms-[1.6rem]">
       <div className="flex items-baseline gap-2 mb-2">
-        <h2 className="text-sm font-semibold text-secondary">My Courses</h2>
+        <h2 className="text-sm font-semibold text-secondary">{t('academy.myCourses.title')}</h2>
         {currentTerm && (
           <span className="text-xs text-muted">· {currentTerm.name} {currentTerm.academicYear}</span>
         )}
       </div>
       {enrollments.length === 0 ? (
-        <p className="text-sm text-muted mb-3">No courses yet — enroll below to start.</p>
+        <p className="text-sm text-muted mb-3">{t('academy.myCourses.empty')}</p>
       ) : (
         <ul className="grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-3 gap-2 mb-3">
           {enrollments.map((e) => (
-            <li key={e.id}
-              className="rounded-2xl border border-line bg-surface p-3 flex flex-col"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <button
-                  type="button"
-                  onClick={() => e.courseId && onOpenCourse(e.courseId)}
-                  disabled={!e.courseId}
-                  className="text-start flex-1 min-w-0"
-                >
-                  <div className="text-xs font-mono text-muted">{e.courseCode ?? '—'}</div>
-                  <div className="font-medium text-base truncate">{e.courseName ?? '—'}</div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onUnenroll(e.id)}
-                  disabled={busy}
-                  className="text-xs text-danger hover:underline shrink-0"
-                  aria-label="Unenroll"
-                >
-                  ✕
-                </button>
-              </div>
-              <div className="mt-2 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => e.courseId && onOpenCourse(e.courseId)}
-                  disabled={!e.courseId}
-                  className="text-xs px-3 py-1 rounded-full bg-indigo-600 text-on-brand"
-                >
-                  Open course →
-                </button>
-              </div>
+            <li key={e.id}>
+              <Card size="md" className="p-3 flex flex-col h-full">
+                <div className="flex items-start gap-3">
+                  <Avatar id={e.courseId ?? e.id} name={e.courseCode ?? '?'} size="md" />
+                  <button
+                    type="button"
+                    onClick={() => e.courseId && onOpenCourse(e.courseId)}
+                    disabled={!e.courseId}
+                    className="text-start flex-1 min-w-0"
+                  >
+                    <div className="text-xs font-mono text-muted">{e.courseCode ?? '—'}</div>
+                    <div className="font-medium text-base truncate">{e.courseName ?? '—'}</div>
+                  </button>
+                  <IconButton
+                    size="sm"
+                    onClick={() => onUnenroll(e.id)}
+                    disabled={busy}
+                    aria-label={t('academy.myCourses.unenrollAria')}
+                    className="text-muted hover:text-danger shrink-0"
+                  >
+                    ✕
+                  </IconButton>
+                </div>
+                <div className="mt-2 flex justify-end">
+                  <Button
+                    size="xs"
+                    onClick={() => e.courseId && onOpenCourse(e.courseId)}
+                    disabled={!e.courseId}
+                  >
+                    {t('academy.myCourses.openCourse')}
+                  </Button>
+                </div>
+              </Card>
             </li>
           ))}
         </ul>
@@ -416,15 +440,24 @@ function RowButton({
   onClick: () => void
   children: React.ReactNode
 }) {
+  if (selected) {
+    return (
+      <div className="ring-iridescent p-[1.5px] rounded-xl shadow-themed">
+        <button
+          type="button"
+          onClick={onClick}
+          className="w-full text-start px-3 py-2 bg-surface rounded-[calc(0.9rem-2px)] text-base"
+        >
+          {children}
+        </button>
+      </div>
+    )
+  }
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`w-full text-start px-3 py-2 rounded-xl transition border ${
-        selected
-          ? 'bg-primary-50 text-primary-700 border-primary-100'
-          : 'bg-transparent border-transparent hover:bg-surface-muted'
-      }`}
+      className="w-full text-start px-3 py-2 rounded-xl border border-transparent bubble-pop transition hover:bg-surface-muted"
     >
       {children}
     </button>
@@ -498,34 +531,29 @@ function CourseDetail({
       <div className="flex flex-wrap gap-2">
         {isEnrolled ? (
           <>
-            <button
-              type="button"
-              onClick={onOpenCourse}
-              className="px-4 py-2 rounded-full bg-indigo-600 text-on-brand text-sm font-medium"
-            >
-              Open course →
-            </button>
-            <button
-              type="button"
+            <Button size="sm" onClick={onOpenCourse}>
+              {t('academy.detail.openCourse')}
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
               onClick={() => enrollment && onUnenroll(enrollment.id)}
               disabled={enrollBusy}
-              className="px-4 py-2 rounded-full border border-line text-sm text-danger hover:bg-surface-muted disabled:opacity-60"
             >
-              Unenroll
-            </button>
+              {t('academy.detail.unenroll')}
+            </Button>
           </>
         ) : hasCurrentOffering ? (
-          <button
-            type="button"
-            onClick={onEnroll}
-            disabled={enrollBusy}
-            className="px-4 py-2 rounded-full bg-indigo-600 text-on-brand text-sm font-medium disabled:opacity-60"
-          >
-            {enrollBusy ? 'Enrolling…' : `Enroll${currentTerm ? ` for ${currentTerm.code}` : ''}`}
-          </button>
+          <Button size="sm" onClick={onEnroll} disabled={enrollBusy}>
+            {enrollBusy
+              ? t('academy.detail.enrolling')
+              : currentTerm
+              ? t('academy.detail.enrollForTerm', { code: currentTerm.code })
+              : t('academy.detail.enroll')}
+          </Button>
         ) : (
-          <span className="text-xs text-muted px-2 py-1 rounded-full border border-line bg-surface-muted">
-            Not offered this term
+          <span className="text-xs text-muted px-3 py-1.5 rounded-full border border-line bg-surface-muted">
+            {t('academy.detail.notOffered')}
           </span>
         )}
       </div>
