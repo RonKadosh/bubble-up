@@ -1,14 +1,31 @@
 package com.ronkadosh.bubbleup.chat.internal;
 
 import com.ronkadosh.bubbleup.chat.internal.dto.ChatRoomSummary;
+import com.ronkadosh.bubbleup.chat.internal.dto.GroupUnreadSummary;
+import com.ronkadosh.bubbleup.chat.internal.dto.MembershipEventItem;
 import com.ronkadosh.bubbleup.chat.model.ChatLinkTargetType;
 import com.ronkadosh.bubbleup.chat.model.ChatMessageType;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 public interface ChatInternalService {
     List<ChatRoomSummary> getRoomsForGroup(UUID groupId);
+
+    /**
+     * Per-group unread rollup for {@code userId} across the given groups' rooms.
+     * Only groups with unread messages are returned. Drives the "Bubble activity"
+     * feed section's unread cards.
+     */
+    List<GroupUnreadSummary> getUnreadSummaryForGroups(UUID userId, Set<UUID> groupIds);
+
+    /**
+     * Recent membership signals (SYSTEM_JOIN / SYSTEM_LEAVE), newest first, across
+     * the given groups' rooms, capped at {@code limit}. Drives the "Bubble activity"
+     * feed section.
+     */
+    List<MembershipEventItem> findRecentMembershipEventsForGroups(Set<UUID> groupIds, int limit);
     boolean roomExists(UUID roomId);
     /**
      * Returns the room's group id, or {@code null} for expert-session rooms.

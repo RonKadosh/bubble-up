@@ -3,11 +3,13 @@ package com.ronkadosh.bubbleup.groups.application;
 import com.ronkadosh.bubbleup.catalog.internal.CatalogInternalService;
 import com.ronkadosh.bubbleup.catalog.internal.dto.OfferingRef;
 import com.ronkadosh.bubbleup.groups.internal.GroupInternalService;
+import com.ronkadosh.bubbleup.groups.internal.dto.GroupFileActivityItem;
 import com.ronkadosh.bubbleup.groups.internal.dto.GroupSummary;
 import com.ronkadosh.bubbleup.groups.model.GroupMember;
 import com.ronkadosh.bubbleup.groups.model.GroupVisibility;
 import com.ronkadosh.bubbleup.groups.model.MembershipRole;
 import com.ronkadosh.bubbleup.groups.model.StudyGroup;
+import com.ronkadosh.bubbleup.groups.persistence.GroupFileRepository;
 import com.ronkadosh.bubbleup.groups.persistence.GroupMemberRepository;
 import com.ronkadosh.bubbleup.groups.persistence.GroupRepository;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +30,7 @@ public class GroupInternalServiceImpl implements GroupInternalService {
 
     private final GroupRepository groupRepository;
     private final GroupMemberRepository memberRepository;
+    private final GroupFileRepository groupFileRepository;
     private final CatalogInternalService catalogInternalService;
 
     @Override
@@ -79,6 +82,23 @@ public class GroupInternalServiceImpl implements GroupInternalService {
     public List<UUID> getMemberUserIds(UUID groupId) {
         return memberRepository.findAllByGroupId(groupId).stream()
                 .map(GroupMember::getUserId)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<GroupFileActivityItem> findRecentFilesForGroups(Set<UUID> groupIds, int limit) {
+        if (groupIds == null || groupIds.isEmpty()) return List.of();
+        return groupFileRepository
+                .findByGroupIdInOrderByUploadedAtDesc(groupIds, PageRequest.of(0, limit)).stream()
+                .map(f -> new GroupFileActivityItem(
+                        f.getId(),
+                        f.getGroupId(),
+                        f.getUploaderId(),
+                        f.getOriginalName(),
+                        f.getContentType(),
+                        f.getSizeBytes(),
+                        f.getUploadedAt()))
                 .toList();
     }
 

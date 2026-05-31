@@ -10,6 +10,7 @@ import com.ronkadosh.bubbleup.common.error.AppException;
 import com.ronkadosh.bubbleup.common.error.ErrorCode;
 import com.ronkadosh.bubbleup.expert.application.WhiteboardWriterRegistry;
 import com.ronkadosh.bubbleup.room.internal.RoomInternalService;
+import com.ronkadosh.bubbleup.room.internal.dto.LiveRoomSummary;
 import com.ronkadosh.bubbleup.room.internal.dto.RoomSummary;
 import com.ronkadosh.bubbleup.room.model.Room;
 import com.ronkadosh.bubbleup.room.model.RoomScope;
@@ -18,7 +19,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -133,6 +138,29 @@ public class RoomInternalServiceImpl implements RoomInternalService {
     @Transactional(readOnly = true)
     public boolean roomExists(UUID roomId) {
         return roomRepository.existsById(roomId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<LiveRoomSummary> findLiveGroupRoomsForGroups(Set<UUID> groupIds, Instant now) {
+        if (groupIds == null || groupIds.isEmpty()) return List.of();
+        List<LiveRoomSummary> out = new ArrayList<>();
+        for (Room room : roomRepository.findAllByGroupIdInAndEndedAtIsNull(groupIds)) {
+            if (room.getScope() != RoomScope.GROUP || room.getCalendarEventId() == null) continue;
+            CalendarEventSummary event =
+                    calendarInternalService.findById(room.getCalendarEventId()).orElse(null);
+            if (event == null) continue;
+            // Joinable window: [startsAt - GROUP_OPEN_BEFORE, endsAt]. Mirrors RoomQueryService.requireOpen.
+            Instant opensAt = event.startsAt().minus(RoomQueryService.GROUP_OPEN_BEFORE);
+            if (now.isBefore(opensAt) || now.isAfter(event.endsAt())) continue;
+            out.add(new LiveRoomSummary(
+                    room.getId(),
+                    room.getGroupId(),
+                    room.getCalendarEventId(),
+                    event.startsAt(),
+                    event.endsAt()));
+        }
+        return out;
     }
 
     private RoomSummary toSummary(Room room) {

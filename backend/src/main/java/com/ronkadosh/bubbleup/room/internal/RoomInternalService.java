@@ -1,8 +1,12 @@
 package com.ronkadosh.bubbleup.room.internal;
 
+import com.ronkadosh.bubbleup.room.internal.dto.LiveRoomSummary;
 import com.ronkadosh.bubbleup.room.internal.dto.RoomSummary;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -46,4 +50,12 @@ public interface RoomInternalService {
     Optional<RoomSummary> findById(UUID roomId);
 
     boolean roomExists(UUID roomId);
+
+    /**
+     * Live group study rooms (scope=GROUP, not yet closed) among the given groups
+     * that are joinable at {@code now} — i.e. within the room's open window
+     * {@code [event.startsAt - 15min, event.endsAt]}. Drives the dashboard feed's
+     * "Live" section. Rooms with no resolvable calendar event are skipped.
+     */
+    List<LiveRoomSummary> findLiveGroupRoomsForGroups(Set<UUID> groupIds, Instant now);
 }

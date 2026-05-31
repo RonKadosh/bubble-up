@@ -1,127 +1,141 @@
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { ReactNode, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Group, getGroups } from '../api/groups'
-import { ChatMessage, getMessages, getRooms } from '../api/chat'
-import { CalendarEvent, CalendarEventType, listEvents } from '../api/calendar'
-import { GroupFile, formatBytes, getFiles } from '../api/files'
-import { useAuthStore } from '../store/authStore'
+import { Feed, FeedCta, FeedItem, FeedItemKind, FeedSectionKey, getFeed } from '../api/feed'
 import { Avatar } from '../components/Avatar'
 import { Card } from '../components/Card'
-import { LinkButton } from '../components/Button'
-import { renderBubbleContent } from '../components/BubbleEmojis'
+import { Button, LinkButton } from '../components/Button'
 
-function relTime(iso: string): string {
-  const ms = Date.now() - new Date(iso).getTime()
-  if (ms < 0) return 'just now'
-  const s = Math.floor(ms / 1000)
-  if (s < 60) return 'just now'
-  const m = Math.floor(s / 60)
-  if (m < 60) return `${m}m`
-  const h = Math.floor(m / 60)
-  if (h < 24) return `${h}h`
-  const d = Math.floor(h / 24)
-  if (d < 7) return `${d}d`
-  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+type Translate = (key: string, opts?: Record<string, unknown>) => string
+
+// ---------------------------------------------------------------------------
+// Section presentation
+// ---------------------------------------------------------------------------
+
+const SECTION_META: Record<FeedSectionKey, { icon: string; labelKey: string }> = {
+  LIVE: { icon: '⚡', labelKey: 'dashboard.section.live' },
+  UPCOMING: { icon: '📅', labelKey: 'dashboard.section.upcoming' },
+  ACTIVITY: { icon: '👥', labelKey: 'dashboard.section.activity' },
+  DISCOVERY: { icon: '🫧', labelKey: 'dashboard.section.discovery' },
 }
 
-const TYPE_BADGE: Record<CalendarEventType, string> = {
-  STUDY_SESSION: 'bg-primary-100 text-primary-700',
-  EXPERT_SESSION: 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-200',
-  MEETING: 'bg-primary-50 text-primary-700',
-  DEADLINE: 'bg-danger-soft text-danger',
-  EXAM: 'bg-amber-100 text-amber-800',
-  ASSIGNMENT: 'bg-primary-200 text-primary-800',
-  REMINDER: 'bg-surface-muted text-secondary',
-  OTHER: 'bg-surface-muted text-secondary',
+// ---------------------------------------------------------------------------
+// Per-kind renderers. Adding a new feed item kind = one entry here + one type
+// in the FeedItemKind union (and a backend FeedSource). The card shell, avatar,
+// and CTA routing are shared below.
+// ---------------------------------------------------------------------------
+
+interface Rendered {
+  body: ReactNode
+  /** When set (and the item carries a cta), a CTA button is shown with this label. */
+  ctaLabel?: string
 }
 
-type FeedItem =
-  | { kind: 'message'; ts: string; group: Group; message: ChatMessage }
-  | { kind: 'system'; ts: string; group: Group; message: ChatMessage }
-  | { kind: 'event'; ts: string; group: Group; event: CalendarEvent }
-  | { kind: 'file'; ts: string; group: Group; file: GroupFile }
+const ITEM_RENDERERS: Record<FeedItemKind, (item: FeedItem, t: Translate) => Rendered> = {
+  liveSession: (item, t) => ({
+    body: (
+      <>
+        <p className="font-semibold text-base truncate">🎥 {item.title}</p>
+        <p className="text-sm text-muted truncate">
+          {liveLabel(item, t)}{item.groupName ? ` · ${item.groupName}` : ''}
+        </p>
+      </>
+    ),
+    ctaLabel: t('dashboard.cta.joinSession'),
+  }),
 
-const GROUP_LIMIT = 8
-const MSG_PER_ROOM = 15
-const FEED_SIZE = 40
+  liveGroupRoom: (item, t) => ({
+    body: (
+      <>
+        <p className="font-semibold text-base truncate">🟢 {t('dashboard.live.roomLiveNow')}</p>
+        <p className="text-sm text-muted truncate">{item.groupName}</p>
+      </>
+    ),
+    ctaLabel: t('dashboard.cta.joinRoom'),
+  }),
+
+  upcomingEvent: (item, t) => ({
+    body: (
+      <>
+        <p className="font-semibold text-base truncate">📅 {item.title || humanizeType(item.eventType)}</p>
+        <p className="text-sm text-muted truncate">
+          {fmtEventRange(item.startsAt, item.endsAt)}{item.groupName ? ` · ${item.groupName}` : ''}
+        </p>
+      </>
+    ),
+    ctaLabel: t('dashboard.cta.viewEvent'),
+  }),
+
+  memberJoin: (item, t) => ({
+    body: (
+      <p className="text-sm text-secondary">
+        🫧 {t('dashboard.membership.joined', {
+          name: item.subtitle || t('dashboard.membership.someone'),
+          bubble: item.groupName,
+        })}
+      </p>
+    ),
+  }),
+
+  memberLeave: (item, t) => ({
+    body: (
+      <p className="text-sm text-secondary">
+        👋 {t('dashboard.membership.left', {
+          name: item.subtitle || t('dashboard.membership.someone'),
+          bubble: item.groupName,
+        })}
+      </p>
+    ),
+  }),
+
+  unread: (item, t) => ({
+    body: (
+      <p className="text-sm text-secondary">
+        💬 {t('dashboard.unread.count', { count: item.unreadCount ?? 0, bubble: item.groupName })}
+      </p>
+    ),
+    ctaLabel: t('dashboard.cta.open'),
+  }),
+
+  file: (item, t) => ({
+    body: (
+      <p className="text-sm text-secondary truncate">
+        📄 {t('dashboard.file.uploaded', { name: item.title, bubble: item.groupName })}
+      </p>
+    ),
+  }),
+
+  recommendation: (item, t) => ({
+    body: (
+      <>
+        <p className="text-xs text-muted">{t('dashboard.discovery.recommended')}</p>
+        <p className="font-semibold text-base truncate">🫧 {item.title}</p>
+        <p className="text-sm text-muted truncate">{discoveryMeta(item, t)}</p>
+      </>
+    ),
+    ctaLabel: t('dashboard.cta.viewBubble'),
+  }),
+}
 
 export default function DashboardPage() {
   const { t } = useTranslation()
-  const user = useAuthStore((s) => s.user)
-  const [items, setItems] = useState<FeedItem[]>([])
-  const [groupsCount, setGroupsCount] = useState(0)
+  const [feed, setFeed] = useState<Feed | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let cancelled = false
     ;(async () => {
       try {
-        const [groups, rooms] = await Promise.all([getGroups(), getRooms()])
-        if (cancelled) return
-        setGroupsCount(groups.length)
-
-        const groupById = new Map(groups.map((g) => [g.id, g] as const))
-        const scopedRooms = rooms
-          .filter((r) => r.groupId !== null && groupById.has(r.groupId))
-          .slice(0, GROUP_LIMIT)
-        const scopedGroups = groups.slice(0, GROUP_LIMIT)
-
-        const from = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()
-        const to = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString()
-
-        const [msgBuckets, fileBuckets, eventBuckets] = await Promise.all([
-          Promise.all(scopedRooms.map((r) =>
-            getMessages(r.id, { size: MSG_PER_ROOM })
-              .then((msgs) => ({ room: r, msgs }))
-              .catch(() => ({ room: r, msgs: [] as ChatMessage[] }))
-          )),
-          Promise.all(scopedGroups.map((g) =>
-            getFiles(g.id)
-              .then((files) => ({ group: g, files }))
-              .catch(() => ({ group: g, files: [] as GroupFile[] }))
-          )),
-          Promise.all(scopedGroups.map((g) =>
-            listEvents('GROUP', g.id, from, to)
-              .then((events) => ({ group: g, events }))
-              .catch(() => ({ group: g, events: [] as CalendarEvent[] }))
-          )),
-        ])
-        if (cancelled) return
-
-        const feed: FeedItem[] = []
-
-        for (const bucket of msgBuckets) {
-          if (!bucket.room.groupId) continue
-          const group = groupById.get(bucket.room.groupId)
-          if (!group) continue
-          for (const m of bucket.msgs) {
-            if (m.messageType === 'SYSTEM_JOIN' || m.messageType === 'SYSTEM_LEAVE') {
-              feed.push({ kind: 'system', ts: m.sentAt, group, message: m })
-            } else {
-              feed.push({ kind: 'message', ts: m.sentAt, group, message: m })
-            }
-          }
-        }
-        for (const bucket of fileBuckets) {
-          for (const f of bucket.files) {
-            feed.push({ kind: 'file', ts: f.uploadedAt, group: bucket.group, file: f })
-          }
-        }
-        for (const bucket of eventBuckets) {
-          for (const ev of bucket.events) {
-            feed.push({ kind: 'event', ts: ev.createdAt, group: bucket.group, event: ev })
-          }
-        }
-
-        feed.sort((a, b) => b.ts.localeCompare(a.ts))
-        setItems(feed.slice(0, FEED_SIZE))
+        const data = await getFeed()
+        if (!cancelled) setFeed(data)
       } finally {
         if (!cancelled) setLoading(false)
       }
     })()
     return () => { cancelled = true }
-  }, [user?.id])
+  }, [])
+
+  const sections = feed?.sections ?? []
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -137,7 +151,7 @@ export default function DashboardPage() {
 
         {loading && <FeedSkeleton />}
 
-        {!loading && items.length === 0 && (
+        {!loading && sections.length === 0 && (
           <Card size="lg" className="px-6 py-14 text-center shadow-bubble">
             <div className="ring-iridescent p-[2px] rounded-full w-fit mx-auto mb-5 shadow-sm">
               <div className="w-20 h-20 rounded-full bg-brand-gradient-soft flex items-center justify-center text-3xl">
@@ -145,21 +159,30 @@ export default function DashboardPage() {
               </div>
             </div>
             <p className="text-base font-semibold">{t('dashboard.emptyHeading')}</p>
-            <p className="text-sm text-muted mt-1.5 mb-6">
-              {groupsCount === 0 ? t('dashboard.emptyNoBubbles') : t('dashboard.emptyWaiting')}
-            </p>
+            <p className="text-sm text-muted mt-1.5 mb-6">{t('dashboard.emptyWaiting')}</p>
             <LinkButton href="/groups" size="md" className="shadow-bubble">
-              {groupsCount === 0 ? t('dashboard.findBubble') : t('dashboard.openMyBubbles')}
+              {t('dashboard.findBubble')}
             </LinkButton>
           </Card>
         )}
 
-        {!loading && items.length > 0 && (
-          <div className="flex flex-col gap-3">
-            {items.map((item, i) => (
-              <FeedCard key={feedKey(item, i)} item={item} meId={user?.id ?? null} />
+        {!loading && sections.length > 0 && (
+          <div className="flex flex-col gap-8">
+            {sections.map((section) => (
+              <section key={section.key}>
+                <div className="flex items-center gap-2 mb-3 ms-1">
+                  <span className="text-base">{SECTION_META[section.key].icon}</span>
+                  <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
+                    {t(SECTION_META[section.key].labelKey)}
+                  </h2>
+                </div>
+                <div className="flex flex-col gap-3">
+                  {section.items.map((item, i) => (
+                    <FeedItemCard key={`${section.key}-${i}-${item.cta?.targetId ?? item.groupId ?? ''}`} item={item} />
+                  ))}
+                </div>
+              </section>
             ))}
-            <p className="text-center text-xs text-muted py-4">{t('dashboard.caughtUp')}</p>
           </div>
         )}
       </div>
@@ -167,119 +190,79 @@ export default function DashboardPage() {
   )
 }
 
-function feedKey(item: FeedItem, i: number): string {
-  switch (item.kind) {
-    case 'message':
-    case 'system': return `m:${item.message.id}`
-    case 'event':  return `e:${item.event.id}`
-    case 'file':   return `f:${item.file.id}`
-    default:       return `i:${i}`
-  }
-}
+function FeedItemCard({ item }: { item: FeedItem }) {
+  const { t } = useTranslation()
+  const navigate = useNavigate()
+  const rendered = ITEM_RENDERERS[item.kind](item, t)
+  const showCta = rendered.ctaLabel && item.cta
 
-function FeedCard({ item, meId }: { item: FeedItem; meId: string | null }) {
-  const { group } = item
   return (
-    <Link to="/groups" className="block">
-      <Card size="lg" interactive className="p-4">
-        <div className="flex gap-3">
-          <Avatar id={group.id} name={group.name} size="lg" ring />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-baseline gap-2 flex-wrap">
-              <span className="font-semibold text-base truncate">{group.name}</span>
-              <span className="text-muted text-xs">·</span>
-              <span className="text-xs text-muted">{relTime(item.ts)}</span>
-            </div>
-            <FeedBody item={item} meId={meId} />
-          </div>
-        </div>
-      </Card>
-    </Link>
+    <Card size="lg" className="p-4">
+      <div className="flex items-center gap-3">
+        {item.groupId && (
+          <Avatar id={item.groupId} name={item.groupName ?? '?'} size="md" ring />
+        )}
+        <div className="flex-1 min-w-0">{rendered.body}</div>
+        {showCta && (
+          <Button
+            size="sm"
+            variant={isJoinCta(item.cta!) ? 'primary' : 'secondary'}
+            className="shrink-0"
+            onClick={() => navigate(routeForCta(item.cta!))}
+          >
+            {rendered.ctaLabel}
+          </Button>
+        )}
+      </div>
+    </Card>
   )
 }
 
-function FeedBody({ item, meId }: { item: FeedItem; meId: string | null }) {
-  const { t } = useTranslation()
-  switch (item.kind) {
-    case 'message': {
-      const m = item.message
-      const isMine = m.senderId === meId
-      const author = isMine ? t('common.you') : (m.senderId?.slice(0, 8) ?? '?') + '…'
-      if (m.messageType === 'LINK') {
-        return (
-          <>
-            <p className="text-xs text-muted mt-0.5">
-              <span className="font-mono" dir="ltr">{author}</span> {t('dashboard.kind.sharedEvent')}
-            </p>
-            {m.content && (
-              <p className="text-sm text-secondary mt-1 italic">"{renderBubbleContent(m.content)}"</p>
-            )}
-            <div className="mt-2 inline-flex items-center gap-2 bg-primary-50 text-primary-700 text-xs px-2.5 py-1 rounded-lg border border-primary-100">
-              🔗 {t('dashboard.linkedEvent')}
-            </div>
-          </>
-        )
-      }
-      return (
-        <>
-          <p className="text-xs text-muted mt-0.5">
-            <span className="font-mono" dir="ltr">{author}</span> {t('dashboard.kind.sentMessage')}
-          </p>
-          <p className="text-sm text-secondary mt-1.5 line-clamp-3 whitespace-pre-wrap">
-            {renderBubbleContent(m.content)}
-          </p>
-        </>
-      )
-    }
-    case 'system': {
-      const m = item.message
-      const who = m.content || m.subjectUserId?.slice(0, 8) || '?'
-      const verb = m.messageType === 'SYSTEM_JOIN' ? t('dashboard.kind.joinedBubble') : t('dashboard.kind.leftBubble')
-      const emoji = m.messageType === 'SYSTEM_JOIN' ? '🫧' : '👋'
-      return (
-        <p className="text-sm text-secondary mt-1">
-          {emoji} <span className="font-mono" dir="ltr">{who}</span> {verb}
-        </p>
-      )
-    }
-    case 'event': {
-      const ev = item.event
-      return (
-        <>
-          <p className="text-xs text-muted mt-0.5">{t('dashboard.kind.newEventScheduled')}</p>
-          <div className="mt-2 flex items-center gap-2 flex-wrap">
-            <span className={`text-xs px-2 py-0.5 rounded-lg ${TYPE_BADGE[ev.eventType]}`}>
-              {ev.eventType.replace('_', ' ')}
-            </span>
-            <span className="text-xs text-secondary">{fmtEventRange(ev.startsAt, ev.endsAt)}</span>
-          </div>
-          {ev.description && (
-            <p className="text-sm text-secondary mt-1.5 line-clamp-2">{ev.description}</p>
-          )}
-        </>
-      )
-    }
-    case 'file': {
-      const f = item.file
-      return (
-        <>
-          <p className="text-xs text-muted mt-0.5">{t('dashboard.kind.fileUploaded')}</p>
-          <div className="mt-2 flex items-center gap-2 bg-surface-muted border border-line rounded-xl px-3 py-2">
-            <span className="text-lg">📄</span>
-            <span className="text-sm text-base truncate flex-1">{f.originalName}</span>
-            <span className="text-xs text-muted shrink-0">{formatBytes(f.sizeBytes)}</span>
-          </div>
-        </>
-      )
-    }
+// ---------------------------------------------------------------------------
+// CTA routing + small formatting helpers
+// ---------------------------------------------------------------------------
+
+function routeForCta(cta: FeedCta): string {
+  switch (cta.type) {
+    case 'JOIN_SESSION': return `/sessions/${cta.targetId}`
+    case 'JOIN_ROOM':    return `/rooms/${cta.targetId}`
+    // No /groups/:id deep link yet — the hub is sidebar-driven. Route generically.
+    default:             return '/groups'
   }
 }
 
-function fmtEventRange(start: string, end: string): string {
+function isJoinCta(cta: FeedCta): boolean {
+  return cta.type === 'JOIN_SESSION' || cta.type === 'JOIN_ROOM' || cta.type === 'JOIN_BUBBLE'
+}
+
+function liveLabel(item: FeedItem, t: Translate): string {
+  const mins = minutesUntil(item.startsAt)
+  return mins <= 0 ? t('dashboard.live.liveNow') : t('dashboard.live.startsIn', { count: mins })
+}
+
+function discoveryMeta(item: FeedItem, t: Translate): string {
+  const parts: string[] = []
+  if (item.matchPercent != null) parts.push(t('dashboard.discovery.matchPercent', { percent: item.matchPercent }))
+  if (item.memberCount != null) parts.push(t('dashboard.discovery.members', { count: item.memberCount }))
+  return parts.join(' · ')
+}
+
+function humanizeType(type?: string): string {
+  return type ? type.replace(/_/g, ' ') : ''
+}
+
+function minutesUntil(iso?: string): number {
+  if (!iso) return 0
+  return Math.max(0, Math.round((new Date(iso).getTime() - Date.now()) / 60000))
+}
+
+function fmtEventRange(start?: string, end?: string): string {
+  if (!start) return ''
   const s = new Date(start)
-  const e = new Date(end)
   const dateFmt: Intl.DateTimeFormatOptions = { weekday: 'short', month: 'short', day: 'numeric' }
   const timeFmt: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit' }
+  if (!end) return `${s.toLocaleDateString(undefined, dateFmt)} · ${s.toLocaleTimeString(undefined, timeFmt)}`
+  const e = new Date(end)
   const sameDay = s.toDateString() === e.toDateString()
   if (sameDay) {
     return `${s.toLocaleDateString(undefined, dateFmt)} · ${s.toLocaleTimeString(undefined, timeFmt)} – ${e.toLocaleTimeString(undefined, timeFmt)}`
@@ -293,12 +276,10 @@ function FeedSkeleton() {
       {[0, 1, 2, 3].map((i) => (
         <Card key={i} size="lg" className="p-4 animate-pulse">
           <div className="flex gap-3">
-            <div className="w-12 h-12 rounded-full bg-surface-muted shrink-0" />
+            <div className="w-11 h-11 rounded-full bg-surface-muted shrink-0" />
             <div className="flex-1 space-y-2">
               <div className="h-3 bg-surface-muted rounded-full w-1/3" />
-              <div className="h-3 bg-surface-muted rounded-full w-1/4" />
-              <div className="h-3 bg-surface-muted rounded-full w-full mt-2" />
-              <div className="h-3 bg-surface-muted rounded-full w-4/5" />
+              <div className="h-3 bg-surface-muted rounded-full w-2/3 mt-2" />
             </div>
           </div>
         </Card>

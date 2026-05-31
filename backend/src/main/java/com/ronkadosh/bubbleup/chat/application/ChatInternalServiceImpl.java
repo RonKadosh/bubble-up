@@ -3,10 +3,13 @@ package com.ronkadosh.bubbleup.chat.application;
 import com.ronkadosh.bubbleup.chat.api.dto.ChatMessageResponse;
 import com.ronkadosh.bubbleup.chat.internal.ChatInternalService;
 import com.ronkadosh.bubbleup.chat.internal.dto.ChatRoomSummary;
+import com.ronkadosh.bubbleup.chat.internal.dto.GroupUnreadSummary;
+import com.ronkadosh.bubbleup.chat.internal.dto.MembershipEventItem;
 import com.ronkadosh.bubbleup.chat.model.ChatLinkTargetType;
 import com.ronkadosh.bubbleup.chat.model.ChatMessage;
 import com.ronkadosh.bubbleup.chat.model.ChatMessageType;
 import com.ronkadosh.bubbleup.chat.model.ChatRoom;
+import com.ronkadosh.bubbleup.chat.model.MessageReadCursor;
 import com.ronkadosh.bubbleup.chat.persistence.ChatMessageRepository;
 import com.ronkadosh.bubbleup.chat.persistence.ChatRoomRepository;
 import com.ronkadosh.bubbleup.chat.persistence.MessageReadCursorRepository;
@@ -21,9 +24,17 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.data.domain.PageRequest;
+
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -72,6 +83,84 @@ public class ChatInternalServiceImpl implements ChatInternalService {
     @Transactional(readOnly = true)
     public boolean roomExists(UUID roomId) {
         return chatRoomRepository.existsById(roomId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<GroupUnreadSummary> getUnreadSummaryForGroups(UUID userId, Set<UUID> groupIds) {
+        if (groupIds == null || groupIds.isEmpty()) return List.of();
+        List<ChatRoom> rooms = chatRoomRepository.findAllByGroupIdIn(groupIds);
+        if (rooms.isEmpty()) return List.of();
+
+        List<UUID> roomIds = rooms.stream().map(ChatRoom::getId).toList();
+        Map<UUID, MessageReadCursor> cursorsByRoom = new HashMap<>();
+        messageReadCursorRepository.findAllByUserIdAndRoomIdIn(userId, roomIds)
+                .forEach(c -> cursorsByRoom.put(c.getRoomId(), c));
+        // Pre-load cursor message instants in one shot (mirror ChatQueryService.getRoomsForUser).
+        List<UUID> cursorMsgIds = cursorsByRoom.values().stream()
+                .map(MessageReadCursor::getLastReadMessageId)
+                .toList();
+        Map<UUID, ChatMessage> cursorMessagesById = new HashMap<>();
+        if (!cursorMsgIds.isEmpty()) {
+            chatMessageRepository.findAllById(cursorMsgIds)
+                    .forEach(m -> cursorMessagesById.put(m.getId(), m));
+        }
+
+        // Roll up unread per group.
+        Map<UUID, long[]> unreadByGroup = new LinkedHashMap<>();   // groupId -> [unreadTotal]
+        Map<UUID, Instant> latestByGroup = new HashMap<>();
+        for (ChatRoom room : rooms) {
+            UUID groupId = room.getGroupId();
+            if (groupId == null) continue;
+            long unread = unreadCount(room.getId(), cursorsByRoom.get(room.getId()), cursorMessagesById);
+            if (unread <= 0) continue;
+            unreadByGroup.computeIfAbsent(groupId, g -> new long[1])[0] += unread;
+            List<ChatMessage> newest =
+                    chatMessageRepository.findByRoomIdInOrderBySentAtDesc(List.of(room.getId()), PageRequest.of(0, 1));
+            if (!newest.isEmpty()) {
+                Instant at = newest.get(0).getSentAt();
+                latestByGroup.merge(groupId, at, (a, b) -> a.isAfter(b) ? a : b);
+            }
+        }
+
+        List<GroupUnreadSummary> out = new ArrayList<>();
+        unreadByGroup.forEach((groupId, total) ->
+                out.add(new GroupUnreadSummary(groupId, (int) total[0], latestByGroup.get(groupId))));
+        return out;
+    }
+
+    private long unreadCount(UUID roomId, MessageReadCursor cursor, Map<UUID, ChatMessage> cursorMessagesById) {
+        if (cursor == null) {
+            return chatMessageRepository.countByRoomId(roomId);
+        }
+        ChatMessage cursorMsg = cursorMessagesById.get(cursor.getLastReadMessageId());
+        if (cursorMsg == null) {
+            // Cursor points at a missing message — treat as no cursor.
+            return chatMessageRepository.countByRoomId(roomId);
+        }
+        return chatMessageRepository.countByRoomIdAndSentAtGreaterThan(roomId, cursorMsg.getSentAt());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<MembershipEventItem> findRecentMembershipEventsForGroups(Set<UUID> groupIds, int limit) {
+        if (groupIds == null || groupIds.isEmpty()) return List.of();
+        List<ChatRoom> rooms = chatRoomRepository.findAllByGroupIdIn(groupIds);
+        if (rooms.isEmpty()) return List.of();
+        Map<UUID, UUID> groupByRoom = new HashMap<>();
+        rooms.forEach(r -> { if (r.getGroupId() != null) groupByRoom.put(r.getId(), r.getGroupId()); });
+
+        List<ChatMessage> rows = chatMessageRepository.findByRoomIdInAndMessageTypeInOrderBySentAtDesc(
+                groupByRoom.keySet(),
+                List.of(ChatMessageType.SYSTEM_JOIN, ChatMessageType.SYSTEM_LEAVE),
+                PageRequest.of(0, limit));
+        List<MembershipEventItem> out = new ArrayList<>(rows.size());
+        for (ChatMessage m : rows) {
+            UUID groupId = groupByRoom.get(m.getRoomId());
+            if (groupId == null) continue;
+            out.add(new MembershipEventItem(groupId, m.getSubjectUserId(), m.getMessageType(), m.getSentAt()));
+        }
+        return out;
     }
 
     @Override

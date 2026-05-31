@@ -11,7 +11,10 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.data.domain.PageRequest;
+
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -40,6 +43,30 @@ public class CalendarInternalServiceImpl implements CalendarInternalService {
             Instant to
     ) {
         return repo.findInRange(ownerType, ownerId, from, to).stream()
+                .map(e -> new CalendarEventSummary(
+                        e.getId(),
+                        e.getOwnerType(),
+                        e.getOwnerId(),
+                        e.getEventType(),
+                        e.getDescription(),
+                        e.getStartsAt(),
+                        e.getEndsAt(),
+                        e.getCreatedBy()
+                ))
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CalendarEventSummary> findUpcomingForOwners(
+            CalendarOwnerType ownerType,
+            Collection<UUID> ownerIds,
+            Instant from,
+            Instant to,
+            int limit
+    ) {
+        if (ownerIds == null || ownerIds.isEmpty()) return List.of();
+        return repo.findUpcomingForOwners(ownerType, ownerIds, from, to, PageRequest.of(0, limit)).stream()
                 .map(e -> new CalendarEventSummary(
                         e.getId(),
                         e.getOwnerType(),

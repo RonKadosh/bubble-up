@@ -7,7 +7,10 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import org.springframework.data.domain.Pageable;
+
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -28,6 +31,24 @@ public interface CalendarEventRepository extends JpaRepository<CalendarEvent, UU
 
     @Query("select e from CalendarEvent e where e.ownerType = :type and e.ownerId = :ownerId")
     List<CalendarEvent> findAllByOwner(@Param("type") CalendarOwnerType type, @Param("ownerId") UUID ownerId);
+
+    /**
+     * Upcoming events across many owners (e.g. all of a user's groups), starting within
+     * {@code [from, to]}, soonest first. Drives the dashboard feed's "Upcoming" section.
+     */
+    @Query("""
+            select e from CalendarEvent e
+            where e.ownerType = :type and e.ownerId in :ownerIds
+              and e.startsAt >= :from and e.startsAt <= :to
+            order by e.startsAt asc
+            """)
+    List<CalendarEvent> findUpcomingForOwners(
+            @Param("type") CalendarOwnerType type,
+            @Param("ownerIds") Collection<UUID> ownerIds,
+            @Param("from") Instant from,
+            @Param("to") Instant to,
+            Pageable pageable
+    );
 
     /**
      * Returns the owner's {@code STUDY_SESSION} events that overlap the given

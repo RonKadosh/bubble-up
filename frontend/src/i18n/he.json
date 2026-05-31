@@ -90,6 +90,8 @@
   "academy": {
     "title": "אקדמיה",
     "subtitle": "עיון במחלקות ובקורסים באוניברסיטה שלך.",
+    "browseHeading": "עיון והרשמה",
+    "enrolledBadge": "רשום/ה",
     "term": {
       "label": "סמסטר",
       "all": "כל הסמסטרים",
@@ -105,15 +107,37 @@
       "courses": "בחר/י מחלקה כדי לראות את הקורסים שלה.",
       "detail": "בחר/י קורס כדי לראות פרטים."
     },
+    "myCourses": {
+      "title": "הקורסים שלי",
+      "empty": "אין עדיין קורסים — הירשם/י למטה כדי להתחיל.",
+      "openCourse": "פתח/י קורס →",
+      "unenrollAria": "ביטול הרשמה"
+    },
     "detail": {
       "code": "קוד",
       "credits": "נקודות זכות",
       "description": "תיאור",
       "departments": "מחלקות",
-      "offerings": "מוצע ב"
+      "offerings": "מוצע ב",
+      "openCourse": "פתח/י קורס →",
+      "enroll": "הרשמה",
+      "enrollForTerm": "הרשמה ל-{{code}}",
+      "enrolling": "נרשם…",
+      "unenroll": "ביטול הרשמה",
+      "notOffered": "לא מוצע בסמסטר זה"
+    },
+    "confirmUnenroll": {
+      "title": "לבטל את ההרשמה לקורס?",
+      "body": "תוסר/י מהקורס לסמסטר הנוכחי.",
+      "confirm": "ביטול הרשמה"
     },
     "error": {
-      "load": "טעינת הקטלוג נכשלה."
+      "load": "טעינת הקטלוג נכשלה.",
+      "noCurrentOffering": "הקורס אינו מוצע בסמסטר הנוכחי.",
+      "noCurrentTerm": "אין סמסטר פעיל כרגע — נסה/י שוב מאוחר יותר.",
+      "affiliationRequired": "הגדר/י תחילה את האוניברסיטה והמחלקה בפרופיל שלך.",
+      "enrollGeneric": "ההרשמה נכשלה. נסה/י שוב.",
+      "unenrollGeneric": "ביטול ההרשמה נכשל. נסה/י שוב."
     }
   },
   "dashboard": {
@@ -124,13 +148,41 @@
     "emptyWaiting": "כשהבועות יתעוררו לחיים, הפעילות תצוף לכאן.",
     "findBubble": "מצא בועה",
     "openMyBubbles": "פתח את הבועות שלי",
-    "caughtUp": "🫧 הגעת לסוף",
-    "endMarker": "— סוף הפיד —",
+    "section": {
+      "live": "עכשיו",
+      "upcoming": "בקרוב",
+      "activity": "פעילות בבועות",
+      "discovery": "גילוי"
+    },
+    "live": {
+      "startsIn": "מתחיל בעוד {{count}} דק׳",
+      "liveNow": "משודר עכשיו",
+      "roomLiveNow": "חדר לימוד פעיל עכשיו"
+    },
+    "cta": {
+      "joinSession": "הצטרף למפגש",
+      "joinRoom": "הצטרף לחדר",
+      "viewEvent": "צפה באירוע",
+      "viewBubble": "צפה בבועה",
+      "open": "פתח"
+    },
+    "unread": {
+      "count": "{{count}} הודעות שלא נקראו ב{{bubble}}"
+    },
+    "membership": {
+      "joined": "{{name}} צף/ה לתוך {{bubble}}",
+      "left": "{{name}} עזב/ה את {{bubble}}",
+      "someone": "מישהו"
+    },
+    "file": {
+      "uploaded": "{{name}} הועלה ל{{bubble}}"
+    },
+    "discovery": {
+      "recommended": "בועה מומלצת",
+      "matchPercent": "{{percent}}% התאמה",
+      "members": "{{count}} חברים"
+    },
     "kind": {
-      "sentMessage": "שלח/ה הודעה",
-      "sharedEvent": "שיתף/ה אירוע",
-      "newEventScheduled": "📅 אירוע חדש נקבע",
-      "fileUploaded": "📁 קובץ הועלה",
       "joinedBubble": "צף/ה לתוך הבועה",
       "leftBubble": "עזב/ה את הבועה"
     },
@@ -494,7 +546,9 @@
       "reject": "דחה",
       "accept": "אשר",
       "groupsCount": "{{count}}/{{capacity}} קבוצות",
-      "confirmCancel": "לבטל את המפגש? קבוצות רשומות יוסרו.",
+      "confirmCancelTitle": "לבטל את המפגש?",
+      "confirmCancel": "קבוצות רשומות יוסרו.",
+      "confirmCancelConfirm": "בטל מפגש",
       "errorCancel": "לא ניתן לבטל את המפגש.",
       "errorAccept": "לא ניתן לאשר את הבקשה.",
       "errorReject": "לא ניתן לדחות את הבקשה."

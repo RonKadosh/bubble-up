@@ -42,6 +42,16 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> 
 
     long countByRoomId(UUID roomId);
 
+    /** Newest-first messages across a set of rooms. Used for feed unread-rollup ordering. */
+    List<ChatMessage> findByRoomIdInOrderBySentAtDesc(Collection<UUID> roomIds, Pageable pageable);
+
+    /**
+     * Newest-first messages of the given types across a set of rooms. Used by the
+     * dashboard feed to surface SYSTEM_JOIN / SYSTEM_LEAVE membership events.
+     */
+    List<ChatMessage> findByRoomIdInAndMessageTypeInOrderBySentAtDesc(
+            Collection<UUID> roomIds, Collection<ChatMessageType> messageTypes, Pageable pageable);
+
     /** Pinned messages for a room, most-recently-pinned first. */
     List<ChatMessage> findAllByRoomIdAndPinnedTrueOrderByPinnedAtDesc(UUID roomId);
 

@@ -90,6 +90,8 @@
   "academy": {
     "title": "Academy",
     "subtitle": "Browse departments and courses at your university.",
+    "browseHeading": "Browse & enroll",
+    "enrolledBadge": "ENROLLED",
     "term": {
       "label": "Term",
       "all": "All terms",
@@ -105,15 +107,37 @@
       "courses": "Pick a department to see its courses.",
       "detail": "Pick a course to see its details."
     },
+    "myCourses": {
+      "title": "My Courses",
+      "empty": "No courses yet — enroll below to start.",
+      "openCourse": "Open course →",
+      "unenrollAria": "Unenroll"
+    },
     "detail": {
       "code": "Code",
       "credits": "Credits",
       "description": "Description",
       "departments": "Departments",
-      "offerings": "Offered in"
+      "offerings": "Offered in",
+      "openCourse": "Open course →",
+      "enroll": "Enroll",
+      "enrollForTerm": "Enroll for {{code}}",
+      "enrolling": "Enrolling…",
+      "unenroll": "Unenroll",
+      "notOffered": "Not offered this term"
+    },
+    "confirmUnenroll": {
+      "title": "Unenroll from this course?",
+      "body": "You'll be removed from this course for the current term.",
+      "confirm": "Unenroll"
     },
     "error": {
-      "load": "Failed to load the course catalog."
+      "load": "Failed to load the course catalog.",
+      "noCurrentOffering": "This course is not offered in the current term.",
+      "noCurrentTerm": "No active term right now — try again later.",
+      "affiliationRequired": "Set your university and department in your profile first.",
+      "enrollGeneric": "Could not enroll. Please try again.",
+      "unenrollGeneric": "Could not unenroll. Please try again."
     }
   },
   "dashboard": {
@@ -124,13 +148,41 @@
     "emptyWaiting": "Once Bubbles get busy, the action floats up here.",
     "findBubble": "Find a Bubble",
     "openMyBubbles": "Open my Bubbles",
-    "caughtUp": "🫧 you've caught up",
-    "endMarker": "— end of feed —",
+    "section": {
+      "live": "Live",
+      "upcoming": "Upcoming",
+      "activity": "Bubble activity",
+      "discovery": "Discover"
+    },
+    "live": {
+      "startsIn": "Starts in {{count}} min",
+      "liveNow": "Live now",
+      "roomLiveNow": "Study room is live now"
+    },
+    "cta": {
+      "joinSession": "Join session",
+      "joinRoom": "Join room",
+      "viewEvent": "View event",
+      "viewBubble": "View Bubble",
+      "open": "Open"
+    },
+    "unread": {
+      "count": "{{count}} unread messages in {{bubble}}"
+    },
+    "membership": {
+      "joined": "{{name}} floated into {{bubble}}",
+      "left": "{{name}} left {{bubble}}",
+      "someone": "Someone"
+    },
+    "file": {
+      "uploaded": "{{name}} uploaded to {{bubble}}"
+    },
+    "discovery": {
+      "recommended": "Recommended Bubble",
+      "matchPercent": "{{percent}}% match",
+      "members": "{{count}} members"
+    },
     "kind": {
-      "sentMessage": "sent a message",
-      "sharedEvent": "shared a calendar event",
-      "newEventScheduled": "📅 New event scheduled",
-      "fileUploaded": "📁 File uploaded",
       "joinedBubble": "floated into the Bubble",
       "leftBubble": "left the Bubble"
     },
@@ -494,7 +546,9 @@
       "reject": "Reject",
       "accept": "Accept",
       "groupsCount": "{{count}}/{{capacity}} groups",
-      "confirmCancel": "Cancel this session? Enrolled groups will be unenrolled.",
+      "confirmCancelTitle": "Cancel this session?",
+      "confirmCancel": "Enrolled groups will be unenrolled.",
+      "confirmCancelConfirm": "Cancel session",
       "errorCancel": "Could not cancel the session.",
       "errorAccept": "Could not accept the request.",
       "errorReject": "Could not reject the request."

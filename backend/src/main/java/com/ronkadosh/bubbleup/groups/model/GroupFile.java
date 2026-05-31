@@ -14,7 +14,8 @@ import java.util.UUID;
         name = "group_files",
         indexes = {
                 @Index(name = "idx_group_files_group", columnList = "group_id"),
-                @Index(name = "idx_group_files_folder", columnList = "folder_id")
+                @Index(name = "idx_group_files_folder", columnList = "folder_id"),
+                @Index(name = "idx_group_files_group_uploaded", columnList = "group_id, uploaded_at DESC")
         },
         uniqueConstraints = @UniqueConstraint(
                 name = "uk_group_files_storage",

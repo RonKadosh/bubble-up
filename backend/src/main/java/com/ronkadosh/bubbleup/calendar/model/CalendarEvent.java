@@ -15,7 +15,8 @@ import java.util.UUID;
         name = "calendar_events",
         indexes = {
                 @Index(name = "idx_calendar_events_owner", columnList = "owner_type, owner_id"),
-                @Index(name = "idx_calendar_events_starts_at", columnList = "starts_at")
+                @Index(name = "idx_calendar_events_starts_at", columnList = "starts_at"),
+                @Index(name = "idx_calendar_events_owner_starts", columnList = "owner_type, owner_id, starts_at")
         }
 )
 @Getter

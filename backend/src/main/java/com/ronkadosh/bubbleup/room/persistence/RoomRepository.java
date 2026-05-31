@@ -4,6 +4,7 @@ import com.ronkadosh.bubbleup.room.model.Room;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -23,4 +24,10 @@ public interface RoomRepository extends JpaRepository<Room, UUID> {
 
     /** All rooms still considered "live" (lifecycle scheduler hasn't closed them yet). */
     List<Room> findAllByEndedAtIsNull();
+
+    /**
+     * Live (not-yet-closed) rooms for the given groups. Used by the dashboard feed's
+     * "Live" section to surface group study rooms a member can join right now.
+     */
+    List<Room> findAllByGroupIdInAndEndedAtIsNull(Collection<UUID> groupIds);
 }

@@ -1,10 +1,12 @@
 package com.ronkadosh.bubbleup.groups.internal;
 
+import com.ronkadosh.bubbleup.groups.internal.dto.GroupFileActivityItem;
 import com.ronkadosh.bubbleup.groups.internal.dto.GroupSummary;
 import com.ronkadosh.bubbleup.groups.model.MembershipRole;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 public interface GroupInternalService {
@@ -20,6 +22,12 @@ public interface GroupInternalService {
     List<GroupSummary> getGroupsForUser(UUID userId);
 
     List<UUID> getMemberUserIds(UUID groupId);
+
+    /**
+     * Most-recently-uploaded files across the given groups, newest first, capped at
+     * {@code limit}. Drives the "Bubble activity" feed section.
+     */
+    List<GroupFileActivityItem> findRecentFilesForGroups(Set<UUID> groupIds, int limit);
 
     /**
      * Candidate groups for matching, clustered by course. The catalog resolves

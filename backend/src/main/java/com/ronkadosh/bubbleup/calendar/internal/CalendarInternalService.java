@@ -4,6 +4,7 @@ import com.ronkadosh.bubbleup.calendar.internal.dto.CalendarEventSummary;
 import com.ronkadosh.bubbleup.calendar.model.CalendarOwnerType;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -14,6 +15,19 @@ public interface CalendarInternalService {
             UUID ownerId,
             Instant from,
             Instant to
+    );
+
+    /**
+     * Upcoming events across many owners (e.g. all of a user's groups), starting within
+     * {@code [from, to]}, soonest first, capped at {@code limit}. Drives the dashboard
+     * feed's "Upcoming" section.
+     */
+    List<CalendarEventSummary> findUpcomingForOwners(
+            CalendarOwnerType ownerType,
+            Collection<UUID> ownerIds,
+            Instant from,
+            Instant to,
+            int limit
     );
 
     java.util.Optional<CalendarEventSummary> findById(UUID eventId);
