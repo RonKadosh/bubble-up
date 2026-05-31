@@ -1,0 +1,92 @@
+name: bubbleup-prod
+
+# Production stack for StudySync / Bubble.up.
+# Differences from docker-compose.yml (dev):
+#   - Pulls pre-built images from GHCR (pinned by IMAGE_TAG), no local builds.
+#   - Caddy in front of the frontend: handles TLS (auto Let's Encrypt) on 80/443.
+#   - Frontend nginx is no longer published to the host; only Caddy is.
+#   - Postgres, uploads, and Caddy state are bind-mounted onto /data
+#     (a dedicated EBS volume on the EC2 box) so they survive instance replacement.
+#   - APP_DEMO_SEED_ENABLED forced to false; JWT_SECRET / DB_PASSWORD / Jitsi
+#     creds come from /opt/bubbleup/.env (written by the SSM deploy script
+#     from SSM Parameter Store SecureStrings).
+#   - JVM heap capped (-Xmx384m) and restart policy = unless-stopped on every
+#     service, because t3.micro has 1 GB RAM and we want survival across reboots.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - /data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - bubbleup-network
+
+  backend:
+    image: ghcr.io/ronkadosh/bubble-up-backend:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ACCESS_EXPIRATION_MS: ${JWT_ACCESS_EXPIRATION_MS:-900000}
+      REFRESH_TOKEN_EXPIRATION_MS: ${REFRESH_TOKEN_EXPIRATION_MS:-2592000000}
+      CORS_ALLOWED_ORIGINS: https://${CADDY_DOMAIN}
+      FILE_STORAGE_TYPE: local
+      FILE_STORAGE_LOCAL_PATH: /var/bubbleup/files
+      APP_JITSI_APP_ID: ${APP_JITSI_APP_ID}
+      APP_JITSI_KID: ${APP_JITSI_KID}
+      APP_JITSI_PRIVATE_KEY_PEM: ${APP_JITSI_PRIVATE_KEY_PEM}
+      APP_JITSI_SERVER_URL: ${APP_JITSI_SERVER_URL:-https://8x8.vc}
+      APP_JITSI_TOKEN_TTL: ${APP_JITSI_TOKEN_TTL:-PT2H}
+      APP_DEMO_SEED_ENABLED: "false"
+      JAVA_TOOL_OPTIONS: "-Xmx384m -XX:MaxRAMPercentage=60"
+    volumes:
+      - /data/files:/var/bubbleup/files
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - bubbleup-network
+
+  frontend:
+    image: ghcr.io/ronkadosh/bubble-up-frontend:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      - backend
+    networks:
+      - bubbleup-network
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      CADDY_DOMAIN: ${CADDY_DOMAIN}
+      CADDY_ACME_EMAIL: ${CADDY_ACME_EMAIL:-internal}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - /data/caddy/data:/data
+      - /data/caddy/config:/config
+    depends_on:
+      - frontend
+    networks:
+      - bubbleup-network
+
+networks:
+  bubbleup-network:
+    driver: bridge

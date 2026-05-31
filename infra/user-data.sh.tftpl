@@ -1,0 +1,189 @@
+#!/bin/bash
+# user-data — first boot of the Bubble.up EC2 box.
+# Idempotent: re-running individual sections is safe.
+
+set -euxo pipefail
+
+REGION="${region}"
+PROJECT="${project}"
+BACKUP_BUCKET="${backup_bucket}"
+GITHUB_REPO="${github_repo}"
+
+APP_DIR=/opt/bubbleup
+DATA_DIR=/data
+
+# ───── 1. System updates + packages ─────────────────────────────────────
+dnf update -y
+dnf install -y docker awscli jq cronie
+
+# Docker Compose v2 (plugin) — Amazon Linux 2023 ships the docker-compose-plugin
+# package on most AMIs, but install manually if missing.
+if ! docker compose version >/dev/null 2>&1; then
+  mkdir -p /usr/local/lib/docker/cli-plugins
+  curl -sSL "https://github.com/docker/compose/releases/download/v2.29.7/docker-compose-linux-x86_64" \
+    -o /usr/local/lib/docker/cli-plugins/docker-compose
+  chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+fi
+
+systemctl enable --now docker
+systemctl enable --now crond
+
+# ───── 2. Swap (2 GB) — t3.micro has 1 GB RAM, JVM will OOM without this ─
+if ! swapon --show | grep -q /swapfile; then
+  fallocate -l 2G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=2048
+  chmod 600 /swapfile
+  mkswap /swapfile
+  swapon /swapfile
+  grep -q '^/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
+fi
+
+# ───── 3. Mount the dedicated EBS data volume at /data ──────────────────
+# Volume is attached as /dev/sdf, surfaced as /dev/nvme1n1 on Nitro instances.
+mkdir -p "$DATA_DIR"
+
+DEVICE=""
+for candidate in /dev/nvme1n1 /dev/xvdf /dev/sdf; do
+  if [ -b "$candidate" ]; then DEVICE="$candidate"; break; fi
+done
+
+# Wait up to 60s for the attachment to appear on first boot.
+if [ -z "$DEVICE" ]; then
+  for _ in $(seq 1 30); do
+    sleep 2
+    for candidate in /dev/nvme1n1 /dev/xvdf /dev/sdf; do
+      if [ -b "$candidate" ]; then DEVICE="$candidate"; break 2; fi
+    done
+  done
+fi
+
+if [ -n "$DEVICE" ]; then
+  # Format only if blank (preserves data on re-runs / instance replacement).
+  if ! blkid "$DEVICE" >/dev/null 2>&1; then
+    mkfs.ext4 -L bubbleup-data "$DEVICE"
+  fi
+  UUID=$(blkid -s UUID -o value "$DEVICE")
+  if ! grep -q "$UUID" /etc/fstab; then
+    echo "UUID=$UUID  $DATA_DIR  ext4  defaults,nofail  0 2" >> /etc/fstab
+  fi
+  mountpoint -q "$DATA_DIR" || mount "$DATA_DIR"
+fi
+
+mkdir -p "$DATA_DIR/postgres" "$DATA_DIR/files" "$DATA_DIR/caddy/data" "$DATA_DIR/caddy/config"
+# Postgres in the postgres:16-alpine container runs as uid 70; uploads run as
+# the backend container's user (eclipse-temurin alpine = root by default).
+chown -R 70:70 "$DATA_DIR/postgres"
+chmod 700 "$DATA_DIR/postgres"
+
+# ───── 4. App directory + scripts ──────────────────────────────────────
+mkdir -p "$APP_DIR"
+cat > "$APP_DIR/version" <<EOF
+bootstrap=$(date -Iseconds)
+region=$REGION
+github_repo=$GITHUB_REPO
+EOF
+
+# deploy.sh — invoked by SSM Run Command on every release.
+cat > "$APP_DIR/deploy.sh" <<'DEPLOY'
+#!/bin/bash
+# Pulls every secret from SSM Parameter Store, writes /opt/bubbleup/.env,
+# pulls new images, recreates the stack. Called by SSM Run Command with
+# IMAGE_TAG and CADDY_DOMAIN exported as environment variables.
+set -euo pipefail
+
+APP_DIR=/opt/bubbleup
+PROJECT_REGION="__REGION__"
+PROJECT_NAME="__PROJECT__"
+GITHUB_REPO="__GITHUB_REPO__"
+
+cd "$APP_DIR"
+
+: "$${IMAGE_TAG:?IMAGE_TAG must be set by the SSM Run Command}"
+: "$${CADDY_DOMAIN:?CADDY_DOMAIN must be set by the SSM Run Command}"
+GIT_REF="$${GIT_REF:-$${IMAGE_TAG}}"
+
+# Refresh compose + Caddyfile from the released tag so config rolls forward.
+RAW="https://raw.githubusercontent.com/$GITHUB_REPO/$GIT_REF"
+curl -fsSL "$RAW/docker-compose.prod.yml" -o "$APP_DIR/docker-compose.prod.yml"
+curl -fsSL "$RAW/Caddyfile" -o "$APP_DIR/Caddyfile"
+
+get_param() {
+  aws ssm get-parameter \
+    --region "$PROJECT_REGION" \
+    --name "/$PROJECT_NAME/prod/$1" \
+    --with-decryption \
+    --query Parameter.Value \
+    --output text
+}
+
+DB_PASSWORD=$(get_param DB_PASSWORD)
+JWT_SECRET=$(get_param JWT_SECRET)
+APP_JITSI_APP_ID=$(get_param APP_JITSI_APP_ID)
+APP_JITSI_KID=$(get_param APP_JITSI_KID)
+APP_JITSI_PRIVATE_KEY_PEM=$(get_param APP_JITSI_PRIVATE_KEY_PEM)
+
+umask 077
+cat > "$APP_DIR/.env" <<ENV
+IMAGE_TAG=$${IMAGE_TAG}
+CADDY_DOMAIN=$${CADDY_DOMAIN}
+CADDY_ACME_EMAIL=$${CADDY_ACME_EMAIL:-aamit@post.bgu.ac.il}
+DB_NAME=bubbleup
+DB_USERNAME=bubbleup
+DB_PASSWORD=$${DB_PASSWORD}
+JWT_SECRET=$${JWT_SECRET}
+JWT_ACCESS_EXPIRATION_MS=900000
+REFRESH_TOKEN_EXPIRATION_MS=2592000000
+APP_JITSI_APP_ID=$${APP_JITSI_APP_ID}
+APP_JITSI_KID=$${APP_JITSI_KID}
+APP_JITSI_PRIVATE_KEY_PEM=$${APP_JITSI_PRIVATE_KEY_PEM}
+APP_JITSI_SERVER_URL=https://8x8.vc
+APP_JITSI_TOKEN_TTL=PT2H
+ENV
+
+docker compose -f docker-compose.prod.yml --env-file .env pull
+docker compose -f docker-compose.prod.yml --env-file .env up -d
+docker image prune -af --filter "until=72h"
+DEPLOY
+sed -i "s|__REGION__|$REGION|g; s|__PROJECT__|$PROJECT|g; s|__GITHUB_REPO__|$GITHUB_REPO|g" "$APP_DIR/deploy.sh"
+chmod +x "$APP_DIR/deploy.sh"
+
+# backup.sh — nightly pg_dump → gzip → S3.
+cat > "$APP_DIR/backup.sh" <<'BACKUP'
+#!/bin/bash
+set -euo pipefail
+APP_DIR=/opt/bubbleup
+BUCKET="__BACKUP_BUCKET__"
+REGION="__REGION__"
+
+cd "$APP_DIR"
+[ -f .env ] || { echo "no .env yet — skipping backup"; exit 0; }
+. <(grep -E '^(DB_NAME|DB_USERNAME|DB_PASSWORD)=' .env)
+
+STAMP=$(date -u +%Y%m%dT%H%M%SZ)
+TMP=$(mktemp /tmp/bubbleup-pgdump.XXXXXX.sql.gz)
+trap 'rm -f "$TMP"' EXIT
+
+docker compose -f docker-compose.prod.yml exec -T \
+  -e PGPASSWORD="$DB_PASSWORD" \
+  postgres \
+  pg_dump -U "$DB_USERNAME" -d "$DB_NAME" --no-owner --clean --if-exists \
+  | gzip -9 > "$TMP"
+
+aws s3 cp --region "$REGION" "$TMP" "s3://$BUCKET/pg/bubbleup-$STAMP.sql.gz"
+BACKUP
+sed -i "s|__BACKUP_BUCKET__|$BACKUP_BUCKET|g; s|__REGION__|$REGION|g" "$APP_DIR/backup.sh"
+chmod +x "$APP_DIR/backup.sh"
+
+# Cron: nightly at 03:17 UTC (off-peak, off-the-hour to avoid contention).
+cat > /etc/cron.d/bubbleup-backup <<'CRON'
+17 3 * * * root /opt/bubbleup/backup.sh >> /var/log/bubbleup-backup.log 2>&1
+CRON
+chmod 644 /etc/cron.d/bubbleup-backup
+
+# ───── 5. Seed the compose file + Caddyfile ────────────────────────────
+# These are fetched from GitHub raw on every deploy via SSM, but we seed them
+# on first boot so the box is partly ready before the first release.
+RAW="https://raw.githubusercontent.com/$GITHUB_REPO/main"
+curl -fsSL "$RAW/docker-compose.prod.yml" -o "$APP_DIR/docker-compose.prod.yml" || true
+curl -fsSL "$RAW/Caddyfile" -o "$APP_DIR/Caddyfile" || true
+
+echo "user-data complete at $(date -Iseconds)" >> /var/log/bubbleup-bootstrap.log
