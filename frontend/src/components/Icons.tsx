@@ -197,3 +197,121 @@ export function MenuIcon(p: IconProps) {
     </Svg>
   )
 }
+
+export function CloseIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <line x1="6" y1="6" x2="18" y2="18" />
+      <line x1="18" y1="6" x2="6" y2="18" />
+    </Svg>
+  )
+}
+
+/** Arrow pointing to the inline-start. Add `rtl:rotate-180` for a semantic "back". */
+export function ArrowLeftIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <line x1="19" y1="12" x2="5" y2="12" />
+      <polyline points="12 19 5 12 12 5" />
+    </Svg>
+  )
+}
+
+export function LockIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <rect x="3" y="11" width="18" height="11" rx="2" />
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </Svg>
+  )
+}
+
+export function SearchIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <circle cx="11" cy="11" r="8" />
+      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </Svg>
+  )
+}
+
+/** Four-point sparkle — used as a small "soon / fresh" accent, never as decoration spam. */
+export function SparkleIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" />
+    </Svg>
+  )
+}
+
+/* ---- Subject glyphs: deterministic course tiles (see AcademyPage.courseGlyph) ---- */
+
+export function CodeIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <polyline points="16 18 22 12 16 6" />
+      <polyline points="8 6 2 12 8 18" />
+    </Svg>
+  )
+}
+
+export function AtomIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <circle cx="12" cy="12" r="1.6" />
+      <ellipse cx="12" cy="12" rx="10" ry="4.4" />
+      <ellipse cx="12" cy="12" rx="10" ry="4.4" transform="rotate(60 12 12)" />
+      <ellipse cx="12" cy="12" rx="10" ry="4.4" transform="rotate(120 12 12)" />
+    </Svg>
+  )
+}
+
+export function BeakerIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M9 3h6" />
+      <path d="M10 3v6.5L5.2 18.6A1.6 1.6 0 0 0 6.6 21h10.8a1.6 1.6 0 0 0 1.4-2.4L14 9.5V3" />
+      <line x1="8" y1="14.5" x2="16" y2="14.5" />
+    </Svg>
+  )
+}
+
+export function SigmaIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M18 5H6l6 7-6 7h12" />
+    </Svg>
+  )
+}
+
+export function LeafIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M4 20c0-8 6-14 16-14 0 10-6 14-16 14z" />
+      <line x1="15" y1="9" x2="6" y2="18" />
+    </Svg>
+  )
+}
+
+export function ScaleIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <line x1="12" y1="4" x2="12" y2="21" />
+      <line x1="6" y1="6" x2="18" y2="6" />
+      <line x1="8.5" y1="21" x2="15.5" y2="21" />
+      <path d="M6 6l-3 6a3 3 0 0 0 6 0z" />
+      <path d="M18 6l-3 6a3 3 0 0 0 6 0z" />
+    </Svg>
+  )
+}
+
+export function PaletteIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M12 3a9 9 0 1 0 0 18c1.4 0 2-1 2-2 0-1.4 1-2 2.4-2H19a3 3 0 0 0 3-3 9 9 0 0 0-10-9z" />
+      <circle cx="7.5" cy="11.5" r="1" />
+      <circle cx="11" cy="7.5" r="1" />
+      <circle cx="15.5" cy="9" r="1" />
+    </Svg>
+  )
+}
