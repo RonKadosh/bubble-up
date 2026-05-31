@@ -1,0 +1,121 @@
+name: deploy
+
+# Runs after ci.yml finishes on a v*.*.* tag. ci.yml has already pushed the
+# images to GHCR; this workflow tells the EC2 box to pull them.
+#
+# Inputs (configured in GitHub repo Settings → Secrets and variables → Actions):
+#   variables:
+#     AWS_REGION         e.g. us-east-1
+#     AWS_DEPLOY_ROLE_ARN  arn:aws:iam::<account>:role/bubbleup-github-deploy
+#     EC2_INSTANCE_ID    i-0abc...
+#     CADDY_DOMAIN       bubbleup.<eip-with-dashes>.nip.io
+#
+# Trigger: workflow_run after the 'ci' workflow concludes. We re-check that
+# the head_ref was a v* tag and that ci succeeded before doing anything.
+
+on:
+  workflow_run:
+    workflows: ["ci"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Image tag to deploy (e.g. v0.1.0 or latest)"
+        required: true
+        default: "latest"
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Only run when:
+    #  - manually dispatched, OR
+    #  - the source ci run was on a v*.*.* tag AND succeeded.
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       startsWith(github.event.workflow_run.head_branch, 'v'))
+
+    steps:
+      - name: Resolve image tag
+        id: tag
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "tag=${{ github.event.inputs.image_tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${{ github.event.workflow_run.head_branch }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Send SSM Run Command
+        id: ssm
+        env:
+          IMAGE_TAG: ${{ steps.tag.outputs.tag }}
+          CADDY_DOMAIN: ${{ vars.CADDY_DOMAIN }}
+          INSTANCE_ID: ${{ vars.EC2_INSTANCE_ID }}
+        run: |
+          set -euo pipefail
+          CMD_ID=$(aws ssm send-command \
+            --instance-ids "$INSTANCE_ID" \
+            --document-name "AWS-RunShellScript" \
+            --comment "deploy bubbleup ${IMAGE_TAG}" \
+            --parameters commands="[
+              \"export IMAGE_TAG=${IMAGE_TAG}\",
+              \"export CADDY_DOMAIN=${CADDY_DOMAIN}\",
+              \"export GIT_REF=${IMAGE_TAG}\",
+              \"/opt/bubbleup/deploy.sh\"
+            ]" \
+            --cloud-watch-output-config CloudWatchOutputEnabled=false \
+            --query Command.CommandId \
+            --output text)
+          echo "cmd_id=$CMD_ID" >> "$GITHUB_OUTPUT"
+          echo "Dispatched SSM command $CMD_ID"
+
+      - name: Wait for the SSM command to finish
+        env:
+          CMD_ID: ${{ steps.ssm.outputs.cmd_id }}
+          INSTANCE_ID: ${{ vars.EC2_INSTANCE_ID }}
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 60); do
+            STATUS=$(aws ssm get-command-invocation \
+              --command-id "$CMD_ID" \
+              --instance-id "$INSTANCE_ID" \
+              --query Status \
+              --output text 2>/dev/null || echo "Pending")
+            echo "[$i] $STATUS"
+            case "$STATUS" in
+              Success) exit 0 ;;
+              Cancelled|TimedOut|Failed)
+                echo "SSM command failed: $STATUS"
+                aws ssm get-command-invocation \
+                  --command-id "$CMD_ID" \
+                  --instance-id "$INSTANCE_ID" \
+                  --query "{stdout: StandardOutputContent, stderr: StandardErrorContent}" \
+                  --output json
+                exit 1 ;;
+            esac
+            sleep 10
+          done
+          echo "Timed out waiting for SSM command"
+          exit 1
+
+      - name: Show deploy output
+        if: always()
+        env:
+          CMD_ID: ${{ steps.ssm.outputs.cmd_id }}
+          INSTANCE_ID: ${{ vars.EC2_INSTANCE_ID }}
+        run: |
+          aws ssm get-command-invocation \
+            --command-id "$CMD_ID" \
+            --instance-id "$INSTANCE_ID" \
+            --query "{stdout: StandardOutputContent, stderr: StandardErrorContent}" \
+            --output json || true

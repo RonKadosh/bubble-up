@@ -1,0 +1,6 @@
+# Copy to terraform.tfvars and edit. terraform.tfvars is gitignored.
+region              = "us-east-1"
+github_repo         = "RonKadosh/bubble-up"
+budget_email        = "aamit@post.bgu.ac.il"
+monthly_budget_usd  = 5
+data_volume_size_gb = 8

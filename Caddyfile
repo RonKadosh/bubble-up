@@ -1,0 +1,18 @@
+{
+	email {$CADDY_ACME_EMAIL}
+}
+
+{$CADDY_DOMAIN} {
+	encode zstd gzip
+
+	# Reverse-proxy everything to the frontend nginx container.
+	# The frontend nginx already proxies /api and /ws to the backend with the
+	# right WebSocket upgrade headers (see frontend/nginx.conf), so we don't
+	# need to special-case anything here.
+	reverse_proxy frontend:80 {
+		header_up Host {host}
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+}
