@@ -26,8 +26,10 @@ import java.util.UUID;
 
 /**
  * Boots a small demo population so the app is usable as soon as it starts:
- * 10 users split across 3 Study Bubbles. Idempotent — if {@code alice@bubble.up}
- * already exists we assume the seed already ran and skip everything.
+ * 10 users across 7 Study Bubbles — 3 that Bob belongs to, plus 4 "trending"
+ * bubbles on Bob's courses that he is NOT in, so the Discovery feed has stock.
+ * Idempotent — if {@code alice@bubble.up} already exists we assume the seed
+ * already ran and skip everything.
  *
  * <p>Toggle with {@code app.demo.seed.enabled} (default ON for dev convenience;
  * turn OFF in any environment that should not have shared demo credentials).
@@ -90,7 +92,7 @@ public class DemoSeeder {
                 universityId, "372.1.1117",
                 "Operating Systems study Bubble",
                 "Weekly OS practice — exam prep + past paper walkthroughs.",
-                alice);
+                6, alice);
         addMembers(osGroup, bob, carol, dave);
         enrollAll(universityId, "372.1.1117", alice, bob, carol, dave);
 
@@ -98,7 +100,7 @@ public class DemoSeeder {
                 universityId, "214.1.9111",
                 "Discrete Math Crew",
                 "Problem sets every Sunday. Bring snacks.",
-                eve);
+                6, eve);
         addMembers(mathGroup, frank, grace, henry);
         enrollAll(universityId, "214.1.9111", eve, frank, grace, henry);
 
@@ -106,9 +108,47 @@ public class DemoSeeder {
                 universityId, "237.2.6101",
                 "Deep Learning Reading Group",
                 "We pick one paper a week and dissect it together.",
-                isla);
+                5, isla);
         addMembers(dlGroup, jack, alice, bob);
         enrollAll(universityId, "237.2.6101", isla, jack, alice, bob);
+
+        // ── Trending bubbles in Bob's courses (he is NOT a member) ──────────
+        // Bob is enrolled in OS (372.1.1117) and DL (237.2.6101) and already
+        // belongs to the two bubbles above — so without these he has zero
+        // discoverable groups and his dashboard "Discovery" feed is empty.
+        // These extra PUBLIC bubbles sit on his courses but exclude Bob, so they
+        // surface as TRENDING (a fresh user's quiz reliability is below the match
+        // threshold, so ranking falls back to popularity / member count). The
+        // varied membership below is what gives that trending sort an order.
+        // No enrollment: discovery keys off the bubble's course + visibility, not
+        // the members' enrollment, and we want Bob's own enrollment unchanged.
+        UUID osCrammers = createGroupForCourse(
+                universityId, "372.1.1117",
+                "OS Crammers United",
+                "Last-minute exam grind. Past papers, no judgement.",
+                8, carol);
+        addMembers(osCrammers, dave, eve, frank, grace);          // 5 members
+
+        UUID kernelClub = createGroupForCourse(
+                universityId, "372.1.1117",
+                "Kernel Panic Survivors",
+                "Scheduling, paging, and the dreaded deadlock.",
+                4, henry);
+        addMembers(kernelClub, isla, jack);                       // 3 members
+
+        UUID transformersGroup = createGroupForCourse(
+                universityId, "237.2.6101",
+                "Transformers From Scratch",
+                "Building attention by hand before we trust the library.",
+                10, jack);
+        addMembers(transformersGroup, alice, carol, dave, eve, frank, grace);  // 7 members
+
+        UUID diffusionGroup = createGroupForCourse(
+                universityId, "237.2.6101",
+                "Diffusion Models Salon",
+                "From DDPM to stable diffusion — one denoising step at a time.",
+                4, grace);
+        addMembers(diffusionGroup, henry, isla);                  // 3 members
 
         // ── Admin user — for the /admin panel ──────────────────────────────
         createUserWithRole(
@@ -118,7 +158,8 @@ public class DemoSeeder {
                 universityId,
                 departmentId);
 
-        log.info("DemoSeeder: seeded 10 demo users, 1 admin, and 3 Study Bubbles");
+        log.info("DemoSeeder: seeded 10 demo users, 1 admin, and 7 Study Bubbles "
+                + "(3 with Bob as member, 4 trending in Bob's courses)");
     }
 
     private UUID createUser(String email, String displayName, UUID universityId, UUID departmentId) {
@@ -143,7 +184,7 @@ public class DemoSeeder {
     }
 
     private UUID createGroupForCourse(UUID universityId, String courseCode, String name,
-                                      String description, UUID ownerId) {
+                                      String description, int maxMembers, UUID ownerId) {
         Course course = courseRepository.findByUniversityIdAndCode(universityId, courseCode)
                 .orElseThrow(() -> new IllegalStateException(
                         "DemoSeeder: course " + courseCode + " not found — check catalog seed"));
@@ -151,6 +192,7 @@ public class DemoSeeder {
                 name,
                 description,
                 GroupVisibility.PUBLIC,
+                maxMembers,
                 /* offeringId */ null,
                 /* courseId   */ course.getId());
         return groupCommandService.createGroup(req, ownerId).id();

@@ -103,7 +103,7 @@ class SystemMessageIT extends IntegrationTest {
         String json = mvc.perform(post("/api/groups")
                         .with(bearer(owner))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(String.format("{\"name\":\"g\",\"visibility\":\"%s\",\"offeringId\":\"%s\"}", visibility, seedOfferingId())))
+                        .content(String.format("{\"name\":\"g\",\"maxMembers\":6,\"visibility\":\"%s\",\"offeringId\":\"%s\"}", visibility, seedOfferingId())))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         return UUID.fromString(om.readTree(json).get("data").get("id").asText());

@@ -287,4 +287,21 @@
     transform: translateY(0) scale(0.98);
     filter: brightness(0.97);
   }
+
+  /* "Working…" indicator: an iridescent bubble that inflates, fills with the
+     brand gradient, then pops — same soap-bubble language as the login screen. */
+  @keyframes bubble-burst {
+    0%        { transform: scale(0.72); opacity: 0.85; }
+    58%       { transform: scale(1);    opacity: 1; }    /* fully inflated */
+    74%       { transform: scale(1.1);  opacity: 1; }    /* stretch before the pop */
+    82%       { transform: scale(1.22); opacity: 0; }    /* pop */
+    83%, 100% { transform: scale(0.72); opacity: 0; }    /* reset, hidden */
+  }
+  @keyframes bubble-fill-rise {
+    0%        { height: 0%; }
+    56%       { height: 100%; }   /* filled just before the pop */
+    82%, 100% { height: 100%; }
+  }
+  .bubble-loader      { animation: bubble-burst 1.8s ease-in-out infinite; }
+  .bubble-loader-fill { animation: bubble-fill-rise 1.8s ease-in-out infinite; }
 }

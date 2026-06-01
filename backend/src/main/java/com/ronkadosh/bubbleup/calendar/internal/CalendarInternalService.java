@@ -30,6 +30,17 @@ public interface CalendarInternalService {
             int limit
     );
 
+    /**
+     * Count of upcoming events for the given owners starting within {@code [from, to]}.
+     * Drives the matching module's "upcoming sessions" trending signal.
+     */
+    long countUpcomingForOwners(
+            CalendarOwnerType ownerType,
+            Collection<UUID> ownerIds,
+            Instant from,
+            Instant to
+    );
+
     java.util.Optional<CalendarEventSummary> findById(UUID eventId);
 
     /**

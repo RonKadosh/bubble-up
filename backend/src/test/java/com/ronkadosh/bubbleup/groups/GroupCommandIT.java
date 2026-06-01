@@ -18,7 +18,7 @@ class GroupCommandIT extends IntegrationTest {
         mvc.perform(post("/api/groups")
                         .with(bearer(owner))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Algebra\",\"description\":\"linear stuff\",\"offeringId\":\"" + seedOfferingId() + "\"}"))
+                        .content("{\"name\":\"Algebra\",\"description\":\"linear stuff\",\"maxMembers\":6,\"offeringId\":\"" + seedOfferingId() + "\"}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.name").value("Algebra"))
                 .andExpect(jsonPath("$.data.visibility").value("PUBLIC"))
@@ -27,12 +27,45 @@ class GroupCommandIT extends IntegrationTest {
     }
 
     @Test
+    void create_group_exposes_chosen_maxMembers() throws Exception {
+        AuthedUser owner = registerAndLogin();
+        mvc.perform(post("/api/groups")
+                        .with(bearer(owner))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Capped\",\"maxMembers\":7,\"offeringId\":\"" + seedOfferingId() + "\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.maxMembers").value(7));
+    }
+
+    @Test
+    void create_group_with_maxMembers_below_min_is_rejected() throws Exception {
+        AuthedUser owner = registerAndLogin();
+        mvc.perform(post("/api/groups")
+                        .with(bearer(owner))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"TooSmall\",\"maxMembers\":3,\"offeringId\":\"" + seedOfferingId() + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    void create_group_with_maxMembers_above_max_is_rejected() throws Exception {
+        AuthedUser owner = registerAndLogin();
+        mvc.perform(post("/api/groups")
+                        .with(bearer(owner))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"TooBig\",\"maxMembers\":11,\"offeringId\":\"" + seedOfferingId() + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
     void create_private_group_respects_visibility() throws Exception {
         AuthedUser owner = registerAndLogin();
         mvc.perform(post("/api/groups")
                         .with(bearer(owner))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Secret\",\"visibility\":\"PRIVATE\",\"offeringId\":\"" + seedOfferingId() + "\"}"))
+                        .content("{\"name\":\"Secret\",\"visibility\":\"PRIVATE\",\"maxMembers\":6,\"offeringId\":\"" + seedOfferingId() + "\"}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.visibility").value("PRIVATE"));
     }
@@ -118,7 +151,7 @@ class GroupCommandIT extends IntegrationTest {
         String json = mvc.perform(post("/api/groups")
                         .with(bearer(owner))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(String.format("{\"name\":\"%s\",\"visibility\":\"%s\",\"offeringId\":\"%s\"}", name, visibility, seedOfferingId())))
+                        .content(String.format("{\"name\":\"%s\",\"visibility\":\"%s\",\"maxMembers\":6,\"offeringId\":\"%s\"}", name, visibility, seedOfferingId())))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         return UUID.fromString(om.readTree(json).get("data").get("id").asText());

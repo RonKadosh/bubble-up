@@ -225,12 +225,38 @@
     },
     "discovery": {
       "recommended": "Recommended Bubble",
+      "trendingBadge": "Trending Bubble",
       "matchPercent": "{{percent}}% match",
-      "members": "{{count}} members"
+      "members": "{{count}} members",
+      "trending": {
+        "active": "Buzzing with activity",
+        "growing": "Growing fast",
+        "popular": "Popular Bubble",
+        "upcoming": "Sessions coming up"
+      }
     },
     "kind": {
       "joinedBubble": "floated into the Bubble",
       "leftBubble": "left the Bubble"
+    },
+    "empty": {
+      "live": "No live Bubbles right now. When a study room goes live, it'll pop up here.",
+      "upcoming": "Nothing scheduled yet. Upcoming sessions across your Bubbles show up here.",
+      "activity": "No recent activity. Joins, messages, and shared files float up here.",
+      "discovery": "No recommendations yet. As you use Bubble.up, fresh Bubbles to explore appear here."
+    },
+    "publicBubble": {
+      "about": "About this Bubble",
+      "noDescription": "No description yet.",
+      "public": "Public",
+      "private": "Private",
+      "privateNote": "This is a private Bubble — you'll need an invite to join.",
+      "join": "Join Bubble",
+      "joining": "Joining…",
+      "joinError": "Couldn't join this Bubble. Try again.",
+      "full": "This Bubble is full.",
+      "alreadyMember": "You're already in this Bubble.",
+      "loadError": "Couldn't load this Bubble's details."
     },
     "linkedEvent": "Linked event"
   },
@@ -249,14 +275,23 @@
       "universityLabel": "University",
       "selectDepartment": "Select a department",
       "selectCourse": "Select a course",
+      "maxGroupSize": "Max members (4–10)",
+      "maxGroupSizeIncrease": "Increase max members",
+      "maxGroupSizeDecrease": "Decrease max members",
       "submit": "Float it up 🫧"
     },
+    "capacity": "{{count}}/{{max}} members",
     "header": {
       "hopIn": "Hop in",
+      "full": "Full",
+      "fullTitle": "This Bubble has reached its member limit",
       "leave": "Leave",
       "pop": "Pop",
       "popTitle": "Pop this Bubble",
-      "leaveOwnerTitle": "Transfer ownership first if other members exist"
+      "leaveOwnerTitle": "Transfer ownership first if other members exist",
+      "createLive": "Create Live Bubble",
+      "joinLive": "Join Live Bubble",
+      "joinLiveTitle": "A Live Bubble is running — jump in"
     },
     "memberLabel_one": "{{count}} member",
     "memberLabel_other": "{{count}} members",
@@ -272,6 +307,11 @@
     "bento": {
       "maximize": "Maximize"
     },
+    "info": {
+      "title": "Bubble Info",
+      "openStripAria": "Open Bubble Info",
+      "leaveBubble": "Leave Bubble"
+    },
     "members": {
       "empty": "No members yet.",
       "youSuffix": "(you)",
@@ -281,6 +321,7 @@
       "remove": "Remove",
       "addPlaceholder": "User UUID to add",
       "addButton": "+ Add",
+      "fullHint": "Bubble is full ({{max}} max). Remove a member before adding another.",
       "onlineNow": "online now",
       "lastSeen": "last seen {{rel}}",
       "lastSeenUnknown": "not seen yet",
@@ -424,6 +465,7 @@
       "create": "Failed to create Bubble.",
       "loadCatalog": "Failed to load the course catalog.",
       "join": "Failed to join Bubble.",
+      "full": "This Bubble is full.",
       "leaveOwner": "You are the owner. Transfer ownership before leaving.",
       "leave": "Failed to leave Bubble.",
       "popNotEmpty": "Remove all other members before popping the Bubble.",
@@ -516,23 +558,15 @@
       "return": "↗ Return to Live Bubble",
       "returnAria": "Return to Live Bubble"
     },
-    "liveBanner": {
-      "fallback": "Live session",
-      "fallbackExpert": "Expert session is live",
-      "started": "Started {{when}}",
-      "opensIn_one": "Opens in {{count}} min",
-      "opensIn_other": "Opens in {{count}} min",
-      "join": "Join"
-    },
     "schedule": {
-      "button": "🎥 Go Live Bubble",
-      "title": "🎥 Go Live Bubble",
+      "title": "Create Live Bubble",
       "start": "Start",
       "duration": "Duration",
       "explainer": "Members can join the Live Bubble from 15 minutes before the start time. It auto-closes at the end.",
       "defaultDescription": "Study session — {{groupName}}",
       "submit": "Go Live",
       "submitting": "Going live…",
+      "preparing": "Preparing your live bubble…",
       "duration30": "30 min",
       "duration45": "45 min",
       "duration60": "1 hour",

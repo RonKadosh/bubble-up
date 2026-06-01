@@ -82,6 +82,18 @@ public class CalendarInternalServiceImpl implements CalendarInternalService {
 
     @Override
     @Transactional(readOnly = true)
+    public long countUpcomingForOwners(
+            CalendarOwnerType ownerType,
+            Collection<UUID> ownerIds,
+            Instant from,
+            Instant to
+    ) {
+        if (ownerIds == null || ownerIds.isEmpty()) return 0L;
+        return repo.countUpcomingForOwners(ownerType, ownerIds, from, to);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public java.util.Optional<CalendarEventSummary> findById(UUID eventId) {
         return repo.findById(eventId).map(e -> new CalendarEventSummary(
                 e.getId(),

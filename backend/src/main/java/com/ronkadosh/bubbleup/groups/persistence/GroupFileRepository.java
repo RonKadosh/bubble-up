@@ -19,6 +19,9 @@ public interface GroupFileRepository extends JpaRepository<GroupFile, UUID> {
     /** Most-recently-uploaded files across the given groups. Drives the dashboard feed. */
     List<GroupFile> findByGroupIdInOrderByUploadedAtDesc(Collection<UUID> groupIds, Pageable pageable);
 
+    /** Files uploaded to a group after {@code after} — group activity trending signal. */
+    long countByGroupIdAndUploadedAtGreaterThan(UUID groupId, java.time.Instant after);
+
     List<GroupFile> findAllByGroupIdAndFolderId(UUID groupId, UUID folderId);
 
     List<GroupFile> findAllByGroupIdAndFolderIdIsNull(UUID groupId);

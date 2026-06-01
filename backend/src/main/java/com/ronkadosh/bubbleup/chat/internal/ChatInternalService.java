@@ -26,6 +26,12 @@ public interface ChatInternalService {
      * feed section.
      */
     List<MembershipEventItem> findRecentMembershipEventsForGroups(Set<UUID> groupIds, int limit);
+
+    /**
+     * Count of messages posted to any of the group's rooms since {@code since}.
+     * Drives the matching module's "activity" trending signal.
+     */
+    long countMessagesForGroupSince(UUID groupId, java.time.Instant since);
     boolean roomExists(UUID roomId);
     /**
      * Returns the room's group id, or {@code null} for expert-session rooms.

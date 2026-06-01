@@ -40,6 +40,9 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> 
 
     long countByRoomIdAndSentAtGreaterThan(UUID roomId, Instant after);
 
+    /** Messages across a set of rooms sent after {@code after} — group activity trending signal. */
+    long countByRoomIdInAndSentAtGreaterThan(Collection<UUID> roomIds, Instant after);
+
     long countByRoomId(UUID roomId);
 
     /** Newest-first messages across a set of rooms. Used for feed unread-rollup ordering. */

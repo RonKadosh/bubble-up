@@ -23,6 +23,12 @@ public interface GroupInternalService {
 
     List<UUID> getMemberUserIds(UUID groupId);
 
+    /** Files uploaded to the group since {@code since} — matching "activity" trending signal. */
+    long countFilesForGroupSince(UUID groupId, java.time.Instant since);
+
+    /** Members who joined the group since {@code since} — matching "growing" trending signal. */
+    int countRecentJoinsForGroup(UUID groupId, java.time.Instant since);
+
     /**
      * Most-recently-uploaded files across the given groups, newest first, capped at
      * {@code limit}. Drives the "Bubble activity" feed section.

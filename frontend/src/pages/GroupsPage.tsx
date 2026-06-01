@@ -23,17 +23,18 @@ import { useBentoLayoutStore, type BentoKey } from '../store/bentoLayoutStore'
 import { useViewportStore } from '../store/viewportStore'
 import { useActiveRoomStore } from '../store/activeRoomStore'
 import { BentoCell } from '../components/BentoCell'
+import { BubbleLoader } from '../components/BubbleLoader'
 import { GroupSidebar } from './groups/GroupSidebar'
 import { GroupHeader } from './groups/GroupHeader'
 import { MembersStrip } from './groups/MembersStrip'
-import { ManageMembersModal } from './groups/ManageMembersModal'
+import { BubbleInfoDrawer } from './groups/BubbleInfoDrawer'
 import { FilesPanel } from './groups/FilesPanel'
 import { CalendarPanel } from './groups/CalendarPanel'
 import { ChatPanel } from './groups/ChatPanel'
 import { ScheduleRoomModal } from './groups/ScheduleRoomModal'
-import { LiveSessionBanner } from './groups/LiveSessionBanner'
 import { CalendarEvent, listEvents } from '../api/calendar'
-import { getLiveGroupIds } from '../api/room'
+import { getLiveGroupIds, getRoomForEvent } from '../api/room'
+import { useLocation, useNavigate } from 'react-router-dom'
 
 /**
  * Merge a fresh REST snapshot into the live presence map, keeping live deltas that
@@ -55,6 +56,21 @@ function mergePresenceSnapshot(
     if (prevTime > snapTime) next[userId] = p
   }
   return next
+}
+
+/**
+ * Pick the session that is joinable *now* from a calendar window. STUDY_SESSIONs
+ * open 15 min before start; enrolled EXPERT_SESSIONs open 5 min before. Shared by
+ * the steady 30s poll and the fast "preparing live" poll so both agree.
+ */
+function findOpenSession(events: CalendarEvent[], now: number): CalendarEvent | null {
+  return events.find((e) => {
+    const startsAtMs = new Date(e.startsAt).getTime()
+    const endsAtMs = new Date(e.endsAt).getTime()
+    if (e.eventType === 'STUDY_SESSION') return now >= startsAtMs - 15 * 60_000 && now <= endsAtMs
+    if (e.eventType === 'EXPERT_SESSION') return now >= startsAtMs - 5 * 60_000 && now <= endsAtMs
+    return false
+  }) ?? null
 }
 
 type CellPlacement = { className: string }
@@ -108,6 +124,8 @@ function getBentoLayout(focused: BentoKey): BentoLayout {
  */
 export default function GroupsPage() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
+  const location = useLocation()
   const me = useAuthStore((s) => s.user)
   const focused = useBentoLayoutStore((s) => s.focused)
   const setFocused = useBentoLayoutStore((s) => s.setFocused)
@@ -124,8 +142,10 @@ export default function GroupsPage() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   /** Open dialog state for "Schedule a Room". */
   const [scheduleRoomOpen, setScheduleRoomOpen] = useState(false)
-  /** Open dialog state for "Manage members" (owner only). */
-  const [manageMembersOpen, setManageMembersOpen] = useState(false)
+  /** True while a just-started Live Bubble is spinning up — drives the "preparing" overlay. */
+  const [preparingLive, setPreparingLive] = useState(false)
+  /** Open state for the Bubble Info drawer (member roster + management + leave/pop). */
+  const [bubbleInfoOpen, setBubbleInfoOpen] = useState(false)
   /** Currently-live STUDY_SESSION event for the selected bubble (in the open window), or null. */
   const [liveSession, setLiveSession] = useState<CalendarEvent | null>(null)
   /** Group IDs that are live now (Bubble Room or expert session). Drives the sidebar red marker. */
@@ -182,6 +202,9 @@ export default function GroupsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Close the Bubble Info drawer whenever the selected bubble changes.
+  useEffect(() => { setBubbleInfoOpen(false) }, [selectedId])
+
   // If a Bubble Room is currently active and the user just landed on /groups
   // (typically via "Open Bubble" from the Room header), pre-select that
   // bubble so they don't have to re-find it in the sidebar. Only auto-selects
@@ -192,6 +215,19 @@ export default function GroupsPage() {
       setSelectedId(activeRoomGroupId)
     }
   }, [activeRoomGroupId, selectedId, groups])
+
+  // Deep-link from the dashboard: arriving with `state.selectGroupId` opens that
+  // Bubble directly (e.g. clicking a Bubble-activity card, or joining a Bubble
+  // from the discovery preview). Wait until the group is in our loaded list, then
+  // select it and clear the state so a refresh/back doesn't re-trigger it.
+  const requestedGroupId = (location.state as { selectGroupId?: string } | null)?.selectGroupId ?? null
+  useEffect(() => {
+    if (!requestedGroupId) return
+    if (groups.some((g) => g.id === requestedGroupId)) {
+      setSelectedId(requestedGroupId)
+      navigate('/groups', { replace: true, state: null })
+    }
+  }, [requestedGroupId, groups, navigate])
 
   // Keep members cached for the selected group so role checks render correctly
   useEffect(() => {
@@ -220,18 +256,7 @@ export default function GroupsPage() {
         const to = new Date(now + 60 * 60_000).toISOString()
         const events = await listEvents('GROUP', groupId, from, to)
         if (cancelled) return
-        const open = events.find((e) => {
-          const startsAtMs = new Date(e.startsAt).getTime()
-          const endsAtMs = new Date(e.endsAt).getTime()
-          if (e.eventType === 'STUDY_SESSION') {
-            return now >= startsAtMs - 15 * 60_000 && now <= endsAtMs
-          }
-          if (e.eventType === 'EXPERT_SESSION') {
-            return now >= startsAtMs - 5 * 60_000 && now <= endsAtMs
-          }
-          return false
-        }) ?? null
-        setLiveSession(open)
+        setLiveSession(findOpenSession(events, now))
       } catch {
         // Transient — silent. The banner just won't show.
       }
@@ -240,6 +265,40 @@ export default function GroupsPage() {
     const interval = window.setInterval(tick, 30_000)
     return () => { cancelled = true; window.clearInterval(interval) }
   }, [selectedId, isMember])
+
+  // Right after "Go Live", poll fast (1.5s) so the live banner appears promptly
+  // instead of waiting up to 30s for the steady cadence. The "preparing" overlay
+  // covers the gap. Gives up after 20s so it can never hang on a future session.
+  useEffect(() => {
+    if (!preparingLive) return
+    if (!selectedId || !isMember) { setPreparingLive(false); return }
+    const groupId = selectedId
+    let cancelled = false
+    const startedAt = Date.now()
+    const tick = async () => {
+      try {
+        const now = Date.now()
+        const from = new Date(now - 30 * 60_000).toISOString()
+        const to = new Date(now + 60 * 60_000).toISOString()
+        const events = await listEvents('GROUP', groupId, from, to)
+        if (cancelled) return
+        setLiveSession(findOpenSession(events, now))
+      } catch {
+        // Transient — keep retrying until detected or timed out.
+      }
+    }
+    tick()
+    const interval = window.setInterval(() => {
+      if (Date.now() - startedAt > 20_000) setPreparingLive(false)
+      else tick()
+    }, 1500)
+    return () => { cancelled = true; window.clearInterval(interval) }
+  }, [preparingLive, selectedId, isMember])
+
+  // Dismiss the "preparing" overlay the moment a live session is detected.
+  useEffect(() => {
+    if (preparingLive && liveSession) setPreparingLive(false)
+  }, [preparingLive, liveSession])
 
   // Poll which of my bubbles are live now (Bubble Room or expert session) for the
   // sidebar red marker. One cheap call covers every group, so it's independent of
@@ -304,7 +363,7 @@ export default function GroupsPage() {
     } catch {/* ignore */}
   }
 
-  async function handleCreate(input: { name: string; description?: string; visibility: Visibility; courseId: string }) {
+  async function handleCreate(input: { name: string; description?: string; visibility: Visibility; maxMembers: number; courseId: string }) {
     setError('')
     try {
       const created = await createGroup(input)
@@ -322,8 +381,10 @@ export default function GroupsPage() {
       await loadGroups()
       refreshMembers(groupId)
       refreshRooms()
-    } catch {
-      setError(t('groups.error.join'))
+    } catch (e) {
+      setError(describeError(e, t,
+        { GROUP_IS_FULL: 'groups.error.full' },
+        'groups.error.join'))
     }
   }
 
@@ -354,6 +415,31 @@ export default function GroupsPage() {
     }
   }
 
+  // Join the session that's live right now in the selected bubble. STUDY_SESSIONs
+  // open a Bubble Room (/rooms/{id}); enrolled EXPERT_SESSIONs open at /sessions/{id}.
+  async function handleJoinLive() {
+    if (!liveSession) return
+    try {
+      const room = await getRoomForEvent(liveSession.id)
+      if (room.scope === 'EXPERT_SESSION' && room.expertSessionId) {
+        navigate(`/sessions/${room.expertSessionId}`)
+      } else {
+        navigate(`/rooms/${room.id}`)
+      }
+    } catch (e) {
+      setError(describeError(e, t,
+        {
+          ROOM_NOT_YET_OPEN: 'groups.error.roomNotYetOpen',
+          EXPERT_SESSION_NOT_OPEN_FOR_JOIN_YET: 'groups.error.roomNotYetOpen',
+          ROOM_ENDED: 'groups.error.roomEnded',
+          NOT_GROUP_MEMBER: 'groups.error.notMember',
+          FORBIDDEN: 'groups.error.notMember',
+          JITSI_NOT_CONFIGURED: 'groups.error.jitsiNotConfigured',
+        },
+        'groups.error.openRoom'))
+    }
+  }
+
   async function handleAddMember(groupId: string, userId: string) {
     try {
       await addMember(groupId, userId)
@@ -365,6 +451,7 @@ export default function GroupsPage() {
         {
           USER_NOT_FOUND: 'groups.error.addMissingUser',
           ALREADY_GROUP_MEMBER: 'groups.error.addAlreadyMember',
+          GROUP_IS_FULL: 'groups.error.full',
         },
         'groups.error.addGeneric'))
     }
@@ -449,10 +536,10 @@ export default function GroupsPage() {
     }
   }
 
-  const phoneTabs: Array<{ key: typeof focused; icon: string; label: string }> = [
-    { key: 'chat',     icon: '💬', label: t('groups.tabs.chat') },
-    { key: 'calendar', icon: '📅', label: t('groups.tabs.calendar') },
-    { key: 'files',    icon: '📁', label: t('groups.tabs.files') },
+  const phoneTabs: Array<{ key: typeof focused; label: string }> = [
+    { key: 'chat',     label: t('groups.tabs.chat') },
+    { key: 'calendar', label: t('groups.tabs.calendar') },
+    { key: 'files',    label: t('groups.tabs.files') },
   ]
 
   return (
@@ -490,15 +577,14 @@ export default function GroupsPage() {
           </div>
         ) : (
           <>
-            <LiveSessionBanner liveSession={liveSession} onError={setError} />
             <GroupHeader
               group={selected}
               isOwner={isOwner}
               isMember={isMember}
               onJoin={() => handleJoin(selected.id)}
-              onLeave={() => handleLeave(selected.id)}
-              onDelete={() => handleDelete(selected.id)}
+              liveSession={liveSession}
               onScheduleRoom={() => setScheduleRoomOpen(true)}
+              onJoinLive={handleJoinLive}
               onOpenSidebar={() => setMobileSidebarOpen(true)}
             />
 
@@ -507,7 +593,24 @@ export default function GroupsPage() {
               presence={presence}
               me={me?.id ?? null}
               isOwner={isOwner}
-              onManage={() => setManageMembersOpen(true)}
+              onOpenInfo={() => setBubbleInfoOpen(true)}
+            />
+
+            <div className="relative flex-1 min-h-0 flex flex-col overflow-hidden">
+            <BubbleInfoDrawer
+              open={bubbleInfoOpen}
+              group={selected}
+              members={selectedMembers}
+              presence={presence}
+              me={me?.id ?? null}
+              isOwner={isOwner}
+              isMember={isMember}
+              onClose={() => setBubbleInfoOpen(false)}
+              onAdd={(uid) => handleAddMember(selected.id, uid)}
+              onRemove={(uid) => handleRemoveMember(selected.id, uid)}
+              onTransfer={(uid) => handleTransfer(selected.id, uid)}
+              onLeave={() => handleLeave(selected.id)}
+              onDelete={() => handleDelete(selected.id)}
             />
 
             {isPhone ? (
@@ -521,13 +624,12 @@ export default function GroupsPage() {
                         type="button"
                         onClick={() => setFocused(tab.key)}
                         aria-pressed={active}
-                        className={`flex-1 min-w-[5rem] flex flex-col items-center justify-center gap-0.5 py-2 text-xs font-medium transition-colors ${
+                        className={`flex-1 min-w-[5rem] flex items-center justify-center py-2.5 text-xs font-medium transition-colors ${
                           active
                             ? 'text-primary-600 border-b-2 border-primary-500'
                             : 'text-muted hover:text-base border-b-2 border-transparent'
                         }`}
                       >
-                        <span className="text-base leading-none" aria-hidden="true">{tab.icon}</span>
                         <span>{tab.label}</span>
                       </button>
                     )
@@ -548,7 +650,6 @@ export default function GroupsPage() {
                 return (
                   <section className={layout.sectionClass}>
                     <BentoCell
-                      icon="💬"
                       label={t('groups.tabs.chat')}
                       className={layout.chat.className}
                       isFocused={focused === 'chat'}
@@ -568,7 +669,6 @@ export default function GroupsPage() {
                       />
                     </BentoCell>
                     <BentoCell
-                      icon="📅"
                       label={t('groups.tabs.calendar')}
                       className={layout.calendar.className}
                       isFocused={focused === 'calendar'}
@@ -588,7 +688,6 @@ export default function GroupsPage() {
                       />
                     </BentoCell>
                     <BentoCell
-                      icon="📁"
                       label={t('groups.tabs.files')}
                       className={layout.files.className}
                       isFocused={focused === 'files'}
@@ -611,6 +710,7 @@ export default function GroupsPage() {
                 )
               })()
             )}
+            </div>
           </>
         )}
       </main>
@@ -620,21 +720,18 @@ export default function GroupsPage() {
           groupId={selected.id}
           groupName={selected.name}
           onClose={() => setScheduleRoomOpen(false)}
-          onScheduled={() => {/* polling effect will pick up the new room */}}
+          onScheduled={(opensNow) => { if (opensNow) setPreparingLive(true) }}
           onError={setError}
         />
       )}
 
-      {manageMembersOpen && selected && isOwner && (
-        <ManageMembersModal
-          members={selectedMembers}
-          presence={presence}
-          me={me?.id ?? null}
-          onAdd={(uid) => handleAddMember(selected.id, uid)}
-          onRemove={(uid) => handleRemoveMember(selected.id, uid)}
-          onTransfer={(uid) => handleTransfer(selected.id, uid)}
-          onClose={() => setManageMembersOpen(false)}
-        />
+      {preparingLive && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-5 rounded-3xl border border-line bg-surface px-10 py-8 shadow-bubble">
+            <BubbleLoader size={72} />
+            <p className="text-sm font-medium text-base">{t('room.schedule.preparing')}</p>
+          </div>
+        </div>
       )}
     </div>
   )

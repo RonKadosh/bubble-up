@@ -43,10 +43,10 @@ function getRoomBentoLayout(focused: RoomBentoKey): LayoutSpec {
   }
 }
 
-const PHONE_TABS: { key: RoomBentoKey; icon: string; labelKey: string }[] = [
-  { key: 'video', icon: '🎥', labelKey: 'room.video' },
-  { key: 'whiteboard', icon: '✏️', labelKey: 'room.whiteboard' },
-  { key: 'chat', icon: '💬', labelKey: 'room.chat' },
+const PHONE_TABS: { key: RoomBentoKey; labelKey: string }[] = [
+  { key: 'video', labelKey: 'room.video' },
+  { key: 'whiteboard', labelKey: 'room.whiteboard' },
+  { key: 'chat', labelKey: 'room.chat' },
 ]
 
 interface Props {
@@ -105,13 +105,12 @@ export function RoomBentoShell({
                   type="button"
                   onClick={() => setFocused(tab.key)}
                   aria-pressed={active}
-                  className={`flex-1 min-w-[5rem] flex flex-col items-center justify-center gap-0.5 py-2 text-xs font-medium transition-colors ${
+                  className={`flex-1 min-w-[5rem] flex items-center justify-center py-2.5 text-xs font-medium transition-colors ${
                     active
                       ? 'text-primary-600 border-b-2 border-primary-500'
                       : 'text-muted hover:text-base border-b-2 border-transparent'
                   }`}
                 >
-                  <span className="text-base leading-none" aria-hidden="true">{tab.icon}</span>
                   <span>{t(tab.labelKey)}</span>
                 </button>
               )
@@ -131,7 +130,6 @@ export function RoomBentoShell({
           return (
             <section className={layout.sectionClass}>
               <BentoCell
-                icon="🎥"
                 label={t('room.video')}
                 className={layout.video.className}
                 isFocused={focused === 'video'}
@@ -141,7 +139,6 @@ export function RoomBentoShell({
                 {videoSlot}
               </BentoCell>
               <BentoCell
-                icon="✏️"
                 label={t('room.whiteboard')}
                 className={layout.whiteboard.className}
                 isFocused={focused === 'whiteboard'}
@@ -151,7 +148,6 @@ export function RoomBentoShell({
                 {whiteboardSlot}
               </BentoCell>
               <BentoCell
-                icon="💬"
                 label={t('room.chat')}
                 className={layout.chat.className}
                 isFocused={focused === 'chat'}

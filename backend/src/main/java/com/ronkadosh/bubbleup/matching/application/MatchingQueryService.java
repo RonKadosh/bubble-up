@@ -5,6 +5,7 @@ import com.ronkadosh.bubbleup.common.config.MatchingProperties;
 import com.ronkadosh.bubbleup.common.datetime.TimeProvider;
 import com.ronkadosh.bubbleup.common.error.AppException;
 import com.ronkadosh.bubbleup.common.error.ErrorCode;
+import com.ronkadosh.bubbleup.enrollment.internal.EnrollmentInternalService;
 import com.ronkadosh.bubbleup.groups.internal.GroupInternalService;
 import com.ronkadosh.bubbleup.matching.api.dto.GroupRecommendationDto;
 import com.ronkadosh.bubbleup.matching.api.dto.NextQuestionResponse;
@@ -22,6 +23,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -35,6 +37,7 @@ public class MatchingQueryService {
     private final QuizQuestionRepository quizQuestionRepository;
     private final QuizAnswerOptionRepository answerOptionRepository;
     private final GroupInternalService groupInternalService;
+    private final EnrollmentInternalService enrollmentInternalService;
     private final CatalogInternalService catalogInternalService;
     private final MatchingCommandService commandService;
     private final MatchingProperties props;
@@ -95,11 +98,11 @@ public class MatchingQueryService {
                         userId, PageRequest.of(0, props.recommendationLimit()));
 
         if (!cached.isEmpty()) {
-            MatchResultType type = cached.get(0).getResultType();
             List<GroupRecommendationDto> groups = cached.stream()
-                    .map(c -> toDto(c.getGroupId(), c.getMatchScore(), c.getResultType(), userId))
+                    .map(c -> toDto(c.getGroupId(), c.getMatchPercent(), c.getResultType(),
+                            c.getMatchingConfidence(), userId))
                     .toList();
-            return new RecommendationsResponse(type.name(), reliability, groups);
+            return new RecommendationsResponse(summaryType(groups), reliability, groups);
         }
 
         return computeLive(userId, courseId, profile, reliability);
@@ -111,10 +114,11 @@ public class MatchingQueryService {
         if (courseId != null) {
             userCourseIds = List.of(courseId);
         } else {
-            userCourseIds = groupInternalService.getGroupsForUser(userId).stream()
-                    .map(s -> s.courseId())
-                    .distinct()
-                    .toList();
+            // "Your courses" for discovery = what you're enrolled in this term,
+            // not the courses of bubbles you already joined. This lets a freshly
+            // enrolled student get course-relevant recommendations before joining
+            // anything; an unenrolled user falls through to global trending below.
+            userCourseIds = enrollmentInternalService.enrolledCourseIdsForCurrentTerm(userId);
         }
 
         List<UUID> candidateIds = userCourseIds.isEmpty()
@@ -127,44 +131,64 @@ public class MatchingQueryService {
         }
 
         List<GroupProfile> groupProfiles = groupProfileRepository.findAllByGroupIdIn(candidateIds);
-        boolean useTrending = reliability < props.credibilityThreshold() || groupProfiles.isEmpty();
         int daysActive = (int) ChronoUnit.DAYS.between(profile.getUpdatedAt(), Instant.now());
         double[] userFinal = MatchingScorer.userFinalScores(profile, daysActive, props);
+        double userConfidence = MatchingScorer.userConfidence(
+                profile.getAnsweredQuestions(), profile.getMeaningfulBehaviorEvents(), props);
 
-        List<GroupRecommendationDto> groups;
-        MatchResultType type;
-        if (useTrending) {
-            type = MatchResultType.TRENDING;
-            groups = groupProfiles.stream()
-                    .sorted((a, b) -> Integer.compare(b.getMemberCount(), a.getMemberCount()))
-                    .limit(props.recommendationLimit())
-                    .map(gp -> toDto(gp.getGroupId(), gp.getMemberCount() / 100.0, type, userId))
-                    .toList();
-        } else {
-            type = MatchResultType.MATCHED;
-            groups = groupProfiles.stream()
-                    .map(gp -> {
-                        double score = MatchingScorer.matchPercent(userFinal, gp, reliability, props) / 100.0;
-                        return toDto(gp.getGroupId(), score, type, userId);
-                    })
-                    .sorted((a, b) -> Double.compare(
-                            b.matchPercent() != null ? b.matchPercent() : 0,
-                            a.matchPercent() != null ? a.matchPercent() : 0))
-                    .limit(props.recommendationLimit())
-                    .toList();
-        }
+        // One continuous pipeline: every candidate is blended (matching ⇄ trending by
+        // confidence) and ranked by final_score; the MATCHED/TRENDING label is per-rec.
+        List<GroupRecommendationDto> groups = groupProfiles.stream()
+                .map(gp -> new ScoredGroup(gp, MatchingScorer.score(userFinal, userConfidence, gp, props)))
+                .sorted((a, b) -> Double.compare(b.scored().finalScore(), a.scored().finalScore()))
+                .limit(props.recommendationLimit())
+                .map(sg -> toDto(sg.profile().getGroupId(), sg.scored().matchPercent(),
+                        sg.scored().mode(), sg.scored().matchingConfidence(), userId))
+                .toList();
 
         eventPublisher.publishEvent(new BuildUserMatchCacheEvent(userId));
-        return new RecommendationsResponse(type.name(), reliability, groups);
+        return new RecommendationsResponse(summaryType(groups), reliability, groups);
     }
 
-    private GroupRecommendationDto toDto(UUID groupId, double rawScore, MatchResultType type, UUID userId) {
+    private record ScoredGroup(GroupProfile profile, MatchingScorer.Scored scored) {}
+
+    private GroupRecommendationDto toDto(UUID groupId, Integer matchPercent, MatchResultType mode,
+                                         double matchingConfidence, UUID userId) {
         String groupName = groupInternalService.getGroupName(groupId).orElse("Unknown");
         boolean alreadyMember = groupInternalService.isMember(groupId, userId);
-        Integer matchPercent = type == MatchResultType.MATCHED ? (int) Math.round(rawScore * 100) : null;
-        int memberCount = groupProfileRepository.findByGroupId(groupId)
-                .map(GroupProfile::getMemberCount)
-                .orElse(0);
-        return new GroupRecommendationDto(groupId, groupName, matchPercent, memberCount, alreadyMember);
+        Optional<GroupProfile> gp = groupProfileRepository.findByGroupId(groupId);
+        int memberCount = gp.map(GroupProfile::getMemberCount).orElse(0);
+        List<String> reasons = (mode == MatchResultType.TRENDING && gp.isPresent())
+                ? trendingReasons(gp.get())
+                : List.of();
+        return new GroupRecommendationDto(groupId, groupName, matchPercent, memberCount,
+                alreadyMember, mode.name(), matchingConfidence, reasons);
+    }
+
+    /** The top 1–2 trending signals driving a bubble, as machine codes the client localizes. */
+    private List<String> trendingReasons(GroupProfile gp) {
+        MatchingProperties.Trending t = props.trending();
+        record Sig(String code, double contribution) {}
+        List<Sig> sigs = List.of(
+                new Sig("TRENDING_ACTIVE",   t.activityWeight()    * norm(gp.getTrendingActivityCount(), t.activityCap())),
+                new Sig("TRENDING_GROWING",  t.recentJoinWeight()  * norm(gp.getTrendingRecentJoins(), t.recentJoinCap())),
+                new Sig("TRENDING_POPULAR",  t.memberCountWeight() * norm(gp.getMemberCount(), t.memberCountCap())),
+                new Sig("TRENDING_UPCOMING", t.upcomingWeight()    * norm(gp.getTrendingUpcomingSessions(), t.upcomingCap())));
+        return sigs.stream()
+                .filter(s -> s.contribution() > 1e-9)
+                .sorted((a, b) -> Double.compare(b.contribution(), a.contribution()))
+                .limit(2)
+                .map(Sig::code)
+                .toList();
+    }
+
+    private static double norm(double raw, double cap) {
+        return cap <= 0 ? 0.0 : Math.min(raw / cap, 1.0);
+    }
+
+    private static String summaryType(List<GroupRecommendationDto> groups) {
+        boolean anyMatched = groups.stream()
+                .anyMatch(g -> MatchResultType.MATCHED.name().equals(g.displayMode()));
+        return anyMatched ? MatchResultType.MATCHED.name() : MatchResultType.TRENDING.name();
     }
 }

@@ -46,6 +46,13 @@ export interface FeedItem {
   memberCount?: number
   /** Users currently in the live room's video call (liveGroupRoom / liveSession). */
   participantCount?: number
+  /**
+   * Recommendation (discovery) display mode. MATCHED → trust the fit, show
+   * `matchPercent`. TRENDING → show localized `reasonLabels`, no percent.
+   */
+  displayMode?: 'MATCHED' | 'TRENDING'
+  /** Trending reason codes (TRENDING_ACTIVE | _GROWING | _POPULAR | _UPCOMING), localized client-side. */
+  reasonLabels?: string[]
   cta?: FeedCta
 }
 

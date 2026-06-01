@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Avatar } from '../../components/Avatar'
+import { useUserCardStore } from '../../store/userCardStore'
 import {
   ChatLinkTargetType,
   ChatMessage,
@@ -696,6 +697,7 @@ function ChatMessageRow({
   quotedParent, highlighted, onReply, onJumpTo, onTogglePin, isExpertSession,
 }: ChatMessageRowProps) {
   const { t } = useTranslation()
+  const openUserCard = useUserCardStore((s) => s.open)
   if (m.messageType === 'SYSTEM_JOIN' || m.messageType === 'SYSTEM_LEAVE') {
     const phrase = isExpertSession
       ? (m.messageType === 'SYSTEM_JOIN' ? t('expertRoom.chat.joined') : t('expertRoom.chat.left'))
@@ -778,8 +780,9 @@ function ChatMessageRow({
     >
       {mine && actions}
       {!mine && m.senderId && (
-        <Link
-          to={`/profile/${m.senderId}`}
+        <button
+          type="button"
+          onClick={() => openUserCard(m.senderId!)}
           aria-label={m.senderDisplayName ?? m.senderId}
           className="shrink-0 self-end"
         >
@@ -789,7 +792,7 @@ function ChatMessageRow({
             imageUrl={m.senderAvatarUrl}
             size="sm"
           />
-        </Link>
+        </button>
       )}
       <div className={`max-w-[85%] tablet:max-w-[60%] px-4 py-2.5 shadow-themed text-sm transition-shadow ${highlightRing} ${pinBorder} ${
         mine
@@ -797,12 +800,13 @@ function ChatMessageRow({
           : 'bg-surface border border-line text-base rounded-[1.5rem] rounded-bl-[3px]'
       }`}>
         {!mine && m.senderId && (
-          <Link
-            to={`/profile/${m.senderId}`}
-            className="text-xs font-semibold text-primary-600 hover:underline mb-1 block truncate"
+          <button
+            type="button"
+            onClick={() => openUserCard(m.senderId!)}
+            className="text-xs font-semibold text-primary-600 hover:underline mb-1 block truncate text-start"
           >
             {m.senderDisplayName ?? `${m.senderId.slice(0, 8)}…`}
-          </Link>
+          </button>
         )}
         {m.replyToMessageId && (
           <QuotedPreview

@@ -29,7 +29,7 @@ class GroupsMeIT extends IntegrationTest {
         UUID courseId = seedCourseId();
         // Owner creates a public group on the seeded course.
         String create = String.format(
-                "{\"name\":\"Solo\",\"description\":\"\",\"visibility\":\"PUBLIC\",\"courseId\":\"%s\"}",
+                "{\"name\":\"Solo\",\"description\":\"\",\"visibility\":\"PUBLIC\",\"maxMembers\":6,\"courseId\":\"%s\"}",
                 courseId);
         MvcResult created = mvc.perform(post("/api/groups")
                         .with(bearer(owner))

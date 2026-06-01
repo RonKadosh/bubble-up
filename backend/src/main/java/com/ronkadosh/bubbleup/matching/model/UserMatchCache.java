@@ -38,12 +38,27 @@ public class UserMatchCache {
     @Column(name = "course_id", nullable = false)
     private UUID courseId;
 
+    /** The blended {@code final_score} — the ordering key (see the user-score index). */
     @Column(name = "match_score", nullable = false)
     private double matchScore;
 
+    /**
+     * Per-recommendation display mode. MATCHED when {@code matchingConfidence} cleared
+     * the threshold (show {@link #matchPercent}); TRENDING otherwise (show reason labels,
+     * no percent). Replaces the old batch-level result type — each row carries its own.
+     */
     @Enumerated(EnumType.STRING)
     @Column(name = "result_type", nullable = false, length = 16)
     private MatchResultType resultType;
+
+    /** user_confidence × group_profile_confidence at cache time — drives {@link #resultType}. */
+    @Builder.Default
+    @Column(name = "matching_confidence", nullable = false)
+    private double matchingConfidence = 0.0;
+
+    /** round(personalized_match × 100); null for TRENDING rows (no trustworthy percent). */
+    @Column(name = "match_percent")
+    private Integer matchPercent;
 
     @Column(name = "cached_at", nullable = false)
     private Instant cachedAt;

@@ -87,6 +87,18 @@ public class GroupInternalServiceImpl implements GroupInternalService {
 
     @Override
     @Transactional(readOnly = true)
+    public long countFilesForGroupSince(UUID groupId, java.time.Instant since) {
+        return groupFileRepository.countByGroupIdAndUploadedAtGreaterThan(groupId, since);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public int countRecentJoinsForGroup(UUID groupId, java.time.Instant since) {
+        return (int) memberRepository.countByGroupIdAndJoinedAtGreaterThan(groupId, since);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<GroupFileActivityItem> findRecentFilesForGroups(Set<UUID> groupIds, int limit) {
         if (groupIds == null || groupIds.isEmpty()) return List.of();
         return groupFileRepository

@@ -50,6 +50,19 @@ public interface CalendarEventRepository extends JpaRepository<CalendarEvent, UU
             Pageable pageable
     );
 
+    /** Count of upcoming events for the given owners within {@code [from, to]} — matching trending signal. */
+    @Query("""
+            select count(e) from CalendarEvent e
+            where e.ownerType = :type and e.ownerId in :ownerIds
+              and e.startsAt >= :from and e.startsAt <= :to
+            """)
+    long countUpcomingForOwners(
+            @Param("type") CalendarOwnerType type,
+            @Param("ownerIds") Collection<UUID> ownerIds,
+            @Param("from") Instant from,
+            @Param("to") Instant to
+    );
+
     /**
      * Returns the owner's {@code STUDY_SESSION} events that overlap the given
      * window — i.e. anything that would conflict with a proposed

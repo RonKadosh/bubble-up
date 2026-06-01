@@ -12,6 +12,8 @@ export interface Group {
   createdBy: string
   ownerId: string
   memberCount: number
+  /** Max members allowed in this Bubble. Chosen once at creation (4–10); immutable. */
+  maxMembers: number
   createdAt: string
 }
 
@@ -29,6 +31,8 @@ export interface CreateGroupPayload {
   name: string
   description?: string
   visibility?: Visibility
+  /** Required: max members (4–10), chosen once at creation. */
+  maxMembers: number
   courseId: string
 }
 

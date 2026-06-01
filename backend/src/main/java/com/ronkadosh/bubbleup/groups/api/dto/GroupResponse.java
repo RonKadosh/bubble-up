@@ -15,6 +15,7 @@ public record GroupResponse(
         UUID createdBy,
         UUID ownerId,
         long memberCount,
+        int maxMembers,
         Instant createdAt
 ) {
     public static GroupResponse from(StudyGroup group, UUID ownerId, long memberCount) {
@@ -27,6 +28,7 @@ public record GroupResponse(
                 group.getCreatedBy(),
                 ownerId,
                 memberCount,
+                group.getMaxMembers(),
                 group.getCreatedAt()
         );
     }

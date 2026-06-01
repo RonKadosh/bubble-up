@@ -30,7 +30,7 @@ class GroupsByCourseIT extends IntegrationTest {
         // Create a group under this course (auto-attaches to current offering) so
         // the list is non-empty.
         String create = String.format(
-                "{\"name\":\"Test Group\",\"description\":\"\",\"visibility\":\"PUBLIC\",\"courseId\":\"%s\"}",
+                "{\"name\":\"Test Group\",\"description\":\"\",\"visibility\":\"PUBLIC\",\"maxMembers\":6,\"courseId\":\"%s\"}",
                 courseId);
         mvc.perform(post("/api/groups")
                         .with(bearer(me))
@@ -72,14 +72,14 @@ class GroupsByCourseIT extends IntegrationTest {
                         .with(bearer(me))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(String.format(
-                                "{\"name\":\"Alpha\",\"description\":\"\",\"visibility\":\"PUBLIC\",\"courseId\":\"%s\"}",
+                                "{\"name\":\"Alpha\",\"description\":\"\",\"visibility\":\"PUBLIC\",\"maxMembers\":6,\"courseId\":\"%s\"}",
                                 courseId)))
                 .andExpect(status().isCreated());
         mvc.perform(post("/api/groups")
                         .with(bearer(me))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(String.format(
-                                "{\"name\":\"Beta\",\"description\":\"\",\"visibility\":\"PUBLIC\",\"courseId\":\"%s\"}",
+                                "{\"name\":\"Beta\",\"description\":\"\",\"visibility\":\"PUBLIC\",\"maxMembers\":6,\"courseId\":\"%s\"}",
                                 courseId)))
                 .andExpect(status().isCreated());
         mvc.perform(post("/api/enrollments")

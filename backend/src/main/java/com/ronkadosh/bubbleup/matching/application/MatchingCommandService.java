@@ -6,6 +6,10 @@ import com.ronkadosh.bubbleup.common.error.AppException;
 import com.ronkadosh.bubbleup.common.error.ErrorCode;
 import com.ronkadosh.bubbleup.common.events.BehaviorEventType;
 import com.ronkadosh.bubbleup.common.events.UserBehaviorEvent;
+import com.ronkadosh.bubbleup.calendar.internal.CalendarInternalService;
+import com.ronkadosh.bubbleup.calendar.model.CalendarOwnerType;
+import com.ronkadosh.bubbleup.chat.internal.ChatInternalService;
+import com.ronkadosh.bubbleup.enrollment.internal.EnrollmentInternalService;
 import com.ronkadosh.bubbleup.groups.internal.GroupInternalService;
 import com.ronkadosh.bubbleup.matching.model.*;
 import com.ronkadosh.bubbleup.matching.persistence.*;
@@ -17,7 +21,9 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -32,6 +38,9 @@ public class MatchingCommandService {
     private final QuizQuestionRepository quizQuestionRepository;
     private final QuizAnswerOptionRepository answerOptionRepository;
     private final GroupInternalService groupInternalService;
+    private final EnrollmentInternalService enrollmentInternalService;
+    private final ChatInternalService chatInternalService;
+    private final CalendarInternalService calendarInternalService;
     private final MatchingProperties props;
     private final TimeProvider timeProvider;
     private final ApplicationEventPublisher eventPublisher;
@@ -93,16 +102,18 @@ public class MatchingCommandService {
         UserProfile profile = getOrCreateUserProfile(userId);
         List<QuizResponse> responses = quizResponseRepository.findAllByUserId(userId);
 
-        for (int r = 0; r < 7; r++) profile.setQuizScore(r, 0.0);
-
+        // Build the character vector as a max-normalized SHAPE, not a raw running
+        // tally — so answering more questions sharpens the profile toward the
+        // user's true leanings instead of creeping every role toward 1.0. Trust in
+        // the shape is tracked separately by answeredQuestions → user_confidence.
+        List<double[]> answerWeights = new ArrayList<>();
         for (QuizResponse response : responses) {
-            answerOptionRepository.findById(response.getAnswerId()).ifPresent(option -> {
-                double[] weights = option.weightsArray();
-                for (int r = 0; r < 7; r++) {
-                    profile.setQuizScore(r, Math.min(1.0, profile.getQuizScore(r) + weights[r]));
-                }
-            });
+            answerOptionRepository.findById(response.getAnswerId())
+                    .ifPresent(option -> answerWeights.add(option.weightsArray()));
         }
+        double[] vector = MatchingScorer.buildQuizVector(answerWeights);
+        for (int r = 0; r < 7; r++) profile.setQuizScore(r, vector[r]);
+
         profile.setAnsweredQuestions(responses.size());
         profile.setUpdatedAt(timeProvider.now());
         userProfileRepository.save(profile);
@@ -119,6 +130,9 @@ public class MatchingCommandService {
             case SENT_MESSAGE           -> profile.addBehaviorDelta(4, props.deltas().sentMessageCommunicator());
             default -> { /* future placeholder — no delta configured */ }
         }
+        // Every mapped behavior event counts toward behavior_confidence. Quiz answers
+        // do NOT pass through here (they go to recomputeUserQuizProfile / answeredQuestions).
+        profile.setMeaningfulBehaviorEvents(profile.getMeaningfulBehaviorEvents() + 1);
         profile.setUpdatedAt(timeProvider.now());
         userProfileRepository.save(profile);
     }
@@ -156,22 +170,57 @@ public class MatchingCommandService {
         GroupProfile groupProfile = groupProfileRepository.findByGroupId(groupId)
                 .orElseGet(() -> GroupProfile.builder().groupId(groupId).build());
 
-        int count = memberProfiles.size();
-        if (count == 0) {
+        int memberCount = memberIds.size();   // true count (members without a profile still count for size)
+        if (memberProfiles.isEmpty()) {
             for (int r = 0; r < 7; r++) groupProfile.setAvgScore(r, 0.0);
-            groupProfile.setMemberCount(0);
+            groupProfile.setGroupProfileConfidence(0.0);
         } else {
+            // Each member's confidence weights their contribution to the group vector,
+            // so a strong-but-well-known member shapes the profile more than a guess.
+            double[] confs = new double[memberProfiles.size()];
+            double confSum = 0;
+            for (int i = 0; i < memberProfiles.size(); i++) {
+                UserProfile p = memberProfiles.get(i);
+                confs[i] = MatchingScorer.userConfidence(
+                        p.getAnsweredQuestions(), p.getMeaningfulBehaviorEvents(), props);
+                confSum += confs[i];
+            }
             for (int r = 0; r < 7; r++) {
-                final int role = r;
-                double avg = memberProfiles.stream()
-                        .mapToDouble(p -> MatchingScorer.finalScore(role, p, 0, props))
-                        .average()
-                        .orElse(0.0);
+                double avg;
+                if (confSum > 0) {
+                    double weighted = 0;
+                    for (int i = 0; i < memberProfiles.size(); i++) {
+                        weighted += MatchingScorer.finalScore(r, memberProfiles.get(i), 0, props) * confs[i];
+                    }
+                    avg = weighted / confSum;
+                } else {
+                    double sum = 0;   // all members fully unknown → plain average
+                    for (UserProfile p : memberProfiles) sum += MatchingScorer.finalScore(r, p, 0, props);
+                    avg = sum / memberProfiles.size();
+                }
                 groupProfile.setAvgScore(r, avg);
             }
-            groupProfile.setMemberCount(count);
+            groupProfile.setGroupProfileConfidence(
+                    MatchingScorer.groupConfidence(confs, memberCount, props));
         }
-        groupProfile.setUpdatedAt(timeProvider.now());
+        groupProfile.setMemberCount(memberCount);
+
+        // Trending raw signals (counts within configured windows; stored un-normalized).
+        Instant now = timeProvider.now();
+        MatchingProperties.Trending t = props.trending();
+        Instant activitySince = now.minus(t.activityWindowDays(), ChronoUnit.DAYS);
+        Instant joinSince = now.minus(t.recentJoinWindowDays(), ChronoUnit.DAYS);
+        long activity = chatInternalService.countMessagesForGroupSince(groupId, activitySince)
+                + groupInternalService.countFilesForGroupSince(groupId, activitySince);
+        groupProfile.setTrendingActivityCount(activity);
+        groupProfile.setTrendingRecentJoins(
+                groupInternalService.countRecentJoinsForGroup(groupId, joinSince));
+        long upcoming = calendarInternalService.countUpcomingForOwners(
+                CalendarOwnerType.GROUP, List.of(groupId),
+                now, now.plus(t.upcomingWindowDays(), ChronoUnit.DAYS));
+        groupProfile.setTrendingUpcomingSessions((int) upcoming);
+
+        groupProfile.setUpdatedAt(now);
         groupProfileRepository.save(groupProfile);
     }
 
@@ -190,10 +239,9 @@ public class MatchingCommandService {
         UserProfile profile = getOrCreateUserProfile(userId);
         var now = timeProvider.now();
 
-        List<UUID> userCourseIds = groupInternalService.getGroupsForUser(userId).stream()
-                .map(s -> s.courseId())
-                .distinct()
-                .toList();
+        // Enrollment-driven discovery: cache candidates from the user's enrolled
+        // courses (current term), mirroring MatchingQueryService.computeLive.
+        List<UUID> userCourseIds = enrollmentInternalService.enrolledCourseIdsForCurrentTerm(userId);
 
         List<UUID> candidateIds = userCourseIds.isEmpty()
                 ? groupInternalService.getTopPublicGroupIds(userId, props.recommendationLimit())
@@ -205,32 +253,24 @@ public class MatchingCommandService {
         }
 
         List<GroupProfile> groupProfiles = groupProfileRepository.findAllByGroupIdIn(candidateIds);
-        long totalActive = quizQuestionRepository.countByActive(true);
-        double reliability = totalActive == 0 ? 0.0 : (double) profile.getAnsweredQuestions() / totalActive;
-        boolean useTrending = reliability < props.credibilityThreshold() || groupProfiles.isEmpty();
-
         int daysActive = (int) ChronoUnit.DAYS.between(profile.getUpdatedAt(), now);
+        double[] userFinal = MatchingScorer.userFinalScores(profile, daysActive, props);
+        double userConfidence = MatchingScorer.userConfidence(
+                profile.getAnsweredQuestions(), profile.getMeaningfulBehaviorEvents(), props);
 
         for (GroupProfile gp : groupProfiles) {
             UUID courseId = groupInternalService.getCourseIdForGroup(gp.getGroupId())
                     .orElse(UUID.fromString("00000000-0000-0000-0000-000000000000"));
 
-            double matchScore;
-            MatchResultType resultType;
-            if (useTrending) {
-                matchScore = gp.getMemberCount() / 100.0; // normalized for ordering
-                resultType = MatchResultType.TRENDING;
-            } else {
-                double[] userFinal = MatchingScorer.userFinalScores(profile, daysActive, props);
-                matchScore = MatchingScorer.matchPercent(userFinal, gp, reliability, props) / 100.0;
-                resultType = MatchResultType.MATCHED;
-            }
+            MatchingScorer.Scored s = MatchingScorer.score(userFinal, userConfidence, gp, props);
 
             matchCacheRepository.findByUserIdAndGroupId(userId, gp.getGroupId())
                     .ifPresentOrElse(
                             existing -> {
-                                existing.setMatchScore(matchScore);
-                                existing.setResultType(resultType);
+                                existing.setMatchScore(s.finalScore());
+                                existing.setResultType(s.mode());
+                                existing.setMatchingConfidence(s.matchingConfidence());
+                                existing.setMatchPercent(s.matchPercent());
                                 existing.setCourseId(courseId);
                                 existing.setCachedAt(now);
                                 matchCacheRepository.save(existing);
@@ -239,8 +279,10 @@ public class MatchingCommandService {
                                     .userId(userId)
                                     .groupId(gp.getGroupId())
                                     .courseId(courseId)
-                                    .matchScore(matchScore)
-                                    .resultType(resultType)
+                                    .matchScore(s.finalScore())
+                                    .resultType(s.mode())
+                                    .matchingConfidence(s.matchingConfidence())
+                                    .matchPercent(s.matchPercent())
                                     .cachedAt(now)
                                     .build())
                     );

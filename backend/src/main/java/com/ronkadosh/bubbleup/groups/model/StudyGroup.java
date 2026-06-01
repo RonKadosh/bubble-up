@@ -38,6 +38,10 @@ public class StudyGroup {
     @Column(name = "offering_id", nullable = false, updatable = false)
     private UUID offeringId;
 
+    /** Max members allowed in this Bubble. Chosen once at creation (4–10); immutable. */
+    @Column(name = "max_members", nullable = false, updatable = false)
+    private int maxMembers;
+
     @Column(nullable = false, updatable = false)
     private UUID createdBy;
 

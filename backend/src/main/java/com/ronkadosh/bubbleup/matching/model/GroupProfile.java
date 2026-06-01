@@ -37,6 +37,23 @@ public class GroupProfile {
     @Column(name = "member_count", nullable = false)
     private int memberCount = 0;
 
+    /**
+     * How much we trust this group's characteristic profile:
+     * {@code avg(member_confidences) * min(member_count / cap, 1)}. Drives the
+     * {@code matching_confidence} blend — a group of weakly-known members yields
+     * mostly-trending recommendations. See {@code MatchingScorer.groupConfidence}.
+     */
+    @Builder.Default
+    @Column(name = "group_profile_confidence", nullable = false)
+    private double groupProfileConfidence = 0.0;
+
+    // Raw trending signals (counts within configured windows). Stored un-normalized
+    // so the normalization caps stay tunable without a recompute. See
+    // MatchingScorer.trendingScore. member_count above doubles as the size signal.
+    @Builder.Default @Column(name = "trending_activity_count", nullable = false)    private long trendingActivityCount = 0L;
+    @Builder.Default @Column(name = "trending_recent_joins", nullable = false)      private int trendingRecentJoins = 0;
+    @Builder.Default @Column(name = "trending_upcoming_sessions", nullable = false) private int trendingUpcomingSessions = 0;
+
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 

@@ -41,9 +41,10 @@ app:
     token-ttl: ${APP_JITSI_TOKEN_TTL:PT2H}
   demo:
     seed:
-      # Boots 10 demo users + 3 Study Bubbles on first start. Idempotent.
-      # Turn off in any env that should not have shared credentials.
-      enabled: ${APP_DEMO_SEED_ENABLED:false}
+      # Boots 10 demo users + Study Bubbles on first start. Idempotent.
+      # Temporarily ON by default while iterating; turn off in any env that
+      # should not have shared credentials.
+      enabled: ${APP_DEMO_SEED_ENABLED:true}
   simulation:
     enabled: false
   agents:
@@ -53,7 +54,6 @@ app:
     # Flip to false to require admin approval via /admin/experts.
     auto-verify: ${APP_EXPERT_AUTO_VERIFY:true}
   matching:
-    credibility-threshold: 0.25
     quiz-question-cap: 12
     recommendation-limit: 5
     candidate-limit-per-course: 200
@@ -64,17 +64,37 @@ app:
     # Minimum gap between consecutive quiz prompts to a single user. ISO-8601 duration.
     # PT30S for quick demos; PT10M is the dev default; raise toward PT2H+ for production cadence.
     quiz-cooldown: ${APP_MATCHING_QUIZ_COOLDOWN:PT10M}
-    targets:
-      leader: 0.55
-      planner: 0.60
-      expert: 0.60
-      creative: 0.50
-      communicator: 0.70
-      team-player: 0.70
-      challenger: 0.45
+    # matching_confidence (= user_confidence × group_profile_confidence) at/above this
+    # renders a bubble as MATCHED (shows %); below it renders as TRENDING (reason labels).
+    matched-display-threshold: ${APP_MATCHING_MATCHED_THRESHOLD:0.30}
+    confidence:
+      question-cap: 7        # answered questions for full question-confidence
+      behavior-cap: 30       # meaningful behavior events for full behavior-confidence
+      question-weight: 0.70
+      behavior-weight: 0.30
+      user-cap: 1.0
+      group-member-cap: 5    # members for the group-confidence size factor to saturate
+    trending:
+      activity-weight: 0.35
+      recent-join-weight: 0.30
+      member-count-weight: 0.20
+      upcoming-weight: 0.15
+      activity-window-days: ${APP_MATCHING_TRENDING_ACTIVITY_WINDOW_DAYS:14}
+      recent-join-window-days: ${APP_MATCHING_TRENDING_JOIN_WINDOW_DAYS:14}
+      upcoming-window-days: ${APP_MATCHING_TRENDING_UPCOMING_WINDOW_DAYS:30}
+      activity-cap: 50       # msgs+files in window that saturate the activity signal
+      recent-join-cap: 5
+      member-count-cap: 10
+      upcoming-cap: 5
     deltas:
       created-group-leader: 0.10
       added-member-leader: 0.06
       created-calendar-event-planner: 0.08
       uploaded-file-expert: 0.07
       sent-message-communicator: 0.04
+    scenario:
+      seed:
+        # Seeds end-to-end matching scenarios (cold/cold, complementary, duplicate,
+        # untrusted group, cold user, trending order) for manual browser E2E.
+        # Temporarily ON by default while iterating on matching v1.
+        enabled: ${APP_MATCHING_SCENARIO_SEED_ENABLED:true}

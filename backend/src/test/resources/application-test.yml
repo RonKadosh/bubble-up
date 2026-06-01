@@ -32,3 +32,12 @@ app:
     enabled: false
   agents:
     enabled: false
+  # Tests own their data — keep dev seeders OFF regardless of their (now ON) dev defaults,
+  # so seeded demo/scenario bubbles don't pollute the shared in-memory test DB.
+  demo:
+    seed:
+      enabled: false
+  matching:
+    scenario:
+      seed:
+        enabled: false

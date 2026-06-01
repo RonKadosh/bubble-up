@@ -25,7 +25,8 @@ public class MatchingInternalServiceImpl implements MatchingInternalService {
                         g.matchPercent(),
                         g.memberCount(),
                         g.alreadyMember(),
-                        res.type()))
+                        g.displayMode(),
+                        g.reasonLabels()))
                 .toList();
     }
 }

@@ -132,7 +132,7 @@ class LastReadIT extends IntegrationTest {
         String json = mvc.perform(post("/api/groups")
                         .with(bearer(owner))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"g\",\"visibility\":\"PUBLIC\",\"offeringId\":\"" + seedOfferingId() + "\"}"))
+                        .content("{\"name\":\"g\",\"maxMembers\":6,\"visibility\":\"PUBLIC\",\"offeringId\":\"" + seedOfferingId() + "\"}"))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         return UUID.fromString(om.readTree(json).get("data").get("id").asText());

@@ -3,6 +3,7 @@ package com.ronkadosh.bubbleup.feed.api.dto;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -29,6 +30,9 @@ public record FeedItemResponse(
         Integer matchPercent,
         Integer memberCount,
         Integer participantCount,
+        // discovery (recommendation) extras: MATCHED → matchPercent; TRENDING → reasonLabels
+        String displayMode,
+        List<String> reasonLabels,
         FeedCta cta
 ) {
     /** Builder-ish factory keeps source call sites readable despite the wide record. */
@@ -50,6 +54,8 @@ public record FeedItemResponse(
         private Integer matchPercent;
         private Integer memberCount;
         private Integer participantCount;
+        private String displayMode;
+        private List<String> reasonLabels;
         private FeedCta cta;
 
         private Builder(String kind) { this.kind = kind; }
@@ -65,6 +71,8 @@ public record FeedItemResponse(
         public Builder matchPercent(Integer n) { this.matchPercent = n; return this; }
         public Builder memberCount(Integer n) { this.memberCount = n; return this; }
         public Builder participantCount(Integer n) { this.participantCount = n; return this; }
+        public Builder displayMode(String m) { this.displayMode = m; return this; }
+        public Builder reasonLabels(List<String> labels) { this.reasonLabels = labels; return this; }
         public Builder cta(String type, UUID targetId) {
             this.cta = new FeedCta(type, targetId == null ? null : targetId.toString());
             return this;
@@ -73,7 +81,7 @@ public record FeedItemResponse(
         public FeedItemResponse build() {
             return new FeedItemResponse(kind, groupId, groupName, ts, title, subtitle,
                     startsAt, endsAt, eventType, unreadCount, matchPercent, memberCount,
-                    participantCount, cta);
+                    participantCount, displayMode, reasonLabels, cta);
         }
     }
 }

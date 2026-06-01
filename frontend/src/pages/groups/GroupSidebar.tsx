@@ -16,8 +16,13 @@ interface CreateGroupInput {
   name: string
   description?: string
   visibility: Visibility
+  maxMembers: number
   courseId: string
 }
+
+const MIN_MAX_MEMBERS = 4
+const MAX_MAX_MEMBERS = 10
+const DEFAULT_MAX_MEMBERS = 6
 
 interface GroupSidebarProps {
   groups: Group[]
@@ -48,6 +53,7 @@ export function GroupSidebar({ groups, selectedId, meId, unreadByGroup, liveGrou
   const [newName, setNewName] = useState('')
   const [newDescription, setNewDescription] = useState('')
   const [newVisibility, setNewVisibility] = useState<Visibility>('PUBLIC')
+  const [newMaxMembers, setNewMaxMembers] = useState(DEFAULT_MAX_MEMBERS)
   const [universities, setUniversities] = useState<University[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
   const [courses, setCourses] = useState<Course[]>([])
@@ -88,11 +94,13 @@ export function GroupSidebar({ groups, selectedId, meId, unreadByGroup, liveGrou
       name: newName,
       description: newDescription || undefined,
       visibility: newVisibility,
+      maxMembers: newMaxMembers,
       courseId: selectedCourseId,
     })
     setNewName('')
     setNewDescription('')
     setNewVisibility('PUBLIC')
+    setNewMaxMembers(DEFAULT_MAX_MEMBERS)
     setSelectedDeptId('')
     setSelectedCourseId('')
     setShowCreate(false)
@@ -205,6 +213,32 @@ export function GroupSidebar({ groups, selectedId, meId, unreadByGroup, liveGrou
               />
               {t('groups.createForm.private')}
             </label>
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <label className="text-xs text-muted">{t('groups.createForm.maxGroupSize')}</label>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                size="xs"
+                aria-label={t('groups.createForm.maxGroupSizeDecrease')}
+                disabled={newMaxMembers <= MIN_MAX_MEMBERS}
+                onClick={() => setNewMaxMembers((n) => Math.max(MIN_MAX_MEMBERS, n - 1))}
+              >
+                −
+              </Button>
+              <span className="w-6 text-center text-sm font-semibold tabular-nums">{newMaxMembers}</span>
+              <Button
+                type="button"
+                variant="secondary"
+                size="xs"
+                aria-label={t('groups.createForm.maxGroupSizeIncrease')}
+                disabled={newMaxMembers >= MAX_MAX_MEMBERS}
+                onClick={() => setNewMaxMembers((n) => Math.min(MAX_MAX_MEMBERS, n + 1))}
+              >
+                +
+              </Button>
+            </div>
           </div>
           <Button type="submit" size="sm" className="mt-1 w-full" disabled={!selectedCourseId}>
             {t('groups.createForm.submit')}

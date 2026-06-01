@@ -9,7 +9,8 @@ interface Props {
   groupId: string
   groupName: string
   onClose: () => void
-  onScheduled: () => void
+  /** @param opensNow true when the session is joinable immediately (start within the 15-min open window). */
+  onScheduled: (opensNow: boolean) => void
   onError: (msg: string) => void
 }
 
@@ -50,7 +51,9 @@ export function ScheduleRoomModal({ groupId, groupName, onClose, onScheduled, on
         startsAt: startsAtIso,
         endsAt: endsAtIso,
       })
-      onScheduled()
+      // STUDY_SESSIONs open 15 min before start — within that window it's live right away.
+      const opensNow = Date.now() >= new Date(startsAtIso).getTime() - 15 * 60_000
+      onScheduled(opensNow)
       onClose()
     } catch (err) {
       onError(describeError(err, t,

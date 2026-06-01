@@ -59,6 +59,7 @@ public class GroupCommandService {
                 .description(request.description())
                 .visibility(request.visibility() != null ? request.visibility() : GroupVisibility.PUBLIC)
                 .offeringId(offeringId)
+                .maxMembers(request.maxMembers())
                 .createdBy(requesterId)
                 .build();
         groupRepository.save(group);
@@ -94,6 +95,7 @@ public class GroupCommandService {
         if (memberRepository.existsByGroupIdAndUserId(groupId, requesterId)) {
             throw new AppException(ErrorCode.ALREADY_GROUP_MEMBER);
         }
+        requireCapacity(group);
         GroupMember member = memberRepository.save(GroupMember.builder()
                 .groupId(groupId)
                 .userId(requesterId)
@@ -107,7 +109,7 @@ public class GroupCommandService {
 
     @Transactional
     public GroupMemberResponse addMember(UUID groupId, UUID requesterId, AddMemberRequest request) {
-        findGroup(groupId);
+        StudyGroup group = findGroup(groupId);
         requireOwner(groupId, requesterId);
         UUID targetUserId = request.userId();
         if (!authInternalService.userExists(targetUserId)) {
@@ -116,6 +118,7 @@ public class GroupCommandService {
         if (memberRepository.existsByGroupIdAndUserId(groupId, targetUserId)) {
             throw new AppException(ErrorCode.ALREADY_GROUP_MEMBER);
         }
+        requireCapacity(group);
         GroupMember member = memberRepository.save(GroupMember.builder()
                 .groupId(groupId)
                 .userId(targetUserId)
@@ -222,6 +225,13 @@ public class GroupCommandService {
     private StudyGroup findGroup(UUID groupId) {
         return groupRepository.findById(groupId)
                 .orElseThrow(() -> new AppException(ErrorCode.GROUP_NOT_FOUND));
+    }
+
+    private void requireCapacity(StudyGroup group) {
+        if (memberRepository.countByGroupId(group.getId()) >= group.getMaxMembers()) {
+            throw new AppException(ErrorCode.GROUP_IS_FULL,
+                    "This Bubble is full (max " + group.getMaxMembers() + ")");
+        }
     }
 
     private void requireOwner(UUID groupId, UUID userId) {

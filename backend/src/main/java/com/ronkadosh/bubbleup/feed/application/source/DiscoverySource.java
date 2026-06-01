@@ -38,6 +38,8 @@ public class DiscoverySource implements FeedSource {
                         .title(r.groupName())
                         .matchPercent(r.matchPercent())
                         .memberCount(r.memberCount())
+                        .displayMode(r.displayMode())
+                        .reasonLabels(r.reasonLabels())
                         .cta(FeedCtaType.VIEW_BUBBLE, r.groupId())
                         .build())
                 .toList();

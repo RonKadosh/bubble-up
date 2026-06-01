@@ -45,6 +45,16 @@ public class UserProfile {
     @Column(name = "answered_questions", nullable = false)
     private int answeredQuestions = 0;
 
+    /**
+     * Count of meaningful behavior events (group/calendar/file/message deltas) the
+     * user has produced. Feeds {@code behavior_confidence = min(events / cap, 1)} —
+     * see {@code MatchingScorer.userConfidence}. Quiz answers are NOT counted here;
+     * they accrue to {@link #answeredQuestions}.
+     */
+    @Builder.Default
+    @Column(name = "meaningful_behavior_events", nullable = false)
+    private int meaningfulBehaviorEvents = 0;
+
     @Column(name = "last_question_shown_at")
     private Instant lastQuestionShownAt;
 

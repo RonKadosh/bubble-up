@@ -165,6 +165,16 @@ public class ChatInternalServiceImpl implements ChatInternalService {
 
     @Override
     @Transactional(readOnly = true)
+    public long countMessagesForGroupSince(UUID groupId, Instant since) {
+        List<UUID> roomIds = chatRoomRepository.findAllByGroupId(groupId).stream()
+                .map(ChatRoom::getId)
+                .toList();
+        if (roomIds.isEmpty()) return 0L;
+        return chatMessageRepository.countByRoomIdInAndSentAtGreaterThan(roomIds, since);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public UUID getGroupIdForRoom(UUID roomId) {
         ChatRoom room = chatRoomRepository.findById(roomId)
                 .orElseThrow(() -> new AppException(ErrorCode.CHAT_ROOM_NOT_FOUND));

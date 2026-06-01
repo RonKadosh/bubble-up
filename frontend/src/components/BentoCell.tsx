@@ -16,7 +16,8 @@ import type { ReactNode } from 'react'
  * one in the bento layout.
  */
 interface BentoCellProps {
-  icon: string
+  /** Optional leading glyph. Omit for a clean text-only header. */
+  icon?: string
   label: string
   children: ReactNode
   className?: string
@@ -39,7 +40,7 @@ export function BentoCell({
     <div className={`ring-iridescent p-[1.5px] bento-cell-radius flex flex-col min-h-0 overflow-hidden shadow-themed transition-shadow duration-300 hover:shadow-bubble ${className}`}>
       <div className="flex-1 min-h-0 bg-surface bento-cell-inner-radius flex flex-col overflow-hidden">
         <div className="px-4 py-2.5 border-b border-line flex items-center gap-2 shrink-0">
-          <span className="text-base leading-none">{icon}</span>
+          {icon && <span className="text-base leading-none">{icon}</span>}
           <span className="font-semibold text-sm text-base">{label}</span>
           {showPromote && (
             <button

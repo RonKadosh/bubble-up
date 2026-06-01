@@ -9,6 +9,7 @@ import { logout as logoutApi } from '../api/auth'
 import { Avatar } from './Avatar'
 import { PersistentVideo } from './PersistentVideo'
 import { QuizPrompt } from './QuizPrompt'
+import { UserProfileCard } from './UserProfileCard'
 import {
   BulbIcon,
   CapIcon,
@@ -198,6 +199,7 @@ export default function Layout() {
       </main>
       <PersistentVideo />
       <QuizPrompt />
+      <UserProfileCard />
     </div>
   )
 }

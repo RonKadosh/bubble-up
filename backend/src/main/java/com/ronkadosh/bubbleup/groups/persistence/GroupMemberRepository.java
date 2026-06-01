@@ -26,6 +26,9 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, UUID> 
 
     long countByGroupId(UUID groupId);
 
+    /** Members who joined after {@code after} — group "growing fast" trending signal. */
+    long countByGroupIdAndJoinedAtGreaterThan(UUID groupId, java.time.Instant after);
+
     /**
      * Batched member-count query: returns one row per groupId in {@code groupIds}
      * (groups with zero members are absent from the result). Each row is a

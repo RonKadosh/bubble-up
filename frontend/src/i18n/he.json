@@ -225,12 +225,38 @@
     },
     "discovery": {
       "recommended": "בועה מומלצת",
+      "trendingBadge": "בועה חמה",
       "matchPercent": "{{percent}}% התאמה",
-      "members": "{{count}} חברים"
+      "members": "{{count}} חברים",
+      "trending": {
+        "active": "שוקקת פעילות",
+        "growing": "צומחת במהירות",
+        "popular": "בועה פופולרית",
+        "upcoming": "מפגשים בקרוב"
+      }
     },
     "kind": {
       "joinedBubble": "צף/ה לתוך הבועה",
       "leftBubble": "עזב/ה את הבועה"
+    },
+    "empty": {
+      "live": "אין בועות פעילות כרגע. כשחדר לימוד יעלה לאוויר, הוא יופיע כאן.",
+      "upcoming": "עוד לא נקבע כלום. מפגשים קרובים מהבועות שלך יופיעו כאן.",
+      "activity": "אין פעילות אחרונה. הצטרפויות, הודעות וקבצים משותפים יצופו לכאן.",
+      "discovery": "אין המלצות עדיין. ככל שתשתמש/י ב-Bubble.up, בועות חדשות לגילוי יופיעו כאן."
+    },
+    "publicBubble": {
+      "about": "על הבועה",
+      "noDescription": "אין עדיין תיאור.",
+      "public": "ציבורית",
+      "private": "פרטית",
+      "privateNote": "זו בועה פרטית — צריך הזמנה כדי להצטרף.",
+      "join": "הצטרף לבועה",
+      "joining": "מצטרף…",
+      "joinError": "לא הצלחנו להצטרף לבועה. נסה שוב.",
+      "full": "הבועה מלאה.",
+      "alreadyMember": "את/ה כבר בבועה הזו.",
+      "loadError": "לא הצלחנו לטעון את פרטי הבועה."
     },
     "linkedEvent": "אירוע מקושר"
   },
@@ -249,14 +275,23 @@
       "universityLabel": "אוניברסיטה",
       "selectDepartment": "בחר/י מחלקה",
       "selectCourse": "בחר/י קורס",
+      "maxGroupSize": "מספר חברים מרבי (4–10)",
+      "maxGroupSizeIncrease": "הגדלת מספר החברים המרבי",
+      "maxGroupSizeDecrease": "הקטנת מספר החברים המרבי",
       "submit": "להציף 🫧"
     },
+    "capacity": "{{count}}/{{max}} חברים",
     "header": {
       "hopIn": "להצטרף",
+      "full": "מלאה",
+      "fullTitle": "הבועה הגיעה למספר החברים המרבי",
       "leave": "לעזוב",
       "pop": "פוצץ",
       "popTitle": "פוצץ את הבועה הזו",
-      "leaveOwnerTitle": "יש להעביר את הבעלות אם קיימים חברים נוספים"
+      "leaveOwnerTitle": "יש להעביר את הבעלות אם קיימים חברים נוספים",
+      "createLive": "צרו בועה חיה",
+      "joinLive": "הצטרפו לבועה החיה",
+      "joinLiveTitle": "יש בועה חיה פעילה — הצטרפו"
     },
     "memberLabel_one": "חבר {{count}}",
     "memberLabel_other": "{{count}} חברים",
@@ -272,6 +307,11 @@
     "bento": {
       "maximize": "הגדל"
     },
+    "info": {
+      "title": "פרטי הבועה",
+      "openStripAria": "פתיחת פרטי הבועה",
+      "leaveBubble": "לעזוב את הבועה"
+    },
     "members": {
       "empty": "אין עדיין חברים.",
       "youSuffix": "(אתה)",
@@ -281,6 +321,7 @@
       "remove": "הסר",
       "addPlaceholder": "מזהה משתמש להוספה",
       "addButton": "+ הוספה",
+      "fullHint": "הבועה מלאה (מקסימום {{max}}). יש להסיר חבר לפני הוספת חבר נוסף.",
       "onlineNow": "מחובר עכשיו",
       "lastSeen": "נראה לאחרונה {{rel}}",
       "lastSeenUnknown": "טרם נראה",
@@ -424,6 +465,7 @@
       "create": "יצירת הבועה נכשלה.",
       "loadCatalog": "טעינת קטלוג הקורסים נכשלה.",
       "join": "ההצטרפות לבועה נכשלה.",
+      "full": "הבועה מלאה.",
       "leaveOwner": "אתה הבעלים. יש להעביר את הבעלות לפני העזיבה.",
       "leave": "העזיבה נכשלה.",
       "popNotEmpty": "יש להסיר את שאר החברים לפני פיצוץ הבועה.",
@@ -516,23 +558,15 @@
       "return": "↗ חזרה לבועה החיה",
       "returnAria": "חזרה לבועה החיה"
     },
-    "liveBanner": {
-      "fallback": "מפגש משודר",
-      "fallbackExpert": "מפגש מומחה משודר",
-      "started": "התחיל {{when}}",
-      "opensIn_one": "נפתח בעוד דקה",
-      "opensIn_other": "נפתח בעוד {{count}} דקות",
-      "join": "הצטרפות"
-    },
     "schedule": {
-      "button": "🎥 בועה בשידור חי",
-      "title": "🎥 בועה בשידור חי",
+      "title": "צרו בועה חיה",
       "start": "התחלה",
       "duration": "משך",
       "explainer": "חברים יכולים להצטרף לבועה החיה עד 15 דקות לפני זמן ההתחלה. היא נסגרת אוטומטית בסיום.",
       "defaultDescription": "מפגש לימוד — {{groupName}}",
       "submit": "צאו לשידור",
       "submitting": "יוצא לשידור…",
+      "preparing": "מכינים את הבועה החיה שלך…",
       "duration30": "30 דקות",
       "duration45": "45 דקות",
       "duration60": "שעה",
