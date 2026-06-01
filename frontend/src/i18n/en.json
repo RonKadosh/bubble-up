@@ -32,7 +32,19 @@
     "signedIn": "Signed in",
     "language": "Language",
     "dashboard": "Dashboard",
-    "profile": "Profile"
+    "profile": "Profile",
+    "settings": "Settings"
+  },
+  "settings": {
+    "title": "Settings",
+    "tabs": {
+      "profile": "Profile",
+      "language": "Language"
+    },
+    "language": {
+      "title": "Language",
+      "description": "Choose the language used across the app."
+    }
   },
   "profile": {
     "title": "Your profile",

@@ -32,7 +32,19 @@
     "signedIn": "מחובר/ת",
     "language": "שפה",
     "dashboard": "לוח בקרה",
-    "profile": "פרופיל"
+    "profile": "פרופיל",
+    "settings": "הגדרות"
+  },
+  "settings": {
+    "title": "הגדרות",
+    "tabs": {
+      "profile": "פרופיל",
+      "language": "שפה"
+    },
+    "language": {
+      "title": "שפה",
+      "description": "בחר/י את השפה שתשמש בכל האפליקציה."
+    }
   },
   "profile": {
     "title": "הפרופיל שלך",

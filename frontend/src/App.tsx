@@ -4,6 +4,7 @@ import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
 import GroupsPage from './pages/GroupsPage'
 import ProfilePage from './pages/ProfilePage'
+import SettingsPage from './pages/SettingsPage'
 import AcademyPage from './pages/AcademyPage'
 import BubbleRoomPage from './pages/BubbleRoomPage'
 import ExpertRoomPage from './pages/ExpertRoomPage'
@@ -82,8 +83,9 @@ export default function App() {
           <Route path="/groups" element={<GroupsPage />} />
           <Route path="/academy" element={<AcademyPage />} />
           <Route path="/courses/:id" element={<CoursePage />} />
-          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/profile" element={<Navigate to="/settings" replace />} />
           <Route path="/profile/:userId" element={<ProfilePage />} />
+          <Route path="/settings" element={<SettingsPage />} />
           <Route path="/rooms/:roomId" element={<BubbleRoomPage />} />
           <Route path="/sessions/:sessionId" element={<ExpertRoomPage />} />
           <Route path="/become-expert" element={<ExpertOnboardingPage />} />
