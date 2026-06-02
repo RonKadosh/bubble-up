@@ -45,6 +45,12 @@ public class EnrollmentInternalServiceImpl implements EnrollmentInternalService 
                 .toList();
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public boolean isEnrolledInOffering(UUID userId, UUID offeringId) {
+        return repo.existsByUserIdAndOfferingId(userId, offeringId);
+    }
+
     private Optional<UUID> currentTermOfferingForCourse(UUID userId, UUID courseId) {
         return currentTermIdForUser(userId)
                 .flatMap(termId -> catalogInternalService.offeringIdForCourseAndTerm(courseId, termId));

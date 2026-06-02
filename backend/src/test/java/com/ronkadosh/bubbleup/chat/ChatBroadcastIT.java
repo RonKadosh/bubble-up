@@ -41,7 +41,7 @@ class ChatBroadcastIT extends IntegrationTest {
 
     @Test
     void http_post_broadcasts_to_subscribed_stomp_client() throws Exception {
-        AuthedUser user = registerAndLogin();
+        AuthedUser user = registerEnrolled();
         UUID groupId = createGroup(user);
         UUID roomId = createRoom(user, groupId);
 

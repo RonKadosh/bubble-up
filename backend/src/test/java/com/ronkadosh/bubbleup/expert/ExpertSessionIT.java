@@ -18,7 +18,7 @@ class ExpertSessionIT extends IntegrationTest {
 
     @Test
     void verified_expert_creates_session_and_room_is_wired() throws Exception {
-        AuthedUser expert = registerAndLogin();
+        AuthedUser expert = registerEnrolled();
         applyAsExpert(expert);
 
         String body = sessionBody("Linear Algebra Q&A",
@@ -41,7 +41,7 @@ class ExpertSessionIT extends IntegrationTest {
 
     @Test
     void create_session_without_expert_profile_returns_404() throws Exception {
-        AuthedUser u = registerAndLogin();
+        AuthedUser u = registerEnrolled();
         mvc.perform(post("/api/expert-sessions")
                         .with(bearer(u))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -55,7 +55,7 @@ class ExpertSessionIT extends IntegrationTest {
 
     @Test
     void create_session_with_inverted_time_range_returns_400() throws Exception {
-        AuthedUser expert = registerAndLogin();
+        AuthedUser expert = registerEnrolled();
         applyAsExpert(expert);
         mvc.perform(post("/api/expert-sessions")
                         .with(bearer(expert))
@@ -70,11 +70,11 @@ class ExpertSessionIT extends IntegrationTest {
 
     @Test
     void group_owner_enrolls_group_and_count_updates() throws Exception {
-        AuthedUser expert = registerAndLogin();
+        AuthedUser expert = registerEnrolled();
         applyAsExpert(expert);
         UUID sessionId = createSession(expert, 3);
 
-        AuthedUser groupOwner = registerAndLogin();
+        AuthedUser groupOwner = registerEnrolled();
         UUID groupId = createGroup(groupOwner);
 
         mvc.perform(post("/api/expert-sessions/{id}/enroll", sessionId)
@@ -90,11 +90,11 @@ class ExpertSessionIT extends IntegrationTest {
 
     @Test
     void enroll_same_group_twice_returns_409() throws Exception {
-        AuthedUser expert = registerAndLogin();
+        AuthedUser expert = registerEnrolled();
         applyAsExpert(expert);
         UUID sessionId = createSession(expert, 3);
 
-        AuthedUser groupOwner = registerAndLogin();
+        AuthedUser groupOwner = registerEnrolled();
         UUID groupId = createGroup(groupOwner);
 
         enrollGroup(groupOwner, sessionId, groupId).andExpect(status().isCreated());
@@ -105,14 +105,14 @@ class ExpertSessionIT extends IntegrationTest {
 
     @Test
     void enroll_by_non_owner_returns_403() throws Exception {
-        AuthedUser expert = registerAndLogin();
+        AuthedUser expert = registerEnrolled();
         applyAsExpert(expert);
         UUID sessionId = createSession(expert, 3);
 
-        AuthedUser groupOwner = registerAndLogin();
+        AuthedUser groupOwner = registerEnrolled();
         UUID groupId = createGroup(groupOwner);
 
-        AuthedUser stranger = registerAndLogin();
+        AuthedUser stranger = registerEnrolled();
         mvc.perform(post("/api/expert-sessions/{id}/enroll", sessionId)
                         .with(bearer(stranger))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -123,18 +123,18 @@ class ExpertSessionIT extends IntegrationTest {
 
     @Test
     void capacity_reached_blocks_further_enroll_and_flips_status_to_FULL() throws Exception {
-        AuthedUser expert = registerAndLogin();
+        AuthedUser expert = registerEnrolled();
         applyAsExpert(expert);
         UUID sessionId = createSession(expert, 1);
 
-        AuthedUser owner1 = registerAndLogin();
+        AuthedUser owner1 = registerEnrolled();
         UUID group1 = createGroup(owner1);
         enrollGroup(owner1, sessionId, group1).andExpect(status().isCreated());
 
         mvc.perform(get("/api/expert-sessions/{id}", sessionId).with(bearer(expert)))
                 .andExpect(jsonPath("$.data.status").value("FULL"));
 
-        AuthedUser owner2 = registerAndLogin();
+        AuthedUser owner2 = registerEnrolled();
         UUID group2 = createGroup(owner2);
         enrollGroup(owner2, sessionId, group2)
                 .andExpect(status().isConflict())
@@ -143,11 +143,11 @@ class ExpertSessionIT extends IntegrationTest {
 
     @Test
     void unenroll_returns_status_to_OPEN() throws Exception {
-        AuthedUser expert = registerAndLogin();
+        AuthedUser expert = registerEnrolled();
         applyAsExpert(expert);
         UUID sessionId = createSession(expert, 1);
 
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         enrollGroup(owner, sessionId, groupId).andExpect(status().isCreated());
 
@@ -164,11 +164,11 @@ class ExpertSessionIT extends IntegrationTest {
 
     @Test
     void cancel_session_only_by_host() throws Exception {
-        AuthedUser expert = registerAndLogin();
+        AuthedUser expert = registerEnrolled();
         applyAsExpert(expert);
         UUID sessionId = createSession(expert, 3);
 
-        AuthedUser otherExpert = registerAndLogin();
+        AuthedUser otherExpert = registerEnrolled();
         applyAsExpert(otherExpert);
         mvc.perform(post("/api/expert-sessions/{id}/cancel", sessionId).with(bearer(otherExpert)))
                 .andExpect(status().isForbidden())
@@ -183,11 +183,11 @@ class ExpertSessionIT extends IntegrationTest {
 
     @Test
     void grant_whiteboard_write_by_non_host_returns_403() throws Exception {
-        AuthedUser expert = registerAndLogin();
+        AuthedUser expert = registerEnrolled();
         applyAsExpert(expert);
         UUID sessionId = createSession(expert, 3);
 
-        AuthedUser other = registerAndLogin();
+        AuthedUser other = registerEnrolled();
         mvc.perform(post("/api/expert-sessions/{id}/whiteboard/grant", sessionId)
                         .with(bearer(other))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -198,11 +198,11 @@ class ExpertSessionIT extends IntegrationTest {
 
     @Test
     void grant_and_revoke_whiteboard_write_by_host() throws Exception {
-        AuthedUser expert = registerAndLogin();
+        AuthedUser expert = registerEnrolled();
         applyAsExpert(expert);
         UUID sessionId = createSession(expert, 3);
 
-        AuthedUser participant = registerAndLogin();
+        AuthedUser participant = registerEnrolled();
         mvc.perform(post("/api/expert-sessions/{id}/whiteboard/grant", sessionId)
                         .with(bearer(expert))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -217,7 +217,7 @@ class ExpertSessionIT extends IntegrationTest {
 
     @Test
     void list_mine_returns_host_sessions() throws Exception {
-        AuthedUser expert = registerAndLogin();
+        AuthedUser expert = registerEnrolled();
         applyAsExpert(expert);
         createSession(expert, 3);
         createSession(expert, 5);
@@ -228,11 +228,11 @@ class ExpertSessionIT extends IntegrationTest {
 
     @Test
     void list_enrolled_returns_sessions_for_group() throws Exception {
-        AuthedUser expert = registerAndLogin();
+        AuthedUser expert = registerEnrolled();
         applyAsExpert(expert);
         UUID sessionId = createSession(expert, 3);
 
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         enrollGroup(owner, sessionId, groupId).andExpect(status().isCreated());
 
@@ -244,7 +244,7 @@ class ExpertSessionIT extends IntegrationTest {
 
     @Test
     void host_can_enter_own_room_before_open_window() throws Exception {
-        AuthedUser expert = registerAndLogin();
+        AuthedUser expert = registerEnrolled();
         applyAsExpert(expert);
         // Schedule far in the future — well outside the 15-min open window.
         Instant start = Instant.now().plus(Duration.ofHours(5));
@@ -267,7 +267,7 @@ class ExpertSessionIT extends IntegrationTest {
 
     @Test
     void non_host_cannot_enter_expert_room_before_open_window() throws Exception {
-        AuthedUser expert = registerAndLogin();
+        AuthedUser expert = registerEnrolled();
         applyAsExpert(expert);
         Instant start = Instant.now().plus(Duration.ofHours(5));
         Instant end = start.plus(Duration.ofHours(1));
@@ -280,7 +280,7 @@ class ExpertSessionIT extends IntegrationTest {
         UUID sessionId = UUID.fromString(om.readTree(json).get("data").get("id").asText());
         UUID roomId = UUID.fromString(om.readTree(json).get("data").get("roomId").asText());
 
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         enrollGroup(owner, sessionId, groupId).andExpect(status().isCreated());
 
@@ -291,19 +291,19 @@ class ExpertSessionIT extends IntegrationTest {
 
     @Test
     void list_open_returns_only_OPEN_sessions_sorted_by_start() throws Exception {
-        AuthedUser expert = registerAndLogin();
+        AuthedUser expert = registerEnrolled();
         applyAsExpert(expert);
         UUID openSessionId = createSession(expert, 5);
         UUID smallSessionId = createSession(expert, 1);
 
         // Fill the second session so it flips to FULL and drops out of listOpen.
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         enrollGroup(owner, smallSessionId, groupId).andExpect(status().isCreated());
 
         // Data from other tests in this class accumulates in the H2 schema;
         // assert membership rather than a fixed list length.
-        AuthedUser viewer = registerAndLogin();
+        AuthedUser viewer = registerEnrolled();
         mvc.perform(get("/api/expert-sessions/open").with(bearer(viewer)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data[?(@.id=='" + openSessionId + "')]").exists())
@@ -313,11 +313,11 @@ class ExpertSessionIT extends IntegrationTest {
 
     @Test
     void group_calendar_includes_enrolled_session_events() throws Exception {
-        AuthedUser expert = registerAndLogin();
+        AuthedUser expert = registerEnrolled();
         applyAsExpert(expert);
         UUID sessionId = createSession(expert, 3);
 
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         enrollGroup(owner, sessionId, groupId).andExpect(status().isCreated());
 

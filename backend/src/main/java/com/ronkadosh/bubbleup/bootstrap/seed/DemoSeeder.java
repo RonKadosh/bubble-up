@@ -84,6 +84,18 @@ public class DemoSeeder {
         UUID isla   = createUser("isla@bubble.up",   "Isla Ibrahim",     universityId, departmentId);
         UUID jack   = createUser("jack@bubble.up",   "Jack Jacobs",      universityId, departmentId);
 
+        // ── Enrollments first — membership is gated on enrollment ───────────
+        // Creating a bubble (owner becomes OWNER) and joining one both now require
+        // the user be enrolled in that course's offering, so we enroll every owner
+        // and member up front, per course. Each set below is the union of all
+        // owners + members of the bubbles seeded on that course. Bob is enrolled in
+        // OS + DL only (NOT Math), preserving his discovery story below.
+        enrollAll(universityId, "372.1.1117",     // OS — all ten students
+                alice, bob, carol, dave, eve, frank, grace, henry, isla, jack);
+        enrollAll(universityId, "237.2.6101",     // DL — all ten students
+                isla, jack, alice, bob, carol, dave, eve, frank, grace, henry);
+        enrollAll(universityId, "214.1.9111", eve, frank, grace, henry);  // Discrete Math
+
         // ── 3 groups, each on a different course ────────────────────────────
         // Owner is the first listed user; others join via the public-group join flow.
         // Cross-membership (alice in #1 and #3, bob in #1 and #3) makes the demo
@@ -94,7 +106,6 @@ public class DemoSeeder {
                 "Weekly OS practice — exam prep + past paper walkthroughs.",
                 6, alice);
         addMembers(osGroup, bob, carol, dave);
-        enrollAll(universityId, "372.1.1117", alice, bob, carol, dave);
 
         UUID mathGroup = createGroupForCourse(
                 universityId, "214.1.9111",
@@ -102,7 +113,6 @@ public class DemoSeeder {
                 "Problem sets every Sunday. Bring snacks.",
                 6, eve);
         addMembers(mathGroup, frank, grace, henry);
-        enrollAll(universityId, "214.1.9111", eve, frank, grace, henry);
 
         UUID dlGroup = createGroupForCourse(
                 universityId, "237.2.6101",
@@ -110,18 +120,16 @@ public class DemoSeeder {
                 "We pick one paper a week and dissect it together.",
                 5, isla);
         addMembers(dlGroup, jack, alice, bob);
-        enrollAll(universityId, "237.2.6101", isla, jack, alice, bob);
 
-        // ── Trending bubbles in Bob's courses (he is NOT a member) ──────────
+        // ── More bubbles in Bob's courses (he is NOT a member) ──────────────
         // Bob is enrolled in OS (372.1.1117) and DL (237.2.6101) and already
         // belongs to the two bubbles above — so without these he has zero
         // discoverable groups and his dashboard "Discovery" feed is empty.
-        // These extra PUBLIC bubbles sit on his courses but exclude Bob, so they
-        // surface as TRENDING (a fresh user's quiz reliability is below the match
-        // threshold, so ranking falls back to popularity / member count). The
-        // varied membership below is what gives that trending sort an order.
-        // No enrollment: discovery keys off the bubble's course + visibility, not
-        // the members' enrollment, and we want Bob's own enrollment unchanged.
+        // These extra PUBLIC bubbles sit on his enrolled courses but exclude Bob,
+        // so they are exactly his in-course discovery candidates (ranked by the
+        // matching blend, which leans on popularity / member count for a fresh
+        // user). Their owners/members are enrolled via the per-course enrollAll
+        // above — enrollment now gates create + join.
         UUID osCrammers = createGroupForCourse(
                 universityId, "372.1.1117",
                 "OS Crammers United",

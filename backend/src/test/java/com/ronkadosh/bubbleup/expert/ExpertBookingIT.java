@@ -18,9 +18,9 @@ class ExpertBookingIT extends IntegrationTest {
 
     @Test
     void group_owner_can_request_a_booking_with_verified_expert() throws Exception {
-        AuthedUser expert = registerAndLogin();
+        AuthedUser expert = registerEnrolled();
         applyAsExpert(expert);
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
 
         mvc.perform(post("/api/expert-bookings")
@@ -39,8 +39,8 @@ class ExpertBookingIT extends IntegrationTest {
 
     @Test
     void request_against_non_verified_user_returns_403() throws Exception {
-        AuthedUser nonExpert = registerAndLogin();
-        AuthedUser owner = registerAndLogin();
+        AuthedUser nonExpert = registerEnrolled();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         mvc.perform(post("/api/expert-bookings")
                         .with(bearer(owner))
@@ -55,11 +55,11 @@ class ExpertBookingIT extends IntegrationTest {
 
     @Test
     void request_by_non_group_owner_returns_403() throws Exception {
-        AuthedUser expert = registerAndLogin();
+        AuthedUser expert = registerEnrolled();
         applyAsExpert(expert);
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
-        AuthedUser stranger = registerAndLogin();
+        AuthedUser stranger = registerEnrolled();
         mvc.perform(post("/api/expert-bookings")
                         .with(bearer(stranger))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -73,9 +73,9 @@ class ExpertBookingIT extends IntegrationTest {
 
     @Test
     void expert_accepts_request_and_session_is_created_with_group_enrolled() throws Exception {
-        AuthedUser expert = registerAndLogin();
+        AuthedUser expert = registerEnrolled();
         applyAsExpert(expert);
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         UUID requestId = createBookingRequest(owner, expert, groupId);
 
@@ -99,13 +99,13 @@ class ExpertBookingIT extends IntegrationTest {
 
     @Test
     void accept_by_non_addressed_expert_returns_403() throws Exception {
-        AuthedUser expert = registerAndLogin();
+        AuthedUser expert = registerEnrolled();
         applyAsExpert(expert);
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         UUID requestId = createBookingRequest(owner, expert, groupId);
 
-        AuthedUser otherExpert = registerAndLogin();
+        AuthedUser otherExpert = registerEnrolled();
         applyAsExpert(otherExpert);
         mvc.perform(post("/api/expert-bookings/{id}/accept", requestId).with(bearer(otherExpert)))
                 .andExpect(status().isForbidden())
@@ -114,9 +114,9 @@ class ExpertBookingIT extends IntegrationTest {
 
     @Test
     void accept_already_decided_request_returns_409() throws Exception {
-        AuthedUser expert = registerAndLogin();
+        AuthedUser expert = registerEnrolled();
         applyAsExpert(expert);
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         UUID requestId = createBookingRequest(owner, expert, groupId);
 
@@ -129,9 +129,9 @@ class ExpertBookingIT extends IntegrationTest {
 
     @Test
     void expert_rejects_request() throws Exception {
-        AuthedUser expert = registerAndLogin();
+        AuthedUser expert = registerEnrolled();
         applyAsExpert(expert);
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         UUID requestId = createBookingRequest(owner, expert, groupId);
 
@@ -142,9 +142,9 @@ class ExpertBookingIT extends IntegrationTest {
 
     @Test
     void requester_can_withdraw_pending_request() throws Exception {
-        AuthedUser expert = registerAndLogin();
+        AuthedUser expert = registerEnrolled();
         applyAsExpert(expert);
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         UUID requestId = createBookingRequest(owner, expert, groupId);
 
@@ -155,13 +155,13 @@ class ExpertBookingIT extends IntegrationTest {
 
     @Test
     void withdraw_by_non_requester_returns_403() throws Exception {
-        AuthedUser expert = registerAndLogin();
+        AuthedUser expert = registerEnrolled();
         applyAsExpert(expert);
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         UUID requestId = createBookingRequest(owner, expert, groupId);
 
-        AuthedUser stranger = registerAndLogin();
+        AuthedUser stranger = registerEnrolled();
         mvc.perform(post("/api/expert-bookings/{id}/withdraw", requestId).with(bearer(stranger)))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error.code").value("NOT_BOOKING_REQUEST_REQUESTER"));
@@ -169,9 +169,9 @@ class ExpertBookingIT extends IntegrationTest {
 
     @Test
     void list_mine_returns_inbound_for_expert_and_outbound_for_requester() throws Exception {
-        AuthedUser expert = registerAndLogin();
+        AuthedUser expert = registerEnrolled();
         applyAsExpert(expert);
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         createBookingRequest(owner, expert, groupId);
 
@@ -187,9 +187,9 @@ class ExpertBookingIT extends IntegrationTest {
 
     @Test
     void create_with_inverted_time_range_returns_400() throws Exception {
-        AuthedUser expert = registerAndLogin();
+        AuthedUser expert = registerEnrolled();
         applyAsExpert(expert);
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         mvc.perform(post("/api/expert-bookings")
                         .with(bearer(owner))

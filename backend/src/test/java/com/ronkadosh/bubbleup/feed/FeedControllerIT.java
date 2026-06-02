@@ -17,8 +17,8 @@ class FeedControllerIT extends IntegrationTest {
 
     @Test
     void feed_groups_activity_and_upcoming_into_sections() throws Exception {
-        AuthedUser owner = registerAndLogin();
-        AuthedUser joiner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
+        AuthedUser joiner = registerEnrolled();
         UUID groupId = createGroup(owner);
 
         // A self-join posts a SYSTEM_JOIN (→ membership event + unread for the owner).

@@ -15,8 +15,8 @@ class LastReadIT extends IntegrationTest {
 
     @Test
     void no_cursor_means_all_unread() throws Exception {
-        AuthedUser owner = registerAndLogin();
-        AuthedUser joiner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
+        AuthedUser joiner = registerEnrolled();
         UUID groupId = createGroup(owner);
         join(joiner, groupId);
         UUID roomId = defaultRoomId(owner);
@@ -34,8 +34,8 @@ class LastReadIT extends IntegrationTest {
 
     @Test
     void posting_read_cursor_sets_unread_to_remaining() throws Exception {
-        AuthedUser owner = registerAndLogin();
-        AuthedUser joiner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
+        AuthedUser joiner = registerEnrolled();
         UUID groupId = createGroup(owner);
         join(joiner, groupId);
         UUID roomId = defaultRoomId(owner);
@@ -54,8 +54,8 @@ class LastReadIT extends IntegrationTest {
 
     @Test
     void posting_latest_clears_unread() throws Exception {
-        AuthedUser owner = registerAndLogin();
-        AuthedUser joiner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
+        AuthedUser joiner = registerEnrolled();
         UUID groupId = createGroup(owner);
         join(joiner, groupId);
         UUID roomId = defaultRoomId(owner);
@@ -75,8 +75,8 @@ class LastReadIT extends IntegrationTest {
     void system_messages_count_as_unread() throws Exception {
         // SYSTEM_JOIN is emitted when joiner self-joins. Owner has no read cursor
         // initially, so it counts toward owner's unread too.
-        AuthedUser owner = registerAndLogin();
-        AuthedUser joiner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
+        AuthedUser joiner = registerEnrolled();
         UUID groupId = createGroup(owner);
         join(joiner, groupId);
 
@@ -87,8 +87,8 @@ class LastReadIT extends IntegrationTest {
 
     @Test
     void non_member_cannot_post_read() throws Exception {
-        AuthedUser owner = registerAndLogin();
-        AuthedUser outsider = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
+        AuthedUser outsider = registerEnrolled();
         UUID groupId = createGroup(owner);
         UUID roomId = defaultRoomId(owner);
         UUID anyMsg = sendText(owner, roomId, "x");

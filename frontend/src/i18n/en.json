@@ -184,8 +184,9 @@
       "joined": "Joined",
       "open": "Open in My Bubbles",
       "emptyTitle": "No groups yet",
-      "emptyBody": "Be the first — spin one up from the My Bubbles hub.",
-      "emptyFiltered": "No groups match these filters."
+      "emptyBody": "Be the first to start a study Bubble for this course.",
+      "emptyFiltered": "No groups match these filters.",
+      "startFirst": "Start the first Bubble"
     },
     "error": {
       "load": "Couldn't load this course. Please try again.",
@@ -209,6 +210,9 @@
       "upcoming": "Upcoming",
       "activity": "Bubble activity",
       "discovery": "Discover"
+    },
+    "bento": {
+      "maximize": "Maximize"
     },
     "live": {
       "startsIn": "Starts in {{count}} min",
@@ -245,7 +249,9 @@
         "growing": "Growing fast",
         "popular": "Popular Bubble",
         "upcoming": "Sessions coming up"
-      }
+      },
+      "browseCourses": "Browse courses",
+      "startBubble": "Start a Bubble"
     },
     "kind": {
       "joinedBubble": "floated into the Bubble",
@@ -255,7 +261,8 @@
       "live": "No live Bubbles right now. When a study room goes live, it'll pop up here.",
       "upcoming": "Nothing scheduled yet. Upcoming sessions across your Bubbles show up here.",
       "activity": "No recent activity. Joins, messages, and shared files float up here.",
-      "discovery": "No recommendations yet. As you use Bubble.up, fresh Bubbles to explore appear here."
+      "discovery": "You're not enrolled in any courses yet. Enroll to discover study Bubbles you can join.",
+      "discoveryEnrolled": "No study Bubbles in your courses yet. Be the first to start one!"
     },
     "publicBubble": {
       "about": "About this Bubble",
@@ -268,6 +275,7 @@
       "joinError": "Couldn't join this Bubble. Try again.",
       "full": "This Bubble is full.",
       "alreadyMember": "You're already in this Bubble.",
+      "notEnrolled": "You're not enrolled in this Bubble's course. Enroll in the course to join.",
       "loadError": "Couldn't load this Bubble's details."
     },
     "linkedEvent": "Linked event"
@@ -478,6 +486,7 @@
       "loadCatalog": "Failed to load the course catalog.",
       "join": "Failed to join Bubble.",
       "full": "This Bubble is full.",
+      "notEnrolled": "You're not enrolled in this Bubble's course.",
       "leaveOwner": "You are the owner. Transfer ownership before leaving.",
       "leave": "Failed to leave Bubble.",
       "popNotEmpty": "Remove all other members before popping the Bubble.",

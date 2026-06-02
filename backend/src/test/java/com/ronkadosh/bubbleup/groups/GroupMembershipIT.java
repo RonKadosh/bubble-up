@@ -14,8 +14,8 @@ class GroupMembershipIT extends IntegrationTest {
 
     @Test
     void anyone_can_join_public_group() throws Exception {
-        AuthedUser owner = registerAndLogin();
-        AuthedUser joiner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
+        AuthedUser joiner = registerEnrolled();
         UUID groupId = createGroup(owner, "PUBLIC");
         mvc.perform(post("/api/groups/{id}/join", groupId).with(bearer(joiner)))
                 .andExpect(status().isOk())
@@ -24,9 +24,33 @@ class GroupMembershipIT extends IntegrationTest {
     }
 
     @Test
+    void joining_when_not_enrolled_returns_NOT_ENROLLED_IN_COURSE() throws Exception {
+        AuthedUser owner = registerEnrolled();
+        // Affiliated but NOT enrolled in the seed offering's course.
+        AuthedUser joiner = registerWithAffiliation();
+        UUID groupId = createGroup(owner, "PUBLIC");
+        mvc.perform(post("/api/groups/{id}/join", groupId).with(bearer(joiner)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("NOT_ENROLLED_IN_COURSE"));
+    }
+
+    @Test
+    void owner_adding_non_enrolled_member_returns_NOT_ENROLLED_IN_COURSE() throws Exception {
+        AuthedUser owner = registerEnrolled();
+        AuthedUser invitee = registerWithAffiliation();   // not enrolled
+        UUID groupId = createGroup(owner, "PRIVATE");
+        mvc.perform(post("/api/groups/{id}/members", groupId)
+                        .with(bearer(owner))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(String.format("{\"userId\":\"%s\"}", invitee.id())))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("NOT_ENROLLED_IN_COURSE"));
+    }
+
+    @Test
     void joining_private_group_returns_GROUP_NOT_PUBLIC() throws Exception {
-        AuthedUser owner = registerAndLogin();
-        AuthedUser joiner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
+        AuthedUser joiner = registerEnrolled();
         UUID groupId = createGroup(owner, "PRIVATE");
         mvc.perform(post("/api/groups/{id}/join", groupId).with(bearer(joiner)))
                 .andExpect(status().isForbidden())
@@ -35,8 +59,8 @@ class GroupMembershipIT extends IntegrationTest {
 
     @Test
     void owner_can_add_member_to_private_group() throws Exception {
-        AuthedUser owner = registerAndLogin();
-        AuthedUser invitee = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
+        AuthedUser invitee = registerEnrolled();
         UUID groupId = createGroup(owner, "PRIVATE");
         mvc.perform(post("/api/groups/{id}/members", groupId)
                         .with(bearer(owner))
@@ -48,9 +72,9 @@ class GroupMembershipIT extends IntegrationTest {
 
     @Test
     void non_owner_cannot_add_member() throws Exception {
-        AuthedUser owner = registerAndLogin();
-        AuthedUser other = registerAndLogin();
-        AuthedUser target = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
+        AuthedUser other = registerEnrolled();
+        AuthedUser target = registerEnrolled();
         UUID groupId = createGroup(owner, "PRIVATE");
         mvc.perform(post("/api/groups/{id}/members", groupId)
                         .with(bearer(other))
@@ -62,7 +86,7 @@ class GroupMembershipIT extends IntegrationTest {
 
     @Test
     void adding_nonexistent_user_returns_USER_NOT_FOUND() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner, "PRIVATE");
         mvc.perform(post("/api/groups/{id}/members", groupId)
                         .with(bearer(owner))
@@ -74,8 +98,8 @@ class GroupMembershipIT extends IntegrationTest {
 
     @Test
     void duplicate_join_returns_ALREADY_GROUP_MEMBER() throws Exception {
-        AuthedUser owner = registerAndLogin();
-        AuthedUser joiner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
+        AuthedUser joiner = registerEnrolled();
         UUID groupId = createGroup(owner, "PUBLIC");
         mvc.perform(post("/api/groups/{id}/join", groupId).with(bearer(joiner)))
                 .andExpect(status().isOk());
@@ -86,8 +110,8 @@ class GroupMembershipIT extends IntegrationTest {
 
     @Test
     void members_list_visible_to_members_only() throws Exception {
-        AuthedUser owner = registerAndLogin();
-        AuthedUser nonMember = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
+        AuthedUser nonMember = registerEnrolled();
         UUID groupId = createGroup(owner, "PUBLIC");
         mvc.perform(get("/api/groups/{id}/members", groupId).with(bearer(owner)))
                 .andExpect(status().isOk())
@@ -99,8 +123,8 @@ class GroupMembershipIT extends IntegrationTest {
 
     @Test
     void member_can_leave() throws Exception {
-        AuthedUser owner = registerAndLogin();
-        AuthedUser joiner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
+        AuthedUser joiner = registerEnrolled();
         UUID groupId = createGroup(owner, "PUBLIC");
         mvc.perform(post("/api/groups/{id}/join", groupId).with(bearer(joiner)))
                 .andExpect(status().isOk());
@@ -112,8 +136,8 @@ class GroupMembershipIT extends IntegrationTest {
 
     @Test
     void owner_cannot_leave_group_with_other_members() throws Exception {
-        AuthedUser owner = registerAndLogin();
-        AuthedUser joiner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
+        AuthedUser joiner = registerEnrolled();
         UUID groupId = createGroup(owner, "PUBLIC");
         mvc.perform(post("/api/groups/{id}/join", groupId).with(bearer(joiner)))
                 .andExpect(status().isOk());
@@ -124,7 +148,7 @@ class GroupMembershipIT extends IntegrationTest {
 
     @Test
     void solo_owner_leaving_deletes_group() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner, "PUBLIC");
         mvc.perform(delete("/api/groups/{id}/members/me", groupId).with(bearer(owner)))
                 .andExpect(status().isOk());
@@ -134,8 +158,8 @@ class GroupMembershipIT extends IntegrationTest {
 
     @Test
     void transfer_ownership_swaps_roles() throws Exception {
-        AuthedUser owner = registerAndLogin();
-        AuthedUser successor = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
+        AuthedUser successor = registerEnrolled();
         UUID groupId = createGroup(owner, "PUBLIC");
         mvc.perform(post("/api/groups/{id}/join", groupId).with(bearer(successor)))
                 .andExpect(status().isOk());
@@ -151,8 +175,8 @@ class GroupMembershipIT extends IntegrationTest {
 
     @Test
     void transfer_to_non_member_rejected() throws Exception {
-        AuthedUser owner = registerAndLogin();
-        AuthedUser outsider = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
+        AuthedUser outsider = registerEnrolled();
         UUID groupId = createGroup(owner, "PUBLIC");
         mvc.perform(post("/api/groups/{id}/transfer-ownership", groupId)
                         .with(bearer(owner))
@@ -164,8 +188,8 @@ class GroupMembershipIT extends IntegrationTest {
 
     @Test
     void owner_can_remove_other_member_but_not_self() throws Exception {
-        AuthedUser owner = registerAndLogin();
-        AuthedUser joiner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
+        AuthedUser joiner = registerEnrolled();
         UUID groupId = createGroup(owner, "PUBLIC");
         mvc.perform(post("/api/groups/{id}/join", groupId).with(bearer(joiner)))
                 .andExpect(status().isOk());
@@ -178,32 +202,32 @@ class GroupMembershipIT extends IntegrationTest {
 
     @Test
     void joining_a_full_group_returns_GROUP_IS_FULL() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         // maxMembers=4 → owner already occupies 1 slot, so 3 more joins fill it.
         UUID groupId = createGroup(owner, "PUBLIC", 4);
         for (int i = 0; i < 3; i++) {
-            mvc.perform(post("/api/groups/{id}/join", groupId).with(bearer(registerAndLogin())))
+            mvc.perform(post("/api/groups/{id}/join", groupId).with(bearer(registerEnrolled())))
                     .andExpect(status().isOk());
         }
         // The 5th member is rejected.
-        mvc.perform(post("/api/groups/{id}/join", groupId).with(bearer(registerAndLogin())))
+        mvc.perform(post("/api/groups/{id}/join", groupId).with(bearer(registerEnrolled())))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("GROUP_IS_FULL"));
     }
 
     @Test
     void owner_adding_member_to_full_group_returns_GROUP_IS_FULL() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner, "PRIVATE", 4);
         for (int i = 0; i < 3; i++) {
-            AuthedUser invitee = registerAndLogin();
+            AuthedUser invitee = registerEnrolled();
             mvc.perform(post("/api/groups/{id}/members", groupId)
                             .with(bearer(owner))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(String.format("{\"userId\":\"%s\"}", invitee.id())))
                     .andExpect(status().isCreated());
         }
-        AuthedUser overflow = registerAndLogin();
+        AuthedUser overflow = registerEnrolled();
         mvc.perform(post("/api/groups/{id}/members", groupId)
                         .with(bearer(owner))
                         .contentType(MediaType.APPLICATION_JSON)

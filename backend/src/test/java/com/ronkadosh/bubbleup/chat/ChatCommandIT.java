@@ -14,7 +14,7 @@ class ChatCommandIT extends IntegrationTest {
 
     @Test
     void member_can_create_room_in_group() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         mvc.perform(post("/api/chat/rooms")
                         .with(bearer(owner))
@@ -27,8 +27,8 @@ class ChatCommandIT extends IntegrationTest {
 
     @Test
     void non_member_cannot_create_room() throws Exception {
-        AuthedUser owner = registerAndLogin();
-        AuthedUser outsider = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
+        AuthedUser outsider = registerEnrolled();
         UUID groupId = createGroup(owner);
         mvc.perform(post("/api/chat/rooms")
                         .with(bearer(outsider))
@@ -40,7 +40,7 @@ class ChatCommandIT extends IntegrationTest {
 
     @Test
     void member_can_send_and_retrieve_message() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         UUID roomId = createRoom(owner, groupId);
         mvc.perform(post("/api/chat/rooms/{id}/messages", roomId)
@@ -58,8 +58,8 @@ class ChatCommandIT extends IntegrationTest {
 
     @Test
     void non_member_cannot_send_message() throws Exception {
-        AuthedUser owner = registerAndLogin();
-        AuthedUser outsider = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
+        AuthedUser outsider = registerEnrolled();
         UUID groupId = createGroup(owner);
         UUID roomId = createRoom(owner, groupId);
         mvc.perform(post("/api/chat/rooms/{id}/messages", roomId)
@@ -74,8 +74,8 @@ class ChatCommandIT extends IntegrationTest {
     void list_rooms_filtered_to_my_groups() throws Exception {
         // Each createGroup auto-creates a default "general" room. Adding a manual room
         // brings each group to 2 rooms; member A should see only A's 2 rooms (not B's).
-        AuthedUser a = registerAndLogin();
-        AuthedUser b = registerAndLogin();
+        AuthedUser a = registerEnrolled();
+        AuthedUser b = registerEnrolled();
         UUID groupA = createGroup(a);
         UUID groupB = createGroup(b);
         createRoom(a, groupA);

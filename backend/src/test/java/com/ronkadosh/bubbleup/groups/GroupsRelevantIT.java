@@ -33,6 +33,8 @@ class GroupsRelevantIT extends IntegrationTest {
         UUID universityId = bguId();
         UUID departmentId = seDepartmentId(universityId);
         setAffiliation(u, universityId, departmentId);
+        // Membership is gated on enrollment — enroll before creating the bubble.
+        enroll(u, seedOfferingCourseId());
 
         // Create a bubble against the seeded offering (SE department PLACEHOLDER-101 in 2025-B).
         UUID groupId = createGroup(u, seedOfferingId());

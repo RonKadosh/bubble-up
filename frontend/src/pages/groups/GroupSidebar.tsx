@@ -37,6 +37,14 @@ interface GroupSidebarProps {
   /** Drawer-open state below `desktop`. Ignored at desktop+ where the sidebar is always inline. */
   mobileOpen: boolean
   onMobileClose: () => void
+  /**
+   * Deep-link from elsewhere (dashboard / course page) to open the create form,
+   * optionally pre-targeted to a course. Applied once on arrival; the user can
+   * still change the selection afterwards. {@code prefillDeptId} is needed for
+   * the dept→course cascade to surface {@code prefillCourseId}.
+   */
+  initialCreate?: { open: boolean; deptId?: string; courseId?: string } | null
+  onInitialCreateConsumed?: () => void
 }
 
 /**
@@ -47,7 +55,7 @@ interface GroupSidebarProps {
  * Below `desktop` (1200px) this renders as a slide-over drawer anchored to the
  * inline-start edge with a backdrop. At desktop+ it's a normal inline aside.
  */
-export function GroupSidebar({ groups, selectedId, meId, unreadByGroup, liveGroupIds, onSelect, onCreate, mobileOpen, onMobileClose }: GroupSidebarProps) {
+export function GroupSidebar({ groups, selectedId, meId, unreadByGroup, liveGroupIds, onSelect, onCreate, mobileOpen, onMobileClose, initialCreate, onInitialCreateConsumed }: GroupSidebarProps) {
   const { t } = useTranslation()
   const [showCreate, setShowCreate] = useState(false)
   const [newName, setNewName] = useState('')
@@ -60,6 +68,28 @@ export function GroupSidebar({ groups, selectedId, meId, unreadByGroup, liveGrou
   const [selectedDeptId, setSelectedDeptId] = useState<string>('')
   const [selectedCourseId, setSelectedCourseId] = useState<string>('')
   const [catalogError, setCatalogError] = useState('')
+  // Course to auto-select once the dept's course list arrives (deep-link prefill).
+  const [pendingCourseId, setPendingCourseId] = useState<string>('')
+
+  // Deep-link: open the create form pre-targeted to a course, then tell the
+  // parent to clear the navigation state so a refresh/back doesn't re-trigger it.
+  useEffect(() => {
+    if (!initialCreate?.open) return
+    setShowCreate(true)
+    if (initialCreate.deptId) setSelectedDeptId(initialCreate.deptId)
+    if (initialCreate.courseId) setPendingCourseId(initialCreate.courseId)
+    onInitialCreateConsumed?.()
+  }, [initialCreate, onInitialCreateConsumed])
+
+  // Once the cascade has loaded the courses for the prefilled dept, select the
+  // target course (if it's actually in that department's list).
+  useEffect(() => {
+    if (!pendingCourseId) return
+    if (courses.some((c) => c.id === pendingCourseId)) {
+      setSelectedCourseId(pendingCourseId)
+      setPendingCourseId('')
+    }
+  }, [courses, pendingCourseId])
 
   // Load universities + departments the first time the form opens. v1 only has
   // BGU, so we auto-select the first university and load its departments.

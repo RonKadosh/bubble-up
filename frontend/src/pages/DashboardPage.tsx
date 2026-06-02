@@ -3,10 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Feed, FeedCta, FeedItem, FeedItemKind, FeedSectionKey, getFeed } from '../api/feed'
 import { Group, getGroup, joinGroup } from '../api/groups'
+import { listMyCurrentEnrollments } from '../api/enrollment'
 import { describeError } from '../api/errors'
 import { Avatar } from '../components/Avatar'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
+import { BentoCell } from '../components/BentoCell'
+import { useFeedLayoutStore } from '../store/feedLayoutStore'
+import { useViewportStore } from '../store/viewportStore'
 
 type Translate = (key: string, opts?: Record<string, unknown>) => string
 
@@ -24,6 +28,64 @@ const SECTION_META: Record<FeedSectionKey, { labelKey: string; emptyKey: string 
   UPCOMING: { labelKey: 'dashboard.section.upcoming', emptyKey: 'dashboard.empty.upcoming' },
   ACTIVITY: { labelKey: 'dashboard.section.activity', emptyKey: 'dashboard.empty.activity' },
   DISCOVERY: { labelKey: 'dashboard.section.discovery', emptyKey: 'dashboard.empty.discovery' },
+}
+
+// ---------------------------------------------------------------------------
+// Bento layout. Mirrors GroupsPage's single-focus model, generalized to four
+// cells: the focused section spans all three rows of one column; the other
+// three stack in the opposite column (rows 1–3) in SECTION_ORDER order. The
+// focus column flips left↔right so the maximized cell always reads as primary.
+// ---------------------------------------------------------------------------
+
+type FeedBentoLayout = {
+  sectionClass: string
+  cells: Record<FeedSectionKey, string>
+}
+
+// Literal class strings (not interpolated) so Tailwind's content scanner emits
+// them — same reason GroupsPage's getBentoLayout spells each placement out.
+// The maximized cell ALWAYS occupies the big left column; promoting another
+// section just swaps which one sits there. The other three stack on the right
+// in SECTION_ORDER (minus the focused one).
+const FOCUS_LEFT = 'flex-1 min-h-0 p-3 grid gap-3 grid-rows-3 grid-cols-[2fr_1fr] bg-bento-grid'
+
+const FEED_BENTO_LAYOUTS: Record<FeedSectionKey, FeedBentoLayout> = {
+  LIVE: {
+    sectionClass: FOCUS_LEFT,
+    cells: {
+      LIVE: 'col-start-1 row-start-1 row-span-3',
+      UPCOMING: 'col-start-2 row-start-1',
+      ACTIVITY: 'col-start-2 row-start-2',
+      DISCOVERY: 'col-start-2 row-start-3',
+    },
+  },
+  UPCOMING: {
+    sectionClass: FOCUS_LEFT,
+    cells: {
+      UPCOMING: 'col-start-1 row-start-1 row-span-3',
+      LIVE: 'col-start-2 row-start-1',
+      ACTIVITY: 'col-start-2 row-start-2',
+      DISCOVERY: 'col-start-2 row-start-3',
+    },
+  },
+  ACTIVITY: {
+    sectionClass: FOCUS_LEFT,
+    cells: {
+      ACTIVITY: 'col-start-1 row-start-1 row-span-3',
+      LIVE: 'col-start-2 row-start-1',
+      UPCOMING: 'col-start-2 row-start-2',
+      DISCOVERY: 'col-start-2 row-start-3',
+    },
+  },
+  DISCOVERY: {
+    sectionClass: FOCUS_LEFT,
+    cells: {
+      DISCOVERY: 'col-start-1 row-start-1 row-span-3',
+      LIVE: 'col-start-2 row-start-1',
+      UPCOMING: 'col-start-2 row-start-2',
+      ACTIVITY: 'col-start-2 row-start-3',
+    },
+  },
 }
 
 // ---------------------------------------------------------------------------
@@ -139,8 +201,17 @@ const ITEM_RENDERERS: Record<FeedItemKind, (item: FeedItem, t: Translate) => Ren
 
 export default function DashboardPage() {
   const { t } = useTranslation()
+  const focused = useFeedLayoutStore((s) => s.focused)
+  const setFocused = useFeedLayoutStore((s) => s.setFocused)
+  const isPhone = useViewportStore((s) => s.tier === 'phone')
   const [feed, setFeed] = useState<Feed | null>(null)
   const [loading, setLoading] = useState(true)
+  /**
+   * Current-term enrolment count. Lets the empty Discovery state tell apart
+   * "you haven't enrolled in anything" (→ enroll) from "your courses just have
+   * no Bubbles yet" (→ start one). Null while loading.
+   */
+  const [enrollmentCount, setEnrollmentCount] = useState<number | null>(null)
   /** When set, a non-member is previewing a discovery Bubble before joining. */
   const [preview, setPreview] = useState<FeedItem | null>(null)
 
@@ -148,8 +219,11 @@ export default function DashboardPage() {
     let cancelled = false
     ;(async () => {
       try {
-        const data = await getFeed()
-        if (!cancelled) setFeed(data)
+        const [data, enrollments] = await Promise.all([
+          getFeed(),
+          listMyCurrentEnrollments().catch(() => []),
+        ])
+        if (!cancelled) { setFeed(data); setEnrollmentCount(enrollments.length) }
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -160,52 +234,154 @@ export default function DashboardPage() {
   const itemsByKey: Partial<Record<FeedSectionKey, FeedItem[]>> = {}
   for (const s of feed?.sections ?? []) itemsByKey[s.key] = s.items
 
-  return (
-    <div className="flex-1 overflow-y-auto">
-      <div className="max-w-2xl mx-auto px-4 tablet:px-6 desktop:px-8 py-6 tablet:py-8">
-        <header className="mb-6">
-          <div className="flex items-center gap-3 mb-1">
-            <div className="w-2.5 h-2.5 rounded-full bg-bubble-magenta shadow-sm" />
-            <div className="w-1.5 h-1.5 rounded-full bg-bubble-green" />
-            <h1 className="text-2xl font-bold text-base">{t('dashboard.title')}</h1>
-          </div>
-          <p className="text-sm text-muted ms-[1.6rem]">{t('dashboard.subtitle')}</p>
-        </header>
+  const layout = FEED_BENTO_LAYOUTS[focused]
+  const promoteLabel = t('dashboard.bento.maximize')
 
-        {loading ? (
-          <FeedSkeleton />
-        ) : (
-          <div className="flex flex-col gap-8">
+  return (
+    <div className="flex-1 min-h-0 flex flex-col">
+      <header className="shrink-0 px-4 tablet:px-6 desktop:px-8 pt-6 tablet:pt-8 pb-4">
+        <div className="flex items-center gap-3 mb-1">
+          <div className="w-2.5 h-2.5 rounded-full bg-bubble-magenta shadow-sm" />
+          <div className="w-1.5 h-1.5 rounded-full bg-bubble-green" />
+          <h1 className="text-2xl font-bold text-base">{t('dashboard.title')}</h1>
+        </div>
+        <p className="text-sm text-muted ms-[1.6rem]">{t('dashboard.subtitle')}</p>
+      </header>
+
+      {loading ? (
+        <FeedSkeleton />
+      ) : isPhone ? (
+        <>
+          <nav className="flex shrink-0 border-b border-line bg-surface overflow-x-auto">
             {SECTION_ORDER.map((key) => {
-              const items = itemsByKey[key] ?? []
+              const active = focused === key
               return (
-                <section key={key}>
-                  <h2 className="text-sm font-semibold uppercase tracking-wide text-muted mb-3 ms-1">
-                    {t(SECTION_META[key].labelKey)}
-                  </h2>
-                  {items.length === 0 ? (
-                    <p className="rounded-2xl border border-dashed border-line bg-surface/40 px-4 py-6 text-center text-sm text-muted">
-                      {t(SECTION_META[key].emptyKey)}
-                    </p>
-                  ) : (
-                    <div className="flex flex-col gap-3">
-                      {items.map((item, i) => (
-                        <FeedItemCard
-                          key={`${key}-${i}-${item.cta?.targetId ?? item.groupId ?? ''}`}
-                          item={item}
-                          onPreview={setPreview}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </section>
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setFocused(key)}
+                  aria-pressed={active}
+                  className={`flex-1 min-w-[5rem] flex items-center justify-center py-2.5 text-xs font-medium transition-colors ${
+                    active
+                      ? 'text-primary-600 border-b-2 border-primary-500'
+                      : 'text-muted hover:text-base border-b-2 border-transparent'
+                  }`}
+                >
+                  <span>{t(SECTION_META[key].labelKey)}</span>
+                </button>
               )
             })}
-          </div>
-        )}
-      </div>
+          </nav>
+          <section className="flex-1 min-h-0 p-2 bg-bento-grid flex">
+            <div className="ring-iridescent p-[1.5px] bento-cell-radius flex-1 flex flex-col min-h-0 overflow-hidden shadow-themed">
+              <div className="flex-1 min-h-0 bg-surface bento-cell-inner-radius flex flex-col overflow-hidden">
+                <SectionBody
+                  items={itemsByKey[focused] ?? []}
+                  emptyKey={SECTION_META[focused].emptyKey}
+                  sectionKey={focused}
+                  enrollmentCount={enrollmentCount}
+                  onPreview={setPreview}
+                />
+              </div>
+            </div>
+          </section>
+        </>
+      ) : (
+        <section className={layout.sectionClass}>
+          {SECTION_ORDER.map((key) => (
+            <BentoCell
+              key={key}
+              label={t(SECTION_META[key].labelKey)}
+              className={layout.cells[key]}
+              isFocused={focused === key}
+              onFocus={() => setFocused(key)}
+              promoteLabel={promoteLabel}
+            >
+              <SectionBody
+                items={itemsByKey[key] ?? []}
+                emptyKey={SECTION_META[key].emptyKey}
+                sectionKey={key}
+                enrollmentCount={enrollmentCount}
+                onPreview={setPreview}
+              />
+            </BentoCell>
+          ))}
+        </section>
+      )}
 
       {preview && <PublicBubbleModal item={preview} onClose={() => setPreview(null)} />}
+    </div>
+  )
+}
+
+// One section's scrollable body — the feed-item list, or the dashed empty hint
+// when the backend sent nothing for this section. Reused by the desktop bento
+// grid and the phone single-cell view.
+function SectionBody({
+  items,
+  emptyKey,
+  sectionKey,
+  enrollmentCount,
+  onPreview,
+}: {
+  items: FeedItem[]
+  emptyKey: string
+  sectionKey: FeedSectionKey
+  enrollmentCount: number | null
+  onPreview: (item: FeedItem) => void
+}) {
+  const { t } = useTranslation()
+  if (items.length === 0) {
+    // Discovery's empty state is actionable: it routes the user toward either
+    // enrolling (no enrolments) or starting the first Bubble (enrolled, no Bubbles).
+    if (sectionKey === 'DISCOVERY') {
+      return <DiscoveryEmpty enrollmentCount={enrollmentCount} />
+    }
+    return (
+      <div className="flex-1 min-h-0 overflow-y-auto p-3">
+        <p className="rounded-2xl border border-dashed border-line bg-surface/40 px-4 py-6 text-center text-sm text-muted">
+          {t(emptyKey)}
+        </p>
+      </div>
+    )
+  }
+  return (
+    <div className="flex-1 min-h-0 overflow-y-auto p-3 flex flex-col gap-3">
+      {items.map((item, i) => (
+        <FeedItemCard
+          key={`${i}-${item.cta?.targetId ?? item.groupId ?? ''}`}
+          item={item}
+          onPreview={onPreview}
+        />
+      ))}
+    </div>
+  )
+}
+
+// Actionable empty state for Discovery. Two distinct dead-ends, two distinct
+// nudges: no enrolments → go enroll; enrolled but no Bubbles → start the first
+// one (opens the create form on the hub). Membership is enrollment-gated, so
+// these are the only two ways the section can be empty.
+function DiscoveryEmpty({ enrollmentCount }: { enrollmentCount: number | null }) {
+  const { t } = useTranslation()
+  const navigate = useNavigate()
+  const enrolled = (enrollmentCount ?? 0) > 0
+  return (
+    <div className="flex-1 min-h-0 overflow-y-auto p-3 flex items-center justify-center">
+      <div className="rounded-2xl border border-dashed border-line bg-surface/40 px-4 py-6 text-center max-w-[42ch] flex flex-col items-center gap-3">
+        <p className="text-sm text-muted">
+          {t(enrolled ? 'dashboard.empty.discoveryEnrolled' : 'dashboard.empty.discovery')}
+        </p>
+        <Button
+          size="sm"
+          variant={enrolled ? 'primary' : 'secondary'}
+          onClick={() => enrolled
+            ? navigate('/groups', { state: { openCreate: true } })
+            : navigate('/academy')}
+        >
+          {t(enrolled ? 'dashboard.discovery.startBubble' : 'dashboard.discovery.browseCourses')}
+        </Button>
+      </div>
     </div>
   )
 }
@@ -295,6 +471,7 @@ function PublicBubbleModal({ item, onClose }: { item: FeedItem; onClose: () => v
         GROUP_IS_FULL: 'dashboard.publicBubble.full',
         GROUP_NOT_PUBLIC: 'dashboard.publicBubble.privateNote',
         ALREADY_GROUP_MEMBER: 'dashboard.publicBubble.alreadyMember',
+        NOT_ENROLLED_IN_COURSE: 'dashboard.publicBubble.notEnrolled',
       }, 'dashboard.publicBubble.joinError'))
       setJoining(false)
     }
@@ -433,19 +610,17 @@ function fmtEventRange(start?: string, end?: string): string {
 }
 
 function FeedSkeleton() {
+  // Four pulsing bento-shaped blocks filling the grid area, matching the
+  // default (DISCOVERY-focused) layout so the load → loaded transition doesn't jump.
+  const layout = FEED_BENTO_LAYOUTS.DISCOVERY
   return (
-    <div className="flex flex-col gap-3">
-      {[0, 1, 2, 3].map((i) => (
-        <Card key={i} size="lg" className="p-4 animate-pulse">
-          <div className="flex gap-3">
-            <div className="w-11 h-11 rounded-full bg-surface-muted shrink-0" />
-            <div className="flex-1 space-y-2">
-              <div className="h-3 bg-surface-muted rounded-full w-1/3" />
-              <div className="h-3 bg-surface-muted rounded-full w-2/3 mt-2" />
-            </div>
-          </div>
-        </Card>
+    <section className={layout.sectionClass}>
+      {SECTION_ORDER.map((key) => (
+        <div
+          key={key}
+          className={`bento-cell-radius bg-surface-muted/50 animate-pulse ${layout.cells[key]}`}
+        />
       ))}
-    </div>
+    </section>
   )
 }

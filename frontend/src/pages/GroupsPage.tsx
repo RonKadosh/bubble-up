@@ -229,6 +229,15 @@ export default function GroupsPage() {
     }
   }, [requestedGroupId, groups, navigate])
 
+  // Deep-link from the dashboard / a course page: open the create form, optionally
+  // pre-targeted to a course (the empty-Discovery and empty-course "start a Bubble"
+  // CTAs route here). Consumed once by GroupSidebar, then we clear the nav state.
+  const createState = (location.state as
+    { openCreate?: boolean; courseId?: string; deptId?: string } | null) ?? null
+  const initialCreate = createState?.openCreate
+    ? { open: true, courseId: createState.courseId, deptId: createState.deptId }
+    : null
+
   // Keep members cached for the selected group so role checks render correctly
   useEffect(() => {
     if (!selectedId || membersById[selectedId]) return
@@ -370,8 +379,10 @@ export default function GroupsPage() {
       await loadGroups()
       refreshRooms()
       setSelectedId(created.id)
-    } catch {
-      setError(t('groups.error.create'))
+    } catch (e) {
+      setError(describeError(e, t,
+        { NOT_ENROLLED_IN_COURSE: 'groups.error.notEnrolled' },
+        'groups.error.create'))
     }
   }
 
@@ -383,7 +394,7 @@ export default function GroupsPage() {
       refreshRooms()
     } catch (e) {
       setError(describeError(e, t,
-        { GROUP_IS_FULL: 'groups.error.full' },
+        { GROUP_IS_FULL: 'groups.error.full', NOT_ENROLLED_IN_COURSE: 'groups.error.notEnrolled' },
         'groups.error.join'))
     }
   }
@@ -554,6 +565,8 @@ export default function GroupsPage() {
         onCreate={handleCreate}
         mobileOpen={mobileSidebarOpen}
         onMobileClose={() => setMobileSidebarOpen(false)}
+        initialCreate={initialCreate}
+        onInitialCreateConsumed={() => navigate('/groups', { replace: true, state: null })}
       />
 
       <main className="flex-1 flex flex-col bg-base overflow-hidden min-w-0">

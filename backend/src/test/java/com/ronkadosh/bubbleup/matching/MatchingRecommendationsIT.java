@@ -123,6 +123,23 @@ class MatchingRecommendationsIT extends IntegrationTest {
     }
 
     @Test
+    void noEnrollment_discoveryAggregate_returnsEmpty_noGlobalTrending() throws Exception {
+        // Aggregate discovery path (no ?courseId=): a user with no enrolments has
+        // nothing they can join, so we must NOT fall back to global trending.
+        AuthedUser viewer = registerAndLogin();   // no affiliation, no enrolments
+        seedUserProfile(viewer.id(), ZERO, 0, 0);
+        // A popular public bubble exists on some course the viewer is NOT enrolled in.
+        UUID courseId = claimCourse();
+        candidate(courseId, viewer.id(), uniform(0.4), 0.0, /*members*/9, 80, 5, 5);
+
+        String json = mvc.perform(get("/api/matching/recommendations").with(bearer(viewer)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        JsonNode groups = om.readTree(json).get("data").get("groups");
+        assertThat(groups).isEmpty();
+    }
+
+    @Test
     void groupAverage_isConfidenceWeighted_soStrongKnownMemberDominates() throws Exception {
         UUID courseId = claimCourse();
         UUID offeringId = anyOfferingForCourse(courseId);

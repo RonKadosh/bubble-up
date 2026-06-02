@@ -16,7 +16,7 @@ class GroupEventsIT extends IntegrationTest {
 
     @Test
     void member_sees_group_events_through_proxy() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         createEvent(owner, groupId, "MEETING", futurePlus(1), futurePlus(2));
 
@@ -33,7 +33,7 @@ class GroupEventsIT extends IntegrationTest {
 
     @Test
     void non_member_cannot_list_group_events() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         AuthedUser outsider = registerAndLogin();
         UUID groupId = createGroup(owner);
 

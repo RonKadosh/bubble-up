@@ -117,14 +117,19 @@ public class MatchingQueryService {
             // "Your courses" for discovery = what you're enrolled in this term,
             // not the courses of bubbles you already joined. This lets a freshly
             // enrolled student get course-relevant recommendations before joining
-            // anything; an unenrolled user falls through to global trending below.
+            // anything.
             userCourseIds = enrollmentInternalService.enrolledCourseIdsForCurrentTerm(userId);
         }
 
-        List<UUID> candidateIds = userCourseIds.isEmpty()
-                ? groupInternalService.getTopPublicGroupIds(userId, props.recommendationLimit())
-                : groupInternalService.getCandidateGroupIds(
-                        userCourseIds, userId, props.candidateLimitPerCourse());
+        if (userCourseIds.isEmpty()) {
+            // No enrolments → nothing the user can actually join (membership is
+            // gated on enrollment). Don't surface global trending they can't join;
+            // Discovery shows the enroll nudge for this empty result instead.
+            return new RecommendationsResponse(MatchResultType.TRENDING.name(), reliability, List.of());
+        }
+
+        List<UUID> candidateIds = groupInternalService.getCandidateGroupIds(
+                userCourseIds, userId, props.candidateLimitPerCourse());
 
         if (candidateIds.isEmpty()) {
             return new RecommendationsResponse(MatchResultType.TRENDING.name(), reliability, List.of());

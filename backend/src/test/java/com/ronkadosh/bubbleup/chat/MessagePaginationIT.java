@@ -15,7 +15,7 @@ class MessagePaginationIT extends IntegrationTest {
 
     @Test
     void returns_latest_n_messages_when_no_cursor() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         UUID roomId = defaultRoomId(owner);
         for (int i = 0; i < 7; i++) sendText(owner, roomId, "m" + i);
@@ -32,7 +32,7 @@ class MessagePaginationIT extends IntegrationTest {
 
     @Test
     void returns_next_n_when_before_cursor_provided() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         UUID roomId = defaultRoomId(owner);
         for (int i = 0; i < 7; i++) sendText(owner, roomId, "m" + i);
@@ -60,7 +60,7 @@ class MessagePaginationIT extends IntegrationTest {
 
     @Test
     void size_clamped_to_max_100() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         UUID roomId = defaultRoomId(owner);
         // Don't seed 100+ messages — just verify the request with size=500 doesn't error
@@ -76,7 +76,7 @@ class MessagePaginationIT extends IntegrationTest {
 
     @Test
     void before_with_unknown_id_returns_400() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         UUID roomId = defaultRoomId(owner);
 
@@ -89,8 +89,8 @@ class MessagePaginationIT extends IntegrationTest {
 
     @Test
     void non_member_forbidden() throws Exception {
-        AuthedUser owner = registerAndLogin();
-        AuthedUser outsider = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
+        AuthedUser outsider = registerEnrolled();
         UUID groupId = createGroup(owner);
         UUID roomId = defaultRoomId(owner);
 
