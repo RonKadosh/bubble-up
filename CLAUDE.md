@@ -1,6 +1,6 @@
-# CLAUDE.md — StudySync
+# CLAUDE.md — Bubble.up
 
-You are working in **StudySync** (also called BubbleUp in source — same project). This file is loaded into every agent session in this repo. Read it before you change anything.
+You are working in **Bubble.up** (the Java package and source symbols use `bubbleup` — same project). This file is loaded into every agent session in this repo. Read it before you change anything.
 
 ---
 
@@ -41,7 +41,7 @@ If the helper truly doesn't exist and the same pattern will show up in two featu
 ## Repo layout
 
 ```
-StudySync/
+bubble-up/
 ├── CLAUDE.md                  ← you are here (always loaded)
 ├── docker-compose.yml         ← postgres + backend + frontend
 ├── backend/

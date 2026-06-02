@@ -1,6 +1,6 @@
 name: bubbleup-prod
 
-# Production stack for StudySync / Bubble.up.
+# Production stack for Bubble.up.
 # Differences from docker-compose.yml (dev):
 #   - Pulls pre-built images from GHCR (pinned by IMAGE_TAG), no local builds.
 #   - Caddy in front of the frontend: handles TLS (auto Let's Encrypt) on 80/443.
