@@ -1,14 +1,16 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '../components/Button'
 import { Card } from '../components/Card'
+import { ReliabilityMeter } from '../components/ReliabilityMeter'
+import { getReliability, type Reliability } from '../api/matching'
 import { SUPPORTED_LANGUAGES } from '../i18n'
 import { useLanguageStore } from '../store/languageStore'
 import ProfileSection from './settings/ProfileSection'
 
-type SettingsTab = 'profile' | 'language'
+type SettingsTab = 'profile' | 'matching' | 'language'
 
-const TABS: SettingsTab[] = ['profile', 'language']
+const TABS: SettingsTab[] = ['profile', 'matching', 'language']
 
 function LanguageSection() {
   const { t } = useTranslation()
@@ -44,6 +46,46 @@ function LanguageSection() {
   )
 }
 
+// The user's private "profile strength" in the matching system. Self-only — this
+// never shows anyone else's confidence. Permanent home for the reliability meter
+// once the onboarding widget retires.
+function MatchingSection() {
+  const { t } = useTranslation()
+  const [reliability, setReliability] = useState<Reliability | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    getReliability()
+      .then((r) => { if (!cancelled) setReliability(r) })
+      .catch(() => { /* best-effort; section just stays in its loading state */ })
+    return () => { cancelled = true }
+  }, [])
+
+  return (
+    <Card size="lg" className="p-5 tablet:p-6 shadow-bubble max-w-2xl">
+      <h2 className="text-lg font-bold text-base">{t('settings.matching.title')}</h2>
+      <p className="text-sm text-muted mt-1 mb-4">{t('settings.matching.description')}</p>
+      {reliability ? (
+        <ReliabilityMeter reliability={reliability} />
+      ) : (
+        <div className="h-2.5 rounded-full bg-surface-muted/60 animate-pulse" />
+      )}
+      <p className="text-xs text-muted mt-4">
+        {t('settings.matching.answered', {
+          answered: reliability?.answeredQuestions ?? 0,
+          cap: reliability?.questionCap ?? 0,
+        })}
+      </p>
+    </Card>
+  )
+}
+
+const SECTIONS: Record<SettingsTab, () => JSX.Element> = {
+  profile: ProfileSection,
+  matching: MatchingSection,
+  language: LanguageSection,
+}
+
 export default function SettingsPage() {
   const { t } = useTranslation()
   const [tab, setTab] = useState<SettingsTab>('profile')
@@ -72,7 +114,7 @@ export default function SettingsPage() {
           ))}
         </nav>
 
-        {tab === 'profile' ? <ProfileSection /> : <LanguageSection />}
+        {(() => { const Section = SECTIONS[tab]; return <Section /> })()}
       </div>
     </div>
   )

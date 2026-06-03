@@ -73,6 +73,16 @@ export async function getGroupsByCourse(
   return res.data.data
 }
 
+/**
+ * Public, not-yet-joined bubbles across the caller's current-term enrolled
+ * courses. Backs the onboarding "Find a Bubble" step. Empty (not an error) when
+ * the user has no affiliation / current term / enrolment.
+ */
+export async function getDiscoverableBubbles(): Promise<Group[]> {
+  const res = await client.get<ApiSuccess<Group[]>>('/groups/discoverable')
+  return res.data.data
+}
+
 export async function getGroup(id: string): Promise<Group> {
   const res = await client.get<ApiSuccess<Group>>(`/groups/${id}`)
   return res.data.data

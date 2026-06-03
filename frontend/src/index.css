@@ -33,6 +33,7 @@
     --surface: #ffffff;
     --surface-hover: #f1f7fc;
     --surface-muted: #ebf2f8;
+    --progress-grey: #c3cdd9;
 
     --border: #d7e2ec;
     --border-strong: #b8cad9;
@@ -71,6 +72,7 @@
     --surface: #19232d;
     --surface-hover: #213040;
     --surface-muted: #1c2731;
+    --progress-grey: #3a4a59;
 
     --border: #2d3d4d;
     --border-strong: #3f5365;
@@ -187,6 +189,23 @@
     border-radius: 9999px;
     animation: pulse-ring-live-red 2s ease-in-out infinite;
   }
+
+  /* Onboarding "unlocked!" celebration — a badge that pops then floats up, with a
+     few bubbles rising behind it. */
+  @keyframes celebrate-badge {
+    0%   { transform: translateY(10px) scale(0.85); opacity: 0; }
+    18%  { transform: translateY(0) scale(1.04); opacity: 1; }
+    78%  { transform: translateY(-6px) scale(1); opacity: 1; }
+    100% { transform: translateY(-26px) scale(0.98); opacity: 0; }
+  }
+  .animate-celebrate-badge { animation: celebrate-badge 2.4s ease-out forwards; }
+
+  @keyframes bubble-rise {
+    0%   { transform: translateY(24px) scale(0.6); opacity: 0; }
+    25%  { opacity: 0.9; }
+    100% { transform: translateY(-96px) scale(1.05); opacity: 0; }
+  }
+  .animate-bubble-rise { animation: bubble-rise 2.4s ease-out forwards; }
 
   /* Iridescent focus ring for text inputs — replaces the flat primary-400 outline. */
   .focus-bubble:focus {

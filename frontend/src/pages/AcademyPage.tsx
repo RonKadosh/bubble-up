@@ -42,6 +42,7 @@ import {
   unenroll as unenrollApi,
 } from '../api/enrollment'
 import { describeError } from '../api/errors'
+import { useOnboardingStore } from '../store/onboardingStore'
 
 const TERM_ALL = '__all__'
 
@@ -191,6 +192,8 @@ export default function AcademyPage() {
     try {
       await enrollInCourse(courseId)
       await refreshEnrollments()
+      // Refresh onboarding so the "enroll" arrival callout flips to done.
+      void useOnboardingStore.getState().refresh()
     } catch (e) {
       setActionError(describeError(e, t, {
         ENROLLMENT_NO_CURRENT_OFFERING: 'academy.error.noCurrentOffering',

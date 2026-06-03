@@ -33,17 +33,24 @@
     "language": "Language",
     "dashboard": "Dashboard",
     "profile": "Profile",
-    "settings": "Settings"
+    "settings": "Settings",
+    "locked": "Unlocks at step {{n}}"
   },
   "settings": {
     "title": "Settings",
     "tabs": {
       "profile": "Profile",
+      "matching": "Matching",
       "language": "Language"
     },
     "language": {
       "title": "Language",
       "description": "Choose the language used across the app."
+    },
+    "matching": {
+      "title": "Matching",
+      "description": "How well Bubble.up understands you. Answer Daily Drops to raise your profile strength and unlock Matched recommendations.",
+      "answered": "{{answered}} of {{cap}} Daily Drops answered"
     }
   },
   "profile": {
@@ -784,6 +791,115 @@
   "matching": {
     "title": "Quick check-in",
     "submitting": "Saving…",
-    "error": "Couldn't save your answer. Try again."
+    "error": "Couldn't save your answer. Try again.",
+    "reliability": {
+      "label": "Profile strength",
+      "thresholdMarker": "Matched recommendations unlock here",
+      "hint": "Answer Daily Drops to raise it.",
+      "hintMatched": "Strong enough for Matched recommendations.",
+      "matchedBadge": "Matched unlocked"
+    }
+  },
+  "onboarding": {
+    "title": "Getting started",
+    "subtitle": "A few steps to get the most out of Bubble.up.",
+    "progress": "{{done}} of {{total}} done",
+    "expand": "Expand",
+    "collapse": "Collapse",
+    "gotIt": "Got it",
+    "whatIsBubble": {
+      "title": "What is a Study Bubble?",
+      "body": "A small, collaborative group for one course — chat, a shared calendar, files, and live study rooms, all in one place."
+    },
+    "studyBase": {
+      "title": "Set up your study base",
+      "affiliationSubtitle": "Add your university and department.",
+      "coursesSubtitle": "Enroll in your current courses.",
+      "doneSubtitle": "University, department, and courses are set.",
+      "affiliationCta": "Add details",
+      "coursesCta": "Enroll"
+    },
+    "getBubble": {
+      "title": "Get into a Bubble",
+      "subtitle": "No Bubble for your course yet? Start one, or join your classmates.",
+      "doneSubtitle": "You're in a Bubble.",
+      "createCta": "Create",
+      "joinCta": "Join"
+    },
+    "trendingVsMatching": {
+      "title": "Trending vs Matching",
+      "body": "New here? Your picks are Trending (popular Bubbles). Answer Daily Drops to raise your profile strength — once it's high enough, you'll get Matched Bubbles tailored to you.",
+      "answerCta": "Answer a Daily Drop"
+    },
+    "guide": {
+      "badge": "Onboarding step",
+      "backToSetup": "Back to setup",
+      "profile": {
+        "title": "Finish your study base",
+        "body": "Pick your university and department here, then save — that's how Bubble.up finds the right courses and groups for you."
+      },
+      "enroll": {
+        "title": "Enroll in your courses",
+        "body": "Choose a department, pick a course, and hit Enroll. Your Bubbles and recommendations are built from the courses you're taking this term."
+      }
+    },
+    "feature": {
+      "settings": "Settings",
+      "academy": "Academy",
+      "bubbles": "Bubbles",
+      "matching": "Matching",
+      "dashboard": "your Dashboard",
+      "experts": "Experts"
+    },
+    "wizard": {
+      "workspaceTitle": "Let's set up your workspace",
+      "percentComplete": "{{pct}}% complete",
+      "unlockReward": "Complete this step to unlock {{feature}}",
+      "unlocked": "You unlocked {{feature}}!",
+      "allSet": "You're all set! Welcome to Bubble.up 🎉",
+      "headStart": "✓ You're already at {{pct}}% just for joining Bubble.up.",
+      "stepLabel": "Step {{n}} of {{total}}",
+      "stepDone": "Done",
+      "lockedHint": "Finish this step to continue",
+      "back": "Back",
+      "next": "Next",
+      "finish": "Enter Bubble.up",
+      "welcome": {
+        "title": "Welcome to Bubble.up",
+        "body": "Bubble.up helps you find your people for every course and keep all your studying in one place. Let's get you set up in a few quick steps."
+      },
+      "profile": {
+        "title": "Set up your profile",
+        "body": "Tell us your university and department so Bubble.up can find the right courses and groups for you. While you're in Settings, feel free to explore and set your other preferences just right for you.",
+        "cta": "Set up profile"
+      },
+      "enroll": {
+        "title": "Enroll in your courses",
+        "body": "Add the courses you're taking this term — your Bubbles and recommendations are built from them.",
+        "cta": "Enroll in courses"
+      },
+      "bubble": {
+        "title": "Get into your first Bubble",
+        "body": "A Study Bubble is a small, collaborative group for one course — chat, a shared calendar, files, and live study rooms, all in one place. No Bubble for your course yet? Create one and invite classmates, or join an existing one.",
+        "findCta": "Find a Bubble",
+        "createCta": "Create a Bubble",
+        "loading": "Loading bubbles…",
+        "members": "{{count}}/{{max}} members",
+        "join": "Join",
+        "joining": "Joining…",
+        "fullLabel": "Full",
+        "joined": "You're in a Bubble! Click Next to continue.",
+        "empty": "No bubbles in your courses yet — be the first to create one.",
+        "loadError": "Couldn't load bubbles. Try again.",
+        "joinError": "Couldn't join this Bubble. Try again.",
+        "full": "This Bubble is full.",
+        "alreadyMember": "You're already in this Bubble."
+      },
+      "matching": {
+        "title": "Trending vs Matching",
+        "body": "New here? Your picks start as Trending (popular Bubbles). Answer Daily Drops to raise your profile strength — once it's high enough, you'll get Matched Bubbles tailored to you. Answer your first one to finish.",
+        "cta": "Answer a Daily Drop"
+      }
+    }
   }
 }
