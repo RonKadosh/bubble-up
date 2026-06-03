@@ -85,6 +85,17 @@ public class GroupController {
                 me.id(), includeOtherDepartments, includeOtherUniversities, termIdOverride));
     }
 
+    /**
+     * Public, not-yet-joined bubbles across the caller's current-term enrolled
+     * courses — the onboarding "Find a Bubble" step. Empty (not an error) when the
+     * user has no affiliation / current term / enrolment.
+     */
+    @GetMapping("/discoverable")
+    public ApiResponse<List<GroupResponse>> listDiscoverable() {
+        CurrentUser me = currentUserProvider.get();
+        return ApiResponse.success(queries.getDiscoverableForMyCourses(me.id()));
+    }
+
     @GetMapping("/{id}")
     public ApiResponse<GroupResponse> getById(@PathVariable UUID id) {
         return ApiResponse.success(queries.getGroupById(id));

@@ -18,4 +18,5 @@ public final class ApiPaths {
     public static final String ADMIN_BASE = API_BASE + "/admin";
     public static final String ENROLLMENTS_BASE = API_BASE + "/enrollments";
     public static final String FEED_BASE = API_BASE + "/feed";
+    public static final String ONBOARDING_BASE = API_BASE + "/onboarding";
 }

@@ -11,6 +11,7 @@ import com.ronkadosh.bubbleup.matching.api.dto.GroupRecommendationDto;
 import com.ronkadosh.bubbleup.matching.api.dto.NextQuestionResponse;
 import com.ronkadosh.bubbleup.matching.api.dto.QuizOptionDto;
 import com.ronkadosh.bubbleup.matching.api.dto.RecommendationsResponse;
+import com.ronkadosh.bubbleup.matching.internal.dto.MatchingReliability;
 import com.ronkadosh.bubbleup.matching.model.*;
 import com.ronkadosh.bubbleup.matching.persistence.*;
 import lombok.RequiredArgsConstructor;
@@ -78,6 +79,22 @@ public class MatchingQueryService {
         return NextQuestionResponse.of(
                 question.getId(), question.localizedText(lang), options,
                 now.plus(props.quizCooldown()));
+    }
+
+    /**
+     * The user's own profile strength: user_confidence + the matched threshold. A
+     * pure read — uses {@code findByUserId} (never {@code getOrCreate}) so fetching
+     * reliability does not create a profile row. Absent profile → zero confidence.
+     */
+    @Transactional(readOnly = true)
+    public MatchingReliability getReliability(UUID userId) {
+        Optional<UserProfile> profile = userProfileRepository.findByUserId(userId);
+        int answered = profile.map(UserProfile::getAnsweredQuestions).orElse(0);
+        int behavior = profile.map(UserProfile::getMeaningfulBehaviorEvents).orElse(0);
+        double confidence = MatchingScorer.userConfidence(answered, behavior, props);
+        double threshold = props.matchedDisplayThreshold();
+        return new MatchingReliability(
+                confidence, threshold, confidence >= threshold, answered, props.quizQuestionCap());
     }
 
     @Transactional(readOnly = true)

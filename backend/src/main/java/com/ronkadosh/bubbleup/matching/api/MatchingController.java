@@ -8,6 +8,7 @@ import com.ronkadosh.bubbleup.matching.api.dto.RecommendationsResponse;
 import com.ronkadosh.bubbleup.matching.api.dto.SubmitAnswerRequest;
 import com.ronkadosh.bubbleup.matching.application.MatchingCommandService;
 import com.ronkadosh.bubbleup.matching.application.MatchingQueryService;
+import com.ronkadosh.bubbleup.matching.internal.dto.MatchingReliability;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -42,5 +43,12 @@ public class MatchingController {
             @RequestParam(required = false) UUID courseId) {
         UUID userId = currentUserProvider.get().id();
         return ApiResponse.success(queryService.getRecommendations(userId, courseId));
+    }
+
+    /** The caller's own private profile strength (matching reliability) — Settings + onboarding. */
+    @GetMapping("/reliability")
+    public ApiResponse<MatchingReliability> reliability() {
+        UUID userId = currentUserProvider.get().id();
+        return ApiResponse.success(queryService.getReliability(userId));
     }
 }
