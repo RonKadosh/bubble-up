@@ -14,6 +14,7 @@ import { useAuthStore } from '../store/authStore'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
 import { Avatar } from '../components/Avatar'
+import { formatClock, formatDateTime } from '../i18n/datetime'
 
 /**
  * `/experts` — directory + open-sessions browse view.
@@ -187,7 +188,7 @@ function OpenSessionCard({ session, ownedGroups, onEnrolled }: OpenSessionCardPr
   }
 
   const timeLabel = session.startsAt
-    ? `${new Date(session.startsAt).toLocaleString()} → ${session.endsAt ? new Date(session.endsAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}`
+    ? `${formatDateTime(session.startsAt)} → ${session.endsAt ? formatClock(session.endsAt) : ''}`
     : ''
 
   return (

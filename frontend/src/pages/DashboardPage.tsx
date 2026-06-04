@@ -10,6 +10,7 @@ import { Card } from '../components/Card'
 import { Button } from '../components/Button'
 import { OnboardingWizard } from './dashboard/OnboardingWizard'
 import { useOnboardingStore, isOnboarded } from '../store/onboardingStore'
+import { formatRange } from '../i18n/datetime'
 
 type Translate = (key: string, opts?: Record<string, unknown>) => string
 
@@ -78,7 +79,7 @@ const ITEM_RENDERERS: Record<FeedItemKind, (item: FeedItem, t: Translate) => Ren
       <>
         <p className="font-semibold text-base truncate">📅 {item.title || humanizeType(item.eventType)}</p>
         <p className="text-sm text-muted truncate">
-          {fmtEventRange(item.startsAt, item.endsAt)}{item.groupName ? ` · ${item.groupName}` : ''}
+          {item.startsAt ? formatRange(item.startsAt, item.endsAt) : ''}{item.groupName ? ` · ${item.groupName}` : ''}
         </p>
       </>
     ),
@@ -496,20 +497,6 @@ function humanizeType(type?: string): string {
 function minutesUntil(iso?: string): number {
   if (!iso) return 0
   return Math.max(0, Math.round((new Date(iso).getTime() - Date.now()) / 60000))
-}
-
-function fmtEventRange(start?: string, end?: string): string {
-  if (!start) return ''
-  const s = new Date(start)
-  const dateFmt: Intl.DateTimeFormatOptions = { weekday: 'short', month: 'short', day: 'numeric' }
-  const timeFmt: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit' }
-  if (!end) return `${s.toLocaleDateString(undefined, dateFmt)} · ${s.toLocaleTimeString(undefined, timeFmt)}`
-  const e = new Date(end)
-  const sameDay = s.toDateString() === e.toDateString()
-  if (sameDay) {
-    return `${s.toLocaleDateString(undefined, dateFmt)} · ${s.toLocaleTimeString(undefined, timeFmt)} – ${e.toLocaleTimeString(undefined, timeFmt)}`
-  }
-  return `${s.toLocaleDateString(undefined, dateFmt)} – ${e.toLocaleDateString(undefined, dateFmt)}`
 }
 
 // Stacked-list loading placeholder — one header bar + two card blocks per section,

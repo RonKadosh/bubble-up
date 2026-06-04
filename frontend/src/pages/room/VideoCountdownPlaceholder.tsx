@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { fmtRelative } from './timeFormat'
+import { formatClock } from '../../i18n/datetime'
 
 interface Props {
   /** ISO timestamp when the Video cell becomes active. */
@@ -35,10 +36,9 @@ export function VideoCountdownPlaceholder({ videoOpensAt, sessionTitle }: Props)
     return () => clearInterval(id)
   }, [])
 
-  // Pre-compute the absolute clock time for the tooltip / sub-label.
-  const absoluteTime = useMemo(() => {
-    return new Date(videoOpensAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-  }, [videoOpensAt])
+  // Absolute clock time for the tooltip / sub-label. Cheap to recompute each
+  // render; reads the active language so it follows the live language toggle.
+  const absoluteTime = formatClock(videoOpensAt)
 
   return (
     <div

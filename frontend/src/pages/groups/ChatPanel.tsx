@@ -50,6 +50,7 @@ import {
   renderBubbleContent,
 } from '../../components/BubbleEmojis'
 import { TYPE_COLORS, fmtRange } from './calendarFormat'
+import { formatClock, formatDateTime } from '../../i18n/datetime'
 
 const PAGE_SIZE = 50
 
@@ -852,6 +853,22 @@ function ChatMessageRow({
         ) : (
           <p className="leading-snug whitespace-pre-wrap break-words">{renderBubbleContent(m.content)}</p>
         )}
+        {/* Clock time inline; full date reveals on hover (desktop) and on focus —
+            tapping the time focuses it, so mobile/tablet get the same popup. No state. */}
+        <button
+          type="button"
+          aria-label={formatDateTime(m.sentAt)}
+          className={`group/ts relative block ms-auto w-fit text-end text-[10px] mt-1 leading-none cursor-default ${mine ? 'text-on-brand/70' : 'text-muted'}`}
+        >
+          <time dateTime={m.sentAt} dir="ltr">{formatClock(m.sentAt)}</time>
+          <span
+            aria-hidden="true"
+            dir="ltr"
+            className="pointer-events-none absolute top-full end-0 mt-1 z-50 whitespace-nowrap rounded-md bg-gray-900 text-white px-2 py-1 text-[11px] font-normal shadow-themed opacity-0 group-hover/ts:opacity-100 group-focus/ts:opacity-100 transition-opacity"
+          >
+            {formatDateTime(m.sentAt)}
+          </span>
+        </button>
       </div>
       {!mine && actions}
     </div>

@@ -14,6 +14,7 @@ import {
 } from '../../api/users'
 import { Department, University, getDepartments, getUniversities } from '../../api/catalog'
 import { describeError } from '../../api/errors'
+import { formatDate } from '../../i18n/datetime'
 
 /**
  * The current user's own profile — view + inline edit + avatar upload/delete.
@@ -138,16 +139,10 @@ export default function ProfileSection() {
     }
   }
 
-  const joinedLabel = useMemo(() => {
-    if (!profile?.createdAt) return ''
-    try {
-      return new Date(profile.createdAt).toLocaleDateString(i18n.language, {
-        year: 'numeric', month: 'short', day: 'numeric',
-      })
-    } catch {
-      return profile.createdAt
-    }
-  }, [profile?.createdAt, i18n.language])
+  const joinedLabel = useMemo(
+    () => (profile?.createdAt ? formatDate(profile.createdAt, { year: 'numeric', month: 'short', day: 'numeric' }) : ''),
+    [profile?.createdAt, i18n.language],
+  )
 
   if (loading || !profile) {
     return <p className="text-muted text-sm">{t('common.loading')}</p>

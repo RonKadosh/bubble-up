@@ -8,6 +8,7 @@
  *   else   → "on <locale date>"
  */
 import type { TFunction } from 'i18next'
+import { formatDate } from '../../i18n/datetime'
 
 export function formatRelative(iso: string, t: TFunction): string {
   const then = new Date(iso).getTime()
@@ -18,5 +19,5 @@ export function formatRelative(iso: string, t: TFunction): string {
   if (diffSec < 60 * 60) return t('groups.members.relMinutes', { count: Math.floor(diffSec / 60) })
   if (diffSec < 60 * 60 * 24) return t('groups.members.relHours', { count: Math.floor(diffSec / 3600) })
   if (diffSec < 60 * 60 * 24 * 7) return t('groups.members.relDays', { count: Math.floor(diffSec / 86400) })
-  return t('groups.members.relOn', { date: new Date(iso).toLocaleDateString() })
+  return t('groups.members.relOn', { date: formatDate(iso) })
 }

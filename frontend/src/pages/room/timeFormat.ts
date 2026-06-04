@@ -1,4 +1,5 @@
 import type { TFunction } from 'i18next'
+import { formatClock } from '../../i18n/datetime'
 
 /**
  * Renders a target ISO time relative to {@code now} using the shared
@@ -12,7 +13,7 @@ export function fmtRelative(t: TFunction, now: number, target: string | null): s
   const absMin = Math.round(Math.abs(diffMs) / 60000)
   if (diffMs > 0) {
     if (absMin < 60) return t('room.rel.in', { count: absMin })
-    return t('room.rel.at', { time: new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) })
+    return t('room.rel.at', { time: formatClock(target) })
   }
   if (absMin < 1) return t('room.rel.justNow')
   if (absMin < 60) return t('room.rel.minAgo', { count: absMin })

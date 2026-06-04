@@ -6,6 +6,7 @@ import { Avatar } from '../components/Avatar'
 import { Card } from '../components/Card'
 import { UserProfile, getUserProfile } from '../api/users'
 import { errorCode } from '../api/errors'
+import { formatDate } from '../i18n/datetime'
 
 /**
  * Read-only view of *another* user's profile (`/profile/:userId`). The current
@@ -45,16 +46,10 @@ export default function ProfilePage() {
     return () => { cancelled = true }
   }, [userId, isSelf, t])
 
-  const joinedLabel = useMemo(() => {
-    if (!profile?.createdAt) return ''
-    try {
-      return new Date(profile.createdAt).toLocaleDateString(i18n.language, {
-        year: 'numeric', month: 'short', day: 'numeric',
-      })
-    } catch {
-      return profile.createdAt
-    }
-  }, [profile?.createdAt, i18n.language])
+  const joinedLabel = useMemo(
+    () => (profile?.createdAt ? formatDate(profile.createdAt, { year: 'numeric', month: 'short', day: 'numeric' }) : ''),
+    [profile?.createdAt, i18n.language],
+  )
 
   // Own profile is edited in Settings — keep a single source of truth.
   if (isSelf) {
