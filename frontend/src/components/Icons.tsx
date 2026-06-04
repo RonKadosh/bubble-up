@@ -253,6 +253,66 @@ export function SparkleIcon(p: IconProps) {
   )
 }
 
+/* ---- Feed activity glyphs: one per dashboard feed item kind ---- */
+
+export function VideoIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <rect x="2" y="6" width="14" height="12" rx="2.5" />
+      <path d="M16 9.5l5.5-2.8v10.6L16 14.5z" />
+    </Svg>
+  )
+}
+
+export function CalendarIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <rect x="3" y="4.5" width="18" height="16.5" rx="2.5" />
+      <line x1="3" y1="9.5" x2="21" y2="9.5" />
+      <line x1="8" y1="2.5" x2="8" y2="6" />
+      <line x1="16" y1="2.5" x2="16" y2="6" />
+    </Svg>
+  )
+}
+
+export function UserPlusIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M13 20v-1.5a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4V20" />
+      <circle cx="7.5" cy="7.5" r="3.8" />
+      <line x1="19" y1="8" x2="19" y2="14" />
+      <line x1="16" y1="11" x2="22" y2="11" />
+    </Svg>
+  )
+}
+
+export function UserMinusIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M13 20v-1.5a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4V20" />
+      <circle cx="7.5" cy="7.5" r="3.8" />
+      <line x1="16" y1="11" x2="22" y2="11" />
+    </Svg>
+  )
+}
+
+export function ChatIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.5 9.5 0 0 1-3.4-.7L3 21l1.8-4.9A8.4 8.4 0 0 1 4 11.5 8.5 8.5 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z" />
+    </Svg>
+  )
+}
+
+export function FileIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M14 2.5H7a2 2 0 0 0-2 2v15a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7.5z" />
+      <polyline points="14 2.5 14 8 19.5 8" />
+    </Svg>
+  )
+}
+
 /* ---- Subject glyphs: deterministic course tiles (see AcademyPage.courseGlyph) ---- */
 
 export function CodeIcon(p: IconProps) {

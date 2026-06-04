@@ -30,9 +30,17 @@ public record FeedItemResponse(
         Integer matchPercent,
         Integer memberCount,
         Integer participantCount,
-        // discovery (recommendation) extras: MATCHED → matchPercent; TRENDING → reasonLabels
+        // discovery (recommendation) extras: MATCHED → matchPercent; TRENDING → reasonLabels.
+        // courseCode/courseName tell the user which course a recommended Bubble belongs to.
         String displayMode,
         List<String> reasonLabels,
+        String courseCode,
+        String courseName,
+        // collapse extras (membership / file rollups): the lead labels (actor names or
+        // file names, capped ~3) plus the total distinct count, so the frontend can render
+        // "<labels> and N others/more". collapsedCount == labels.size() → no overflow.
+        List<String> collapsedLabels,
+        Integer collapsedCount,
         FeedCta cta
 ) {
     /** Builder-ish factory keeps source call sites readable despite the wide record. */
@@ -56,6 +64,10 @@ public record FeedItemResponse(
         private Integer participantCount;
         private String displayMode;
         private List<String> reasonLabels;
+        private String courseCode;
+        private String courseName;
+        private List<String> collapsedLabels;
+        private Integer collapsedCount;
         private FeedCta cta;
 
         private Builder(String kind) { this.kind = kind; }
@@ -73,6 +85,10 @@ public record FeedItemResponse(
         public Builder participantCount(Integer n) { this.participantCount = n; return this; }
         public Builder displayMode(String m) { this.displayMode = m; return this; }
         public Builder reasonLabels(List<String> labels) { this.reasonLabels = labels; return this; }
+        public Builder course(String code, String name) { this.courseCode = code; this.courseName = name; return this; }
+        public Builder collapsed(List<String> labels, int count) {
+            this.collapsedLabels = labels; this.collapsedCount = count; return this;
+        }
         public Builder cta(String type, UUID targetId) {
             this.cta = new FeedCta(type, targetId == null ? null : targetId.toString());
             return this;
@@ -81,7 +97,8 @@ public record FeedItemResponse(
         public FeedItemResponse build() {
             return new FeedItemResponse(kind, groupId, groupName, ts, title, subtitle,
                     startsAt, endsAt, eventType, unreadCount, matchPercent, memberCount,
-                    participantCount, displayMode, reasonLabels, cta);
+                    participantCount, displayMode, reasonLabels, courseCode, courseName,
+                    collapsedLabels, collapsedCount, cta);
         }
     }
 }

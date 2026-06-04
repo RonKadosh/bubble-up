@@ -23,6 +23,8 @@ public class MatchingInternalServiceImpl implements MatchingInternalService {
                 .map(g -> new GroupRecommendation(
                         g.groupId(),
                         g.groupName(),
+                        g.courseCode(),
+                        g.courseName(),
                         g.matchPercent(),
                         g.memberCount(),
                         g.alreadyMember(),

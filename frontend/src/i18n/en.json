@@ -239,16 +239,23 @@
       "count": "{{count}} unread messages in {{bubble}}"
     },
     "membership": {
-      "joined": "{{name}} floated into {{bubble}}",
-      "left": "{{name}} left {{bubble}}",
+      "joined": "{{names}} floated into {{bubble}}",
+      "left": "{{names}} left {{bubble}}",
+      "joinedOverflow_one": "{{names}} and {{count}} other floated into {{bubble}}",
+      "joinedOverflow_other": "{{names}} and {{count}} others floated into {{bubble}}",
+      "leftOverflow_one": "{{names}} and {{count}} other left {{bubble}}",
+      "leftOverflow_other": "{{names}} and {{count}} others left {{bubble}}",
       "someone": "Someone"
     },
     "file": {
-      "uploaded": "{{name}} uploaded to {{bubble}}"
+      "uploaded": "{{name}} uploaded to {{bubble}}",
+      "uploadedOverflow_one": "{{name}} and {{count}} more file uploaded to {{bubble}}",
+      "uploadedOverflow_other": "{{name}} and {{count}} more files uploaded to {{bubble}}"
     },
     "discovery": {
       "recommended": "Recommended Bubble",
       "trendingBadge": "Trending Bubble",
+      "fromCourse": "from {{course}}",
       "matchPercent": "{{percent}}% match",
       "members": "{{count}} members",
       "trending": {

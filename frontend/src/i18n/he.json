@@ -239,16 +239,23 @@
       "count": "{{count}} הודעות שלא נקראו ב{{bubble}}"
     },
     "membership": {
-      "joined": "{{name}} צף/ה לתוך {{bubble}}",
-      "left": "{{name}} עזב/ה את {{bubble}}",
+      "joined": "{{names}} צפו לתוך {{bubble}}",
+      "left": "{{names}} עזבו את {{bubble}}",
+      "joinedOverflow_one": "{{names}} ועוד {{count}} צפו לתוך {{bubble}}",
+      "joinedOverflow_other": "{{names}} ועוד {{count}} צפו לתוך {{bubble}}",
+      "leftOverflow_one": "{{names}} ועוד {{count}} עזבו את {{bubble}}",
+      "leftOverflow_other": "{{names}} ועוד {{count}} עזבו את {{bubble}}",
       "someone": "מישהו"
     },
     "file": {
-      "uploaded": "{{name}} הועלה ל{{bubble}}"
+      "uploaded": "{{name}} הועלה ל{{bubble}}",
+      "uploadedOverflow_one": "{{name}} ועוד קובץ {{count}} הועלו ל{{bubble}}",
+      "uploadedOverflow_other": "{{name}} ועוד {{count}} קבצים הועלו ל{{bubble}}"
     },
     "discovery": {
       "recommended": "בועה מומלצת",
       "trendingBadge": "בועה חמה",
+      "fromCourse": "מהקורס {{course}}",
       "matchPercent": "{{percent}}% התאמה",
       "members": "{{count}} חברים",
       "trending": {

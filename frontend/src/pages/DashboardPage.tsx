@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState } from 'react'
+import { ComponentType, ReactNode, SVGProps, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Feed, FeedCta, FeedItem, FeedItemKind, FeedSectionKey, getFeed } from '../api/feed'
@@ -8,11 +8,33 @@ import { describeError } from '../api/errors'
 import { Avatar } from '../components/Avatar'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
+import {
+  VideoIcon, PeopleIcon, CalendarIcon, UserPlusIcon, UserMinusIcon,
+  ChatIcon, FileIcon, SparkleIcon, TrendIcon,
+} from '../components/Icons'
 import { OnboardingWizard } from './dashboard/OnboardingWizard'
 import { useOnboardingStore, isOnboarded } from '../store/onboardingStore'
 import { formatRange } from '../i18n/datetime'
 
 type Translate = (key: string, opts?: Record<string, unknown>) => string
+type IconType = ComponentType<SVGProps<SVGSVGElement>>
+
+// A feed line: a small type glyph + text. `tone` colors the icon (live = green,
+// discovery = magenta, activity = muted). Used by every renderer so the icons feel
+// like one set instead of scattered emoji. `title` styles the primary (bold) line.
+function FeedLine({ icon: Icon, tone = 'text-muted', title = false, children }: {
+  icon: IconType
+  tone?: string
+  title?: boolean
+  children: ReactNode
+}) {
+  return (
+    <p className={`flex items-center gap-2 min-w-0 ${title ? 'font-semibold text-base' : 'text-sm text-secondary'}`}>
+      <Icon className={`shrink-0 ${title ? 'w-[1.05rem] h-[1.05rem]' : 'w-4 h-4'} ${tone}`} />
+      <span className="truncate">{children}</span>
+    </p>
+  )
+}
 
 // ---------------------------------------------------------------------------
 // Section presentation. Sections render in this fixed order and are *always*
@@ -48,8 +70,8 @@ const ITEM_RENDERERS: Record<FeedItemKind, (item: FeedItem, t: Translate) => Ren
     return {
       body: (
         <>
-          <p className="font-semibold text-base truncate">🎥 {item.title}</p>
-          <p className="text-sm text-muted truncate">
+          <FeedLine icon={VideoIcon} tone="text-bubble-green" title>{item.title}</FeedLine>
+          <p className="text-sm text-muted truncate ps-[1.65rem]">
             {n > 0 ? t('dashboard.live.roomParticipants', { count: n }) : liveLabel(item, t)}
             {item.groupName ? ` · ${item.groupName}` : ''}
           </p>
@@ -64,10 +86,10 @@ const ITEM_RENDERERS: Record<FeedItemKind, (item: FeedItem, t: Translate) => Ren
     return {
       body: (
         <>
-          <p className="font-semibold text-base truncate">
-            🟢 {n > 0 ? t('dashboard.live.roomParticipants', { count: n }) : t('dashboard.live.roomLiveNow')}
-          </p>
-          <p className="text-sm text-muted truncate">{item.groupName}</p>
+          <FeedLine icon={PeopleIcon} tone="text-bubble-green" title>
+            {n > 0 ? t('dashboard.live.roomParticipants', { count: n }) : t('dashboard.live.roomLiveNow')}
+          </FeedLine>
+          <p className="text-sm text-muted truncate ps-[1.65rem]">{item.groupName}</p>
         </>
       ),
       ctaLabel: n > 0 ? t('dashboard.cta.hopIn') : t('dashboard.cta.joinRoom'),
@@ -77,8 +99,10 @@ const ITEM_RENDERERS: Record<FeedItemKind, (item: FeedItem, t: Translate) => Ren
   upcomingEvent: (item, t) => ({
     body: (
       <>
-        <p className="font-semibold text-base truncate">📅 {item.title || humanizeType(item.eventType)}</p>
-        <p className="text-sm text-muted truncate">
+        <FeedLine icon={CalendarIcon} tone="text-bubble-magenta" title>
+          {item.title || humanizeType(item.eventType)}
+        </FeedLine>
+        <p className="text-sm text-muted truncate ps-[1.65rem]">
           {item.startsAt ? formatRange(item.startsAt, item.endsAt) : ''}{item.groupName ? ` · ${item.groupName}` : ''}
         </p>
       </>
@@ -87,58 +111,59 @@ const ITEM_RENDERERS: Record<FeedItemKind, (item: FeedItem, t: Translate) => Ren
   }),
 
   memberJoin: (item, t) => ({
-    body: (
-      <p className="text-sm text-secondary">
-        🫧 {t('dashboard.membership.joined', {
-          name: item.subtitle || t('dashboard.membership.someone'),
-          bubble: item.groupName,
-        })}
-      </p>
-    ),
+    body: <FeedLine icon={UserPlusIcon}>{membershipText(item, t, 'joined')}</FeedLine>,
   }),
 
   memberLeave: (item, t) => ({
-    body: (
-      <p className="text-sm text-secondary">
-        👋 {t('dashboard.membership.left', {
-          name: item.subtitle || t('dashboard.membership.someone'),
-          bubble: item.groupName,
-        })}
-      </p>
-    ),
+    body: <FeedLine icon={UserMinusIcon}>{membershipText(item, t, 'left')}</FeedLine>,
   }),
 
   unread: (item, t) => ({
     body: (
-      <p className="text-sm text-secondary">
-        💬 {t('dashboard.unread.count', { count: item.unreadCount ?? 0, bubble: item.groupName })}
-      </p>
+      <FeedLine icon={ChatIcon}>
+        {t('dashboard.unread.count', { count: item.unreadCount ?? 0, bubble: item.groupName })}
+      </FeedLine>
     ),
     ctaLabel: t('dashboard.cta.open'),
   }),
 
-  file: (item, t) => ({
-    body: (
-      <p className="text-sm text-secondary truncate">
-        📄 {t('dashboard.file.uploaded', { name: item.title, bubble: item.groupName })}
-      </p>
-    ),
-  }),
+  file: (item, t) => {
+    const labels = item.collapsedLabels ?? []
+    const total = item.collapsedCount ?? labels.length
+    const lead = labels[0] ?? ''
+    const extra = total - 1
+    const key = extra > 0 ? 'dashboard.file.uploadedOverflow' : 'dashboard.file.uploaded'
+    return {
+      body: <FeedLine icon={FileIcon}>{t(key, { name: lead, count: extra, bubble: item.groupName })}</FeedLine>,
+    }
+  },
 
-  recommendation: (item, t) => ({
-    body: (
-      <>
-        <p className="text-xs text-muted">
-          {t(item.displayMode === 'TRENDING'
-            ? 'dashboard.discovery.trendingBadge'
-            : 'dashboard.discovery.recommended')}
-        </p>
-        <p className="font-semibold text-base truncate">🫧 {item.title}</p>
-        <p className="text-sm text-muted truncate">{discoveryMeta(item, t)}</p>
-      </>
-    ),
-    ctaLabel: t('dashboard.cta.viewBubble'),
-  }),
+  recommendation: (item, t) => {
+    const trending = item.displayMode === 'TRENDING'
+    const course = courseLabel(item)
+    return {
+      body: (
+        <>
+          <p className="text-xs text-bubble-magenta flex items-center gap-1.5">
+            {trending
+              ? <TrendIcon className="w-3.5 h-3.5 shrink-0" />
+              : <SparkleIcon className="w-3.5 h-3.5 shrink-0" />}
+            {t(trending ? 'dashboard.discovery.trendingBadge' : 'dashboard.discovery.recommended')}
+          </p>
+          <p className="font-semibold text-base truncate">{item.title}</p>
+          {course && <p className="text-sm text-muted truncate">{t('dashboard.discovery.fromCourse', { course })}</p>}
+          <p className="text-sm text-muted truncate">{discoveryMeta(item, t)}</p>
+        </>
+      ),
+      ctaLabel: t('dashboard.cta.viewBubble'),
+    }
+  },
+}
+
+// "CS101 · Operating Systems" when a code exists, else just the course name.
+function courseLabel(item: FeedItem): string {
+  if (!item.courseName) return ''
+  return item.courseCode ? `${item.courseCode} · ${item.courseName}` : item.courseName
 }
 
 export default function DashboardPage() {
@@ -396,8 +421,11 @@ function PublicBubbleModal({ item, onClose }: { item: FeedItem; onClose: () => v
         <div className="px-4 py-3 border-b border-line flex items-center gap-3">
           <Avatar id={groupId} name={item.groupName ?? item.title ?? '?'} size="md" ring />
           <div className="flex-1 min-w-0">
-            <p className="text-xs text-muted">{badge}</p>
+            <p className="text-xs text-bubble-magenta">{badge}</p>
             <h3 className="font-semibold truncate">{item.groupName ?? item.title}</h3>
+            {courseLabel(item) && (
+              <p className="text-xs text-muted truncate">{t('dashboard.discovery.fromCourse', { course: courseLabel(item) })}</p>
+            )}
           </div>
           <button type="button" onClick={onClose} className="text-muted hover:text-secondary text-xl leading-none">×</button>
         </div>
@@ -454,6 +482,20 @@ function PublicBubbleModal({ item, onClose }: { item: FeedItem; onClose: () => v
 
 function isJoinCta(cta: FeedCta): boolean {
   return cta.type === 'JOIN_SESSION' || cta.type === 'JOIN_ROOM' || cta.type === 'JOIN_BUBBLE'
+}
+
+// Collapsed membership rollup → localized string. Lists up to the lead names the
+// backend sent, then "+N others" via the plural overflow key. Falls back to the
+// "someone" label when no actor name resolved (deleted user / lookup miss).
+function membershipText(item: FeedItem, t: Translate, verb: 'joined' | 'left'): string {
+  const labels = item.collapsedLabels ?? []
+  const total = item.collapsedCount ?? labels.length
+  const names = labels.length > 0 ? labels : [t('dashboard.membership.someone')]
+  const extra = total - names.length
+  const key = extra > 0
+    ? `dashboard.membership.${verb}Overflow`
+    : `dashboard.membership.${verb}`
+  return t(key, { names: names.join(', '), count: extra, bubble: item.groupName })
 }
 
 function liveLabel(item: FeedItem, t: Translate): string {

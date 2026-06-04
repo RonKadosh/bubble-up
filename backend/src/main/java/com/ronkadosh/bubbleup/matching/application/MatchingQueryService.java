@@ -1,6 +1,7 @@
 package com.ronkadosh.bubbleup.matching.application;
 
 import com.ronkadosh.bubbleup.catalog.internal.CatalogInternalService;
+import com.ronkadosh.bubbleup.catalog.internal.dto.OfferingRef;
 import com.ronkadosh.bubbleup.common.config.MatchingProperties;
 import com.ronkadosh.bubbleup.common.datetime.TimeProvider;
 import com.ronkadosh.bubbleup.common.error.AppException;
@@ -178,13 +179,19 @@ public class MatchingQueryService {
                                          double matchingConfidence, UUID userId) {
         String groupName = groupInternalService.getGroupName(groupId).orElse("Unknown");
         boolean alreadyMember = groupInternalService.isMember(groupId, userId);
+        // Which course this Bubble belongs to — the Discovery card shows it so the user
+        // knows the subject before joining. Resolved offering → course via the catalog.
+        Optional<OfferingRef> offering = groupInternalService.getOfferingIdForGroup(groupId)
+                .flatMap(catalogInternalService::getOfferingRef);
+        String courseCode = offering.map(OfferingRef::courseCode).orElse(null);
+        String courseName = offering.map(OfferingRef::courseName).orElse(null);
         Optional<GroupProfile> gp = groupProfileRepository.findByGroupId(groupId);
         int memberCount = gp.map(GroupProfile::getMemberCount).orElse(0);
         List<String> reasons = (mode == MatchResultType.TRENDING && gp.isPresent())
                 ? trendingReasons(gp.get())
                 : List.of();
-        return new GroupRecommendationDto(groupId, groupName, matchPercent, memberCount,
-                alreadyMember, mode.name(), matchingConfidence, reasons);
+        return new GroupRecommendationDto(groupId, groupName, courseCode, courseName, matchPercent,
+                memberCount, alreadyMember, mode.name(), matchingConfidence, reasons);
     }
 
     /** The top 1–2 trending signals driving a bubble, as machine codes the client localizes. */

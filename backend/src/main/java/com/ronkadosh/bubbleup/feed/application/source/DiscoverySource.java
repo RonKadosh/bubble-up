@@ -36,6 +36,7 @@ public class DiscoverySource implements FeedSource {
                 .map((GroupRecommendation r) -> FeedItemResponse.of("recommendation")
                         .group(r.groupId(), r.groupName())
                         .title(r.groupName())
+                        .course(r.courseCode(), r.courseName())
                         .matchPercent(r.matchPercent())
                         .memberCount(r.memberCount())
                         .displayMode(r.displayMode())
