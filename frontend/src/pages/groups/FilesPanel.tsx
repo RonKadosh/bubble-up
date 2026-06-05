@@ -236,6 +236,7 @@ function FilesBrowserView({
         FILE_TYPE_BLOCKED: 'groups.error.fileBlocked',
         NOT_GROUP_MEMBER: 'groups.error.uploadNotMember',
         FOLDER_NOT_FOUND: 'groups.error.folderGone',
+        TOO_MANY_REQUESTS: 'common.rateLimited',
       }, 'groups.error.uploadGeneric'))
     } finally {
       setUploading(false)

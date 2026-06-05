@@ -6,6 +6,8 @@ import com.ronkadosh.bubbleup.chat.application.ChatQueryService;
 import com.ronkadosh.bubbleup.common.api.ApiPaths;
 import com.ronkadosh.bubbleup.common.api.ApiResponse;
 import com.ronkadosh.bubbleup.common.context.CurrentUserProvider;
+import com.ronkadosh.bubbleup.common.ratelimit.RateLimit;
+import com.ronkadosh.bubbleup.common.ratelimit.RateLimitScope;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -37,6 +39,7 @@ public class ChatController {
 
     @PostMapping("/rooms")
     @ResponseStatus(HttpStatus.CREATED)
+    @RateLimit(limit = 10, windowSeconds = 60, scope = RateLimitScope.PER_USER)
     public ApiResponse<ChatRoomResponse> createRoom(@Valid @RequestBody CreateRoomRequest request) {
         UUID me = currentUserProvider.get().id();
         return ApiResponse.success(commands.createRoom(request, me));
@@ -65,6 +68,7 @@ public class ChatController {
 
     @PostMapping("/rooms/{id}/messages")
     @ResponseStatus(HttpStatus.CREATED)
+    @RateLimit(limit = 20, windowSeconds = 10, scope = RateLimitScope.PER_USER_PER_ROOM)
     public ApiResponse<ChatMessageResponse> sendMessage(
             @PathVariable UUID id,
             @Valid @RequestBody SendMessageRequest request) {
@@ -73,6 +77,7 @@ public class ChatController {
     }
 
     @PostMapping("/rooms/{id}/read")
+    @RateLimit(limit = 60, windowSeconds = 60, scope = RateLimitScope.PER_USER_PER_ROOM)
     public ApiResponse<Void> markRead(
             @PathVariable UUID id,
             @Valid @RequestBody MarkReadRequest request) {
@@ -82,6 +87,7 @@ public class ChatController {
     }
 
     @PostMapping("/rooms/{id}/messages/{messageId}/pin")
+    @RateLimit(limit = 20, windowSeconds = 60, scope = RateLimitScope.PER_USER_PER_ROOM)
     public ApiResponse<com.ronkadosh.bubbleup.chat.api.dto.PinUpdateEvent> pinMessage(
             @PathVariable UUID id,
             @PathVariable UUID messageId) {
@@ -90,6 +96,7 @@ public class ChatController {
     }
 
     @DeleteMapping("/rooms/{id}/messages/{messageId}/pin")
+    @RateLimit(limit = 20, windowSeconds = 60, scope = RateLimitScope.PER_USER_PER_ROOM)
     public ApiResponse<com.ronkadosh.bubbleup.chat.api.dto.PinUpdateEvent> unpinMessage(
             @PathVariable UUID id,
             @PathVariable UUID messageId) {

@@ -25,6 +25,10 @@ app:
     refresh-token-expiration-ms: 2592000000
   cors:
     allowed-origins: http://localhost:3000
+  # Rate limiting OFF by default in tests so the suite isn't throttled by the
+  # production caps. RateLimitIT opts in via @TestPropertySource to verify enforcement.
+  rate-limit:
+    enabled: false
   file-storage:
     type: local
     local-path: /tmp/bubbleup-test-files

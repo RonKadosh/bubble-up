@@ -3,6 +3,8 @@ package com.ronkadosh.bubbleup.groups.api;
 import com.ronkadosh.bubbleup.common.api.ApiPaths;
 import com.ronkadosh.bubbleup.common.api.ApiResponse;
 import com.ronkadosh.bubbleup.common.context.CurrentUserProvider;
+import com.ronkadosh.bubbleup.common.ratelimit.RateLimit;
+import com.ronkadosh.bubbleup.common.ratelimit.RateLimitScope;
 import com.ronkadosh.bubbleup.groups.api.dto.GroupFileResponse;
 import com.ronkadosh.bubbleup.groups.application.DownloadedFile;
 import com.ronkadosh.bubbleup.groups.application.GroupFileCommandService;
@@ -31,6 +33,8 @@ public class GroupFileController {
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
+    @RateLimit(limit = 30, windowSeconds = 60, scope = RateLimitScope.PER_GROUP)
+    @RateLimit(limit = 10, windowSeconds = 60, scope = RateLimitScope.PER_USER_PER_GROUP)
     public ApiResponse<GroupFileResponse> upload(
             @PathVariable UUID groupId,
             @RequestPart("file") MultipartFile file,
@@ -82,6 +86,7 @@ public class GroupFileController {
      * (used by the in-app PDF / image viewer). Default behavior unchanged.
      */
     @GetMapping("/{fileId}/download")
+    @RateLimit(limit = 60, windowSeconds = 60, scope = RateLimitScope.PER_FILE)
     public ResponseEntity<Resource> download(
             @PathVariable UUID groupId,
             @PathVariable UUID fileId,

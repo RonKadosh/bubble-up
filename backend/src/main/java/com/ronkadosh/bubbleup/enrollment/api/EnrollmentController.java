@@ -4,6 +4,8 @@ import com.ronkadosh.bubbleup.common.api.ApiPaths;
 import com.ronkadosh.bubbleup.common.api.ApiResponse;
 import com.ronkadosh.bubbleup.common.context.CurrentUser;
 import com.ronkadosh.bubbleup.common.context.CurrentUserProvider;
+import com.ronkadosh.bubbleup.common.ratelimit.RateLimit;
+import com.ronkadosh.bubbleup.common.ratelimit.RateLimitScope;
 import com.ronkadosh.bubbleup.enrollment.api.dto.EnrollRequest;
 import com.ronkadosh.bubbleup.enrollment.api.dto.EnrollmentResponse;
 import com.ronkadosh.bubbleup.enrollment.application.EnrollmentCommandService;
@@ -46,6 +48,7 @@ public class EnrollmentController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @RateLimit(limit = 20, windowSeconds = 60, scope = RateLimitScope.PER_USER)
     public ApiResponse<EnrollmentResponse> enroll(@Valid @RequestBody EnrollRequest req) {
         CurrentUser me = currentUserProvider.get();
         return ApiResponse.success(commands.enroll(me.id(), req.courseId()));

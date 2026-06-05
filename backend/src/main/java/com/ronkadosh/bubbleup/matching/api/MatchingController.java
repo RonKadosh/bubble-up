@@ -3,6 +3,8 @@ package com.ronkadosh.bubbleup.matching.api;
 import com.ronkadosh.bubbleup.common.api.ApiPaths;
 import com.ronkadosh.bubbleup.common.api.ApiResponse;
 import com.ronkadosh.bubbleup.common.context.CurrentUserProvider;
+import com.ronkadosh.bubbleup.common.ratelimit.RateLimit;
+import com.ronkadosh.bubbleup.common.ratelimit.RateLimitScope;
 import com.ronkadosh.bubbleup.matching.api.dto.NextQuestionResponse;
 import com.ronkadosh.bubbleup.matching.api.dto.RecommendationsResponse;
 import com.ronkadosh.bubbleup.matching.api.dto.SubmitAnswerRequest;
@@ -32,6 +34,7 @@ public class MatchingController {
     }
 
     @PostMapping("/quiz/answers")
+    @RateLimit(limit = 30, windowSeconds = 60, scope = RateLimitScope.PER_USER)
     public ApiResponse<Void> submitAnswer(@Valid @RequestBody SubmitAnswerRequest req) {
         UUID userId = currentUserProvider.get().id();
         commandService.submitAnswer(userId, req.questionId(), req.answerId());
