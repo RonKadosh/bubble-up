@@ -709,6 +709,7 @@
     },
     "directory": {
       "title": "Experts",
+      "subtitle": "Find an expert to host a live session.",
       "becomeLink": "Become an expert →",
       "searchPlaceholder": "Search headline, bio, or tag…",
       "noMatches": "No experts match your search.",

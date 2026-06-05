@@ -8,6 +8,7 @@ import { describeError } from '../api/errors'
 import { Avatar } from '../components/Avatar'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
+import { PageHeader, PageWidth, SectionLabel } from '../components/PageHeader'
 import {
   VideoIcon, PeopleIcon, CalendarIcon, UserPlusIcon, UserMinusIcon,
   ChatIcon, FileIcon, SparkleIcon, TrendIcon,
@@ -211,14 +212,9 @@ export default function DashboardPage() {
 
   return (
     <div className="flex-1 overflow-y-auto">
-      <div className="max-w-2xl mx-auto px-4 tablet:px-6 desktop:px-8 py-6 tablet:py-8">
+      <PageWidth className="py-6 tablet:py-8">
         <header className="mb-6">
-          <div className="flex items-center gap-3 mb-1">
-            <div className="w-2.5 h-2.5 rounded-full bg-bubble-magenta shadow-sm" />
-            <div className="w-1.5 h-1.5 rounded-full bg-bubble-green" />
-            <h1 className="text-2xl font-bold text-base">{t('dashboard.title')}</h1>
-          </div>
-          <p className="text-sm text-muted ms-[1.6rem]">{t('dashboard.subtitle')}</p>
+          <PageHeader title={t('dashboard.title')} subtitle={t('dashboard.subtitle')} />
         </header>
 
         {loading ? (
@@ -227,9 +223,9 @@ export default function DashboardPage() {
           <div className="flex flex-col gap-8">
             {SECTION_ORDER.map((key) => (
               <section key={key}>
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted mb-3 ms-1">
+                <SectionLabel className="mb-3 ms-1">
                   {t(SECTION_META[key].labelKey)}
-                </h2>
+                </SectionLabel>
                 <SectionItems
                   items={itemsByKey[key] ?? []}
                   emptyKey={SECTION_META[key].emptyKey}
@@ -241,7 +237,7 @@ export default function DashboardPage() {
             ))}
           </div>
         )}
-      </div>
+      </PageWidth>
 
       {preview && <PublicBubbleModal item={preview} onClose={() => setPreview(null)} />}
     </div>

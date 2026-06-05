@@ -90,21 +90,21 @@ function getBentoLayout(focused: BentoKey): BentoLayout {
   switch (focused) {
     case 'chat':
       return {
-        sectionClass: 'flex-1 min-h-0 p-3 grid gap-3 grid-cols-[2fr_1fr] grid-rows-2 bg-bento-grid',
+        sectionClass: 'flex-1 min-h-0 p-3 grid gap-3 grid-cols-[2fr_1fr] grid-rows-2',
         chat:     { className: 'row-span-2' },
         calendar: { className: '' },
         files:    { className: '' },
       }
     case 'calendar':
       return {
-        sectionClass: 'flex-1 min-h-0 p-3 grid gap-3 grid-cols-[1fr_2fr] grid-rows-2 bg-bento-grid',
+        sectionClass: 'flex-1 min-h-0 p-3 grid gap-3 grid-cols-[1fr_2fr] grid-rows-2',
         chat:     { className: '' },
         files:    { className: '' },
         calendar: { className: 'row-span-2 col-start-2 row-start-1' },
       }
     case 'files':
       return {
-        sectionClass: 'flex-1 min-h-0 p-3 grid gap-3 grid-cols-[1fr_2fr] grid-rows-2 bg-bento-grid',
+        sectionClass: 'flex-1 min-h-0 p-3 grid gap-3 grid-cols-[1fr_2fr] grid-rows-2',
         chat:     { className: '' },
         calendar: { className: '' },
         files:    { className: 'row-span-2 col-start-2 row-start-1' },
@@ -648,9 +648,9 @@ export default function GroupsPage() {
                     )
                   })}
                 </nav>
-                <section className="flex-1 min-h-0 p-2 bg-bento-grid flex">
-                  <div className="ring-iridescent p-[1.5px] bento-cell-radius flex-1 flex flex-col min-h-0 overflow-hidden shadow-themed">
-                    <div className="flex-1 min-h-0 bg-surface bento-cell-inner-radius flex flex-col overflow-hidden">
+                <section className="flex-1 min-h-0 p-2 flex">
+                  <div className="ring-iridescent p-[1.5px] rounded-3xl flex-1 flex flex-col min-h-0 overflow-hidden shadow-themed">
+                    <div className="flex-1 min-h-0 bg-surface rounded-[calc(1.75rem-1.5px)] flex flex-col overflow-hidden">
                       {renderPanel()}
                     </div>
                   </div>
