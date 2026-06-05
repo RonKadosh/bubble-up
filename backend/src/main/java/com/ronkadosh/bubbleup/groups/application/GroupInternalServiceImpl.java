@@ -14,6 +14,7 @@ import com.ronkadosh.bubbleup.groups.persistence.GroupMemberRepository;
 import com.ronkadosh.bubbleup.groups.persistence.GroupRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -116,21 +117,23 @@ public class GroupInternalServiceImpl implements GroupInternalService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<UUID> getCandidateGroupIds(List<UUID> courseIds, UUID excludeUserId, int limitPerCourse) {
+    public List<UUID> getCandidateGroupIdsByOffering(List<UUID> offeringIds, UUID excludeUserId, int limitPerOffering) {
         Set<UUID> userGroupIds = memberRepository.findAllByUserId(excludeUserId).stream()
                 .map(GroupMember::getGroupId)
                 .collect(Collectors.toSet());
 
-        var pageable = PageRequest.of(0, limitPerCourse);
+        // Newest-first so that when an offering exceeds the cap the kept set is
+        // deterministic rather than DB page order.
+        var pageable = PageRequest.of(0, limitPerOffering, Sort.by(Sort.Direction.DESC, "createdAt"));
         List<UUID> result = new ArrayList<>();
-        for (UUID courseId : courseIds) {
-            // Each course can have multiple offerings (across terms) — fetch them all.
-            List<UUID> offeringIds = catalogInternalService.offeringIdsForCourses(List.of(courseId));
-            if (offeringIds.isEmpty()) continue;
+        for (UUID offeringId : offeringIds) {
+            // Each offering (course+term) gets its own cap — preserves per-course
+            // fairness now that callers pass one current-term offering per course.
+            List<UUID> singleton = List.of(offeringId);
             List<StudyGroup> groups = userGroupIds.isEmpty()
-                    ? groupRepository.findByOfferingIdInAndVisibility(offeringIds, GroupVisibility.PUBLIC, pageable)
+                    ? groupRepository.findByOfferingIdInAndVisibility(singleton, GroupVisibility.PUBLIC, pageable)
                     : groupRepository.findByOfferingIdInAndVisibilityAndIdNotIn(
-                            offeringIds, GroupVisibility.PUBLIC, userGroupIds, pageable);
+                            singleton, GroupVisibility.PUBLIC, userGroupIds, pageable);
             groups.stream().map(StudyGroup::getId).forEach(result::add);
         }
         return result;
@@ -154,20 +157,6 @@ public class GroupInternalServiceImpl implements GroupInternalService {
     @Transactional(readOnly = true)
     public Optional<String> getGroupName(UUID groupId) {
         return groupRepository.findById(groupId).map(StudyGroup::getName);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<UUID> getTopPublicGroupIds(UUID excludeUserId, int limit) {
-        Set<UUID> userGroupIds = memberRepository.findAllByUserId(excludeUserId).stream()
-                .map(GroupMember::getGroupId)
-                .collect(Collectors.toSet());
-
-        var pageable = PageRequest.of(0, limit);
-        List<StudyGroup> groups = userGroupIds.isEmpty()
-                ? groupRepository.findTopPublic(GroupVisibility.PUBLIC, pageable)
-                : groupRepository.findTopPublicExcluding(GroupVisibility.PUBLIC, userGroupIds, pageable);
-        return groups.stream().map(StudyGroup::getId).toList();
     }
 
     @Override

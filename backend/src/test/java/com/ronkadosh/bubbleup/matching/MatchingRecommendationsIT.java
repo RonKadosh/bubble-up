@@ -3,7 +3,10 @@ package com.ronkadosh.bubbleup.matching;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.ronkadosh.bubbleup.catalog.internal.CatalogInternalService;
 import com.ronkadosh.bubbleup.catalog.model.Course;
+import com.ronkadosh.bubbleup.catalog.model.CourseOffering;
+import com.ronkadosh.bubbleup.catalog.persistence.CourseOfferingRepository;
 import com.ronkadosh.bubbleup.catalog.persistence.CourseRepository;
+import com.ronkadosh.bubbleup.catalog.persistence.TermRepository;
 import com.ronkadosh.bubbleup.groups.model.GroupMember;
 import com.ronkadosh.bubbleup.groups.model.GroupVisibility;
 import com.ronkadosh.bubbleup.groups.model.MembershipRole;
@@ -20,6 +23,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -31,8 +35,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * End-to-end recommendation scenarios. Profiles are seeded directly (inert — no
  * matching events fired, no QuizResponse rows) so each case has exact vectors and
- * confidence; the {@code ?courseId=} path is used so candidate resolution doesn't
- * depend on enrollment or the current term. The live {@code computeLive} runs
+ * confidence. The {@code ?courseId=} path resolves the course's current-term
+ * offering (via the course's university), so it doesn't depend on the viewer's
+ * enrollment — and every seeded offering is in the current term ({@code 2025-B}),
+ * so existing scenarios resolve as before. The live {@code computeLive} runs
  * synchronously inside the request, so no async wait is needed.
  *
  * <p>Each test claims its own catalog course (shared H2 persists across tests) to
@@ -51,6 +57,8 @@ class MatchingRecommendationsIT extends IntegrationTest {
     @Autowired GroupRepository groupRepository;
     @Autowired GroupMemberRepository groupMemberRepository;
     @Autowired CourseRepository courseRepository;
+    @Autowired CourseOfferingRepository courseOfferingRepository;
+    @Autowired TermRepository termRepository;
     @Autowired CatalogInternalService catalogInternalService;
     @Autowired MatchingCommandService matchingCommandService;
 
@@ -161,6 +169,43 @@ class MatchingRecommendationsIT extends IntegrationTest {
         assertThat(gp.getMemberCount()).isEqualTo(5);
     }
 
+    @Test
+    void recommendsCurrentTermOffering_notPastTermOfferingOfSameCourse() throws Exception {
+        // The term-scoping guard: a bubble on the course's CURRENT-term offering is a
+        // candidate; an identical bubble on a PAST-term offering of the same course is not.
+        AuthedUser viewer = registerAndLogin();
+        seedUserProfile(viewer.id(), LEADER_PLANNER, 7, 30);
+        UUID courseId = claimCourse();
+
+        UUID nowGroup = candidateOnOffering(currentTermOffering(courseId), viewer.id(),
+                new double[]{0.1, 0.1, 0.8, 0.8, 0.8, 0.8, 0.8}, 0.9, 6, 20, 1, 1);
+        UUID pastGroup = candidateOnOffering(pastTermOffering(courseId), viewer.id(),
+                new double[]{0.1, 0.1, 0.8, 0.8, 0.8, 0.8, 0.8}, 0.9, 6, 20, 1, 1);
+
+        List<String> ids = idsOf(recommend(viewer, courseId));
+        assertThat(ids).contains(nowGroup.toString());
+        assertThat(ids).doesNotContain(pastGroup.toString());
+    }
+
+    @Test
+    void noEnrollment_afterCacheBuild_recommendationsStayEmpty() throws Exception {
+        // The cache-path counterpart to the aggregate test above: building the cache
+        // for a zero-enrolment user must NOT materialize global-trending rows (the
+        // removed getTopPublicGroupIds fallback would have), so reads stay empty.
+        AuthedUser viewer = registerAndLogin();   // no affiliation, no enrolments
+        seedUserProfile(viewer.id(), ZERO, 0, 0);
+        UUID courseId = claimCourse();
+        candidate(courseId, viewer.id(), uniform(0.4), 0.0, /*members*/9, 80, 5, 5);
+
+        matchingCommandService.refreshUserMatchCache(viewer.id());   // build the cache directly
+
+        String json = mvc.perform(get("/api/matching/recommendations").with(bearer(viewer)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        JsonNode groups = om.readTree(json).get("data").get("groups");
+        assertThat(groups).isEmpty();
+    }
+
     // ── helpers ───────────────────────────────────────────────────────────────
 
     private JsonNode recommend(AuthedUser u, UUID courseId) throws Exception {
@@ -202,7 +247,13 @@ class MatchingRecommendationsIT extends IntegrationTest {
 
     private UUID candidate(UUID courseId, UUID createdBy, double[] avg, double groupConfidence,
                            int memberCount, long activity, int recentJoins, int upcoming) {
-        UUID offeringId = anyOfferingForCourse(courseId);
+        return candidateOnOffering(anyOfferingForCourse(courseId), createdBy, avg, groupConfidence,
+                memberCount, activity, recentJoins, upcoming);
+    }
+
+    /** Like {@link #candidate} but on an explicit offering (used to seed past-term bubbles). */
+    private UUID candidateOnOffering(UUID offeringId, UUID createdBy, double[] avg, double groupConfidence,
+                                     int memberCount, long activity, int recentJoins, int upcoming) {
         StudyGroup group = groupRepository.save(StudyGroup.builder()
                 .name("IT bubble " + UUID.randomUUID())
                 .description("scenario")
@@ -229,6 +280,30 @@ class MatchingRecommendationsIT extends IntegrationTest {
         List<UUID> offerings = catalogInternalService.offeringIdsForCourses(List.of(courseId));
         assertThat(offerings).as("seeded course must have an offering").isNotEmpty();
         return offerings.get(0);
+    }
+
+    /** The course's current-term ({@code 2025-B}) offering — resolved explicitly so it can't be confused with a seeded past-term one. */
+    private UUID currentTermOffering(UUID courseId) {
+        UUID termId = catalogInternalService.currentTermFor(seedUniversityId()).orElseThrow().id();
+        return catalogInternalService.offeringIdForCourseAndTerm(courseId, termId).orElseThrow();
+    }
+
+    /** Creates (or reuses) an offering for the course on the past {@code 2025-A} term. */
+    private UUID pastTermOffering(UUID courseId) {
+        UUID pastTermId = termRepository.findByUniversityIdAndCode(seedUniversityId(), "2025-A")
+                .orElseThrow().getId();
+        return courseOfferingRepository.findAll().stream()
+                .filter(o -> o.getCourseId().equals(courseId) && o.getTermId().equals(pastTermId))
+                .findFirst()
+                .map(CourseOffering::getId)
+                .orElseGet(() -> courseOfferingRepository.save(
+                        CourseOffering.builder().courseId(courseId).termId(pastTermId).build()).getId());
+    }
+
+    private List<String> idsOf(JsonNode groups) {
+        List<String> ids = new ArrayList<>();
+        groups.forEach(g -> ids.add(g.get("groupId").asText()));
+        return ids;
     }
 
     /** A distinct seeded course per test, so groups created here don't bleed across tests. */
