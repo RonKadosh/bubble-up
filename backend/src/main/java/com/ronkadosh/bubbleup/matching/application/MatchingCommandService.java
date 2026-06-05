@@ -239,13 +239,18 @@ public class MatchingCommandService {
         UserProfile profile = getOrCreateUserProfile(userId);
         var now = timeProvider.now();
 
-        // Enrollment-driven discovery: cache candidates from the user's enrolled
-        // courses (current term), mirroring MatchingQueryService.computeLive.
-        List<UUID> userCourseIds = enrollmentInternalService.enrolledCourseIdsForCurrentTerm(userId);
+        // Enrollment-driven discovery: cache candidates from the user's current-term
+        // offerings, mirroring MatchingQueryService.computeLive. No current-term
+        // enrolments → nothing the user can join; clear the cache (no global-trending
+        // fallback — that would leak ungated bubbles and diverge from the live path).
+        List<UUID> offeringIds = enrollmentInternalService.enrolledOfferingIdsForCurrentTerm(userId);
+        if (offeringIds.isEmpty()) {
+            matchCacheRepository.deleteAllByUserId(userId);
+            return;
+        }
 
-        List<UUID> candidateIds = userCourseIds.isEmpty()
-                ? groupInternalService.getTopPublicGroupIds(userId, props.recommendationLimit())
-                : groupInternalService.getCandidateGroupIds(userCourseIds, userId, props.candidateLimitPerCourse());
+        List<UUID> candidateIds = groupInternalService.getCandidateGroupIdsByOffering(
+                offeringIds, userId, props.candidateLimitPerCourse());
 
         if (candidateIds.isEmpty()) {
             matchCacheRepository.deleteAllByUserId(userId);
@@ -261,6 +266,10 @@ public class MatchingCommandService {
         for (GroupProfile gp : groupProfiles) {
             UUID courseId = groupInternalService.getCourseIdForGroup(gp.getGroupId())
                     .orElse(UUID.fromString("00000000-0000-0000-0000-000000000000"));
+            // Term-precise key: offering encodes course+term, enabling a future
+            // term-rollover sweep / partition keyed off it.
+            UUID offeringId = groupInternalService.getOfferingIdForGroup(gp.getGroupId())
+                    .orElse(null);
 
             MatchingScorer.Scored s = MatchingScorer.score(userFinal, userConfidence, gp, props);
 
@@ -272,6 +281,7 @@ public class MatchingCommandService {
                                 existing.setMatchingConfidence(s.matchingConfidence());
                                 existing.setMatchPercent(s.matchPercent());
                                 existing.setCourseId(courseId);
+                                existing.setOfferingId(offeringId);
                                 existing.setCachedAt(now);
                                 matchCacheRepository.save(existing);
                             },
@@ -279,6 +289,7 @@ public class MatchingCommandService {
                                     .userId(userId)
                                     .groupId(gp.getGroupId())
                                     .courseId(courseId)
+                                    .offeringId(offeringId)
                                     .matchScore(s.finalScore())
                                     .resultType(s.mode())
                                     .matchingConfidence(s.matchingConfidence())

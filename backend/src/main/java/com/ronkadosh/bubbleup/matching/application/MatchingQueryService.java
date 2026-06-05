@@ -128,33 +128,38 @@ public class MatchingQueryService {
 
     private RecommendationsResponse computeLive(UUID userId, UUID courseId,
                                                  UserProfile profile, double reliability) {
-        List<UUID> userCourseIds;
+        List<UUID> offeringIds;
         if (courseId != null) {
-            userCourseIds = List.of(courseId);
+            // Course-filtered discovery: the course's current-term offering (resolved
+            // via the course's own university), never a past-term offering of the
+            // same course. Independent of the viewer's affiliation.
+            offeringIds = catalogInternalService.getCourseRef(courseId)
+                    .flatMap(c -> catalogInternalService.currentTermFor(c.universityId()))
+                    .flatMap(term -> catalogInternalService.offeringIdForCourseAndTerm(courseId, term.id()))
+                    .map(List::of).orElseGet(List::of);
         } else {
-            // "Your courses" for discovery = what you're enrolled in this term,
-            // not the courses of bubbles you already joined. This lets a freshly
-            // enrolled student get course-relevant recommendations before joining
-            // anything.
-            userCourseIds = enrollmentInternalService.enrolledCourseIdsForCurrentTerm(userId);
+            // "Your courses" for discovery = the current-term offerings you're
+            // enrolled in. Keeping the offering (not collapsing to course) is what
+            // keeps candidates scoped to this term instead of every past offering.
+            offeringIds = enrollmentInternalService.enrolledOfferingIdsForCurrentTerm(userId);
         }
 
-        if (userCourseIds.isEmpty()) {
-            // No enrolments → nothing the user can actually join (membership is
-            // gated on enrollment). Don't surface global trending they can't join;
-            // Discovery shows the enroll nudge for this empty result instead.
+        if (offeringIds.isEmpty()) {
+            // No current-term enrolments → nothing the user can actually join
+            // (membership is enrollment-gated). Don't surface trending they can't
+            // join; Discovery shows the enroll nudge for this empty result instead.
             return new RecommendationsResponse(MatchResultType.TRENDING.name(), reliability, List.of());
         }
 
-        List<UUID> candidateIds = groupInternalService.getCandidateGroupIds(
-                userCourseIds, userId, props.candidateLimitPerCourse());
+        List<UUID> candidateIds = groupInternalService.getCandidateGroupIdsByOffering(
+                offeringIds, userId, props.candidateLimitPerCourse());
 
         if (candidateIds.isEmpty()) {
             return new RecommendationsResponse(MatchResultType.TRENDING.name(), reliability, List.of());
         }
 
         List<GroupProfile> groupProfiles = groupProfileRepository.findAllByGroupIdIn(candidateIds);
-        int daysActive = (int) ChronoUnit.DAYS.between(profile.getUpdatedAt(), Instant.now());
+        int daysActive = (int) ChronoUnit.DAYS.between(profile.getUpdatedAt(), timeProvider.now());
         double[] userFinal = MatchingScorer.userFinalScores(profile, daysActive, props);
         double userConfidence = MatchingScorer.userConfidence(
                 profile.getAnsweredQuestions(), profile.getMeaningfulBehaviorEvents(), props);

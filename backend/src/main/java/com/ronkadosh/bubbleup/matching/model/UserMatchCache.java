@@ -38,6 +38,15 @@ public class UserMatchCache {
     @Column(name = "course_id", nullable = false)
     private UUID courseId;
 
+    /**
+     * The group's offering (course+term). Term-precise key — set so a future
+     * term-rollover sweep or LIST partition can target rows by ended term without
+     * re-resolving group → offering. Nullable for forward-compat with pre-existing
+     * rows; populated on every cache rebuild.
+     */
+    @Column(name = "offering_id")
+    private UUID offeringId;
+
     /** The blended {@code final_score} — the ordering key (see the user-score index). */
     @Column(name = "match_score", nullable = false)
     private double matchScore;
