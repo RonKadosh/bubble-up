@@ -15,7 +15,8 @@
     "comingSoon": "Coming soon.",
     "retry": "Try again",
     "you": "you",
-    "close": "Close"
+    "close": "Close",
+    "rateLimited": "You're doing that too fast — please slow down and try again in a moment."
   },
   "nav": {
     "home": "Home",

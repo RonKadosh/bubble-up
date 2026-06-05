@@ -7,6 +7,8 @@ import com.ronkadosh.bubbleup.common.context.CurrentUserProvider;
 import com.ronkadosh.bubbleup.expert.api.dto.ApplyAsExpertRequest;
 import com.ronkadosh.bubbleup.expert.api.dto.ExpertProfileResponse;
 import com.ronkadosh.bubbleup.expert.api.dto.UpdateExpertProfileRequest;
+import com.ronkadosh.bubbleup.common.ratelimit.RateLimit;
+import com.ronkadosh.bubbleup.common.ratelimit.RateLimitScope;
 import com.ronkadosh.bubbleup.expert.application.ExpertProfileService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +35,7 @@ public class ExpertController {
 
     @PostMapping("/apply")
     @ResponseStatus(HttpStatus.CREATED)
+    @RateLimit(limit = 3, windowSeconds = 3600, scope = RateLimitScope.PER_USER)
     public ApiResponse<ExpertProfileResponse> apply(@Valid @RequestBody ApplyAsExpertRequest request) {
         CurrentUser me = currentUserProvider.get();
         return ApiResponse.success(profiles.applyAsExpert(me.id(), request));

@@ -9,6 +9,8 @@ import com.ronkadosh.bubbleup.calendar.model.CalendarOwnerType;
 import com.ronkadosh.bubbleup.common.api.ApiPaths;
 import com.ronkadosh.bubbleup.common.api.ApiResponse;
 import com.ronkadosh.bubbleup.common.context.CurrentUserProvider;
+import com.ronkadosh.bubbleup.common.ratelimit.RateLimit;
+import com.ronkadosh.bubbleup.common.ratelimit.RateLimitScope;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -29,6 +31,7 @@ public class CalendarEventController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @RateLimit(limit = 20, windowSeconds = 60, scope = RateLimitScope.PER_USER)
     public ApiResponse<CalendarEventResponse> create(@Valid @RequestBody CreateCalendarEventRequest request) {
         UUID me = currentUserProvider.get().id();
         return ApiResponse.success(commands.create(request, me));
@@ -56,6 +59,7 @@ public class CalendarEventController {
     }
 
     @PatchMapping("/{id}")
+    @RateLimit(limit = 30, windowSeconds = 60, scope = RateLimitScope.PER_USER)
     public ApiResponse<CalendarEventResponse> update(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateCalendarEventRequest request

@@ -177,8 +177,8 @@ export function ChatPanel({ groupId, room, meId, isMember, onError, onUnreadChan
     try {
       const poll = await votePoll(pollId, optionIds)
       setPollCache((prev) => new Map(prev).set(pollId, poll))
-    } catch {
-      onError(t('groups.error.pollVote'))
+    } catch (err) {
+      onError(describeError(err, t, { TOO_MANY_REQUESTS: 'common.rateLimited' }, 'groups.error.pollVote'))
     }
   }
 
@@ -201,8 +201,8 @@ export function ChatPanel({ groupId, room, meId, isMember, onError, onUnreadChan
       // The LINK chat message that surfaces this poll arrives via the chatRoom subscription;
       // no need to append it manually here.
       stickToBottomRef.current = true
-    } catch {
-      onError(t('groups.error.pollCreate'))
+    } catch (err) {
+      onError(describeError(err, t, { TOO_MANY_REQUESTS: 'common.rateLimited' }, 'groups.error.pollCreate'))
     }
   }
 
@@ -443,8 +443,8 @@ export function ChatPanel({ groupId, room, meId, isMember, onError, onUnreadChan
         bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
         markReadAndRefresh(msg.id)
       })
-    } catch {
-      onError(t('groups.error.send'))
+    } catch (err) {
+      onError(describeError(err, t, { TOO_MANY_REQUESTS: 'common.rateLimited' }, 'groups.error.send'))
       setContent(text)
       if (editorRef.current) deserializeIntoEditor(editorRef.current, text)
       if (replyId) setReplyTo((prev) => prev ?? messagesById.get(replyId) ?? null)
@@ -476,8 +476,8 @@ export function ChatPanel({ groupId, room, meId, isMember, onError, onUnreadChan
         bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
         markReadAndRefresh(msg.id)
       })
-    } catch {
-      onError(t('groups.error.shareLink'))
+    } catch (err) {
+      onError(describeError(err, t, { TOO_MANY_REQUESTS: 'common.rateLimited' }, 'groups.error.shareLink'))
     }
   }
 
