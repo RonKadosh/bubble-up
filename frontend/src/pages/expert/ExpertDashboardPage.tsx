@@ -16,12 +16,11 @@ import { ScheduleExpertSessionModal } from './ScheduleExpertSessionModal'
 import { Card } from '../../components/Card'
 import { Button } from '../../components/Button'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
+import { formatClock, formatDateTime } from '../../i18n/datetime'
 
 function formatRange(startsAt: string | null, endsAt: string | null): string {
   if (!startsAt || !endsAt) return ''
-  const s = new Date(startsAt)
-  const e = new Date(endsAt)
-  return `${s.toLocaleString()} → ${e.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+  return `${formatDateTime(startsAt)} → ${formatClock(endsAt)}`
 }
 
 /**
@@ -167,7 +166,7 @@ export default function ExpertDashboardPage() {
                   <Card size="md" className="p-4 flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="text-sm text-base">
-                        {new Date(r.proposedStartsAt).toLocaleString()} → {new Date(r.proposedEndsAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {formatRange(r.proposedStartsAt, r.proposedEndsAt)}
                       </div>
                       {r.message && <p className="text-sm text-muted mt-1 truncate">{r.message}</p>}
                     </div>

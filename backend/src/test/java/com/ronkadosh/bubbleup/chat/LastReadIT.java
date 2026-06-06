@@ -15,8 +15,8 @@ class LastReadIT extends IntegrationTest {
 
     @Test
     void no_cursor_means_all_unread() throws Exception {
-        AuthedUser owner = registerAndLogin();
-        AuthedUser joiner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
+        AuthedUser joiner = registerEnrolled();
         UUID groupId = createGroup(owner);
         join(joiner, groupId);
         UUID roomId = defaultRoomId(owner);
@@ -25,17 +25,18 @@ class LastReadIT extends IntegrationTest {
         sendText(owner, roomId, "b");
         sendText(owner, roomId, "c");
 
-        // joiner has never marked-read; joiner sees 3 messages + 1 SYSTEM_JOIN = 4 unread
+        // joiner has never marked-read; the SYSTEM_JOIN doesn't count, so only the
+        // 3 text messages are unread.
         mvc.perform(get("/api/chat/rooms").with(bearer(joiner)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.length()").value(1))
-                .andExpect(jsonPath("$.data[0].unreadCount").value(4));
+                .andExpect(jsonPath("$.data[0].unreadCount").value(3));
     }
 
     @Test
     void posting_read_cursor_sets_unread_to_remaining() throws Exception {
-        AuthedUser owner = registerAndLogin();
-        AuthedUser joiner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
+        AuthedUser joiner = registerEnrolled();
         UUID groupId = createGroup(owner);
         join(joiner, groupId);
         UUID roomId = defaultRoomId(owner);
@@ -54,8 +55,8 @@ class LastReadIT extends IntegrationTest {
 
     @Test
     void posting_latest_clears_unread() throws Exception {
-        AuthedUser owner = registerAndLogin();
-        AuthedUser joiner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
+        AuthedUser joiner = registerEnrolled();
         UUID groupId = createGroup(owner);
         join(joiner, groupId);
         UUID roomId = defaultRoomId(owner);
@@ -72,23 +73,24 @@ class LastReadIT extends IntegrationTest {
     }
 
     @Test
-    void system_messages_count_as_unread() throws Exception {
-        // SYSTEM_JOIN is emitted when joiner self-joins. Owner has no read cursor
-        // initially, so it counts toward owner's unread too.
-        AuthedUser owner = registerAndLogin();
-        AuthedUser joiner = registerAndLogin();
+    void system_messages_do_not_count_as_unread() throws Exception {
+        // SYSTEM_JOIN is emitted when joiner self-joins. It's a notice, not a chat
+        // message — even with no read cursor it must not inflate the owner's unread
+        // badge (the join is surfaced as dashboard activity instead).
+        AuthedUser owner = registerEnrolled();
+        AuthedUser joiner = registerEnrolled();
         UUID groupId = createGroup(owner);
         join(joiner, groupId);
 
         mvc.perform(get("/api/chat/rooms").with(bearer(owner)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[0].unreadCount").value(1));
+                .andExpect(jsonPath("$.data[0].unreadCount").value(0));
     }
 
     @Test
     void non_member_cannot_post_read() throws Exception {
-        AuthedUser owner = registerAndLogin();
-        AuthedUser outsider = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
+        AuthedUser outsider = registerEnrolled();
         UUID groupId = createGroup(owner);
         UUID roomId = defaultRoomId(owner);
         UUID anyMsg = sendText(owner, roomId, "x");

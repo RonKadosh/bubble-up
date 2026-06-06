@@ -19,6 +19,7 @@ import AdminExpertVerificationPage from './pages/admin/AdminExpertVerificationPa
 import CoursePage from './pages/CoursePage'
 import Layout from './components/Sidebar'
 import { useAuthStore } from './store/authStore'
+import { useOnboardingStore, isRouteAccessible, type LockableFeature } from './store/onboardingStore'
 import { applyThemeClass, useThemeStore } from './store/themeStore'
 import { applyLangAttrs, useLanguageStore } from './store/languageStore'
 import i18n from './i18n'
@@ -44,6 +45,18 @@ function RequireExpert({ children }: { children: JSX.Element }) {
 function RequireAdmin({ children }: { children: JSX.Element }) {
   const role = useAuthStore((s) => s.user?.role)
   if (role !== 'ADMIN') return <Navigate to="/dashboard" replace />
+  return children
+}
+
+/**
+ * Progressive unlocking: routes for not-yet-unlocked features bounce to the
+ * onboarding wizard (/dashboard). Onboarded users and the still-loading window
+ * pass through (see `isFeatureUnlocked`), so this only gates a mid-onboarding user
+ * trying to jump ahead of the wizard.
+ */
+function RequireUnlocked({ feature, children }: { feature: LockableFeature; children: JSX.Element }) {
+  const status = useOnboardingStore((s) => s.status)
+  if (!isRouteAccessible(feature, status)) return <Navigate to="/dashboard" replace />
   return children
 }
 
@@ -80,16 +93,16 @@ export default function App() {
           }
         >
           <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/groups" element={<GroupsPage />} />
-          <Route path="/academy" element={<AcademyPage />} />
+          <Route path="/groups" element={<RequireUnlocked feature="bubbles"><GroupsPage /></RequireUnlocked>} />
+          <Route path="/academy" element={<RequireUnlocked feature="academy"><AcademyPage /></RequireUnlocked>} />
           <Route path="/courses/:id" element={<CoursePage />} />
           <Route path="/profile" element={<Navigate to="/settings" replace />} />
           <Route path="/profile/:userId" element={<ProfilePage />} />
-          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/settings" element={<RequireUnlocked feature="settings"><SettingsPage /></RequireUnlocked>} />
           <Route path="/rooms/:roomId" element={<BubbleRoomPage />} />
           <Route path="/sessions/:sessionId" element={<ExpertRoomPage />} />
           <Route path="/become-expert" element={<ExpertOnboardingPage />} />
-          <Route path="/experts" element={<ExpertDirectoryPage />} />
+          <Route path="/experts" element={<RequireUnlocked feature="experts"><ExpertDirectoryPage /></RequireUnlocked>} />
           <Route path="/experts/:userId" element={<ExpertPublicProfilePage />} />
           <Route path="/expert" element={<RequireExpert><ExpertDashboardPage /></RequireExpert>} />
           <Route path="/expert/profile/edit" element={<RequireExpert><ExpertProfileEditPage /></RequireExpert>} />

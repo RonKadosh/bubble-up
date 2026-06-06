@@ -26,3 +26,24 @@ export async function getNextQuestion(): Promise<NextQuestion> {
 export async function submitAnswer(questionId: string, answerId: string): Promise<void> {
   await client.post('/matching/quiz/answers', { questionId, answerId })
 }
+
+/**
+ * The caller's own private "profile strength" in the matching system — the part
+ * of confidence they control (Daily Drops answered + activity). Shown to the user
+ * only (never about anyone else) so they can track progression toward MATCHED picks.
+ */
+export interface Reliability {
+  /** user_confidence in [0,1]. */
+  confidence: number
+  /** matched-display threshold in [0,1]; at/above it, Matched picks can appear. */
+  threshold: number
+  /** confidence ≥ threshold — the user has reached the unlock level. */
+  matched: boolean
+  answeredQuestions: number
+  questionCap: number
+}
+
+export async function getReliability(): Promise<Reliability> {
+  const res = await client.get<ApiSuccess<Reliability>>('/matching/reliability')
+  return res.data.data
+}

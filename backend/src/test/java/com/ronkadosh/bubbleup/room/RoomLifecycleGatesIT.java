@@ -49,7 +49,7 @@ class RoomLifecycleGatesIT extends IntegrationTest {
 
     @Test
     void getRoom_before_T_minus_15_returns_ROOM_NOT_YET_OPEN() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         Instant startsAt = Instant.now().plus(Duration.ofMinutes(20));
         Instant endsAt = startsAt.plus(Duration.ofMinutes(60));
@@ -63,7 +63,7 @@ class RoomLifecycleGatesIT extends IntegrationTest {
 
     @Test
     void getRoom_after_endsAt_returns_ROOM_ENDED() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         Instant startsAt = Instant.now().minus(Duration.ofHours(2));
         Instant endsAt = Instant.now().minus(Duration.ofMinutes(1));
@@ -77,7 +77,7 @@ class RoomLifecycleGatesIT extends IntegrationTest {
 
     @Test
     void getRoom_after_endedAt_set_returns_ROOM_ENDED() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         Instant startsAt = Instant.now().minus(Duration.ofMinutes(5));
         Instant endsAt = Instant.now().plus(Duration.ofHours(1));
@@ -96,7 +96,7 @@ class RoomLifecycleGatesIT extends IntegrationTest {
 
     @Test
     void extend_bumps_endsAt_and_posts_system_message() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         Instant startsAt = Instant.now().minus(Duration.ofMinutes(5));
         Instant originalEndsAt = Instant.now().plus(Duration.ofMinutes(10));
@@ -125,7 +125,7 @@ class RoomLifecycleGatesIT extends IntegrationTest {
 
     @Test
     void extend_on_ended_room_returns_ROOM_ENDED() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         UUID eventId = createEvent(owner, groupId, "STUDY_SESSION",
                 Instant.now().minus(Duration.ofHours(2)),
@@ -143,7 +143,7 @@ class RoomLifecycleGatesIT extends IntegrationTest {
 
     @Test
     void scheduler_hard_closes_rooms_past_endsAt() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         // Event ended 5 min ago.
         UUID eventId = createEvent(owner, groupId, "STUDY_SESSION",
@@ -161,7 +161,7 @@ class RoomLifecycleGatesIT extends IntegrationTest {
 
     @Test
     void scheduler_posts_end_soon_warning_within_15min_window() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         // endsAt 10 min from now → inside the 15-min warning window.
         UUID eventId = createEvent(owner, groupId, "STUDY_SESSION",
@@ -181,7 +181,7 @@ class RoomLifecycleGatesIT extends IntegrationTest {
 
     @Test
     void scheduler_does_not_double_post_warning() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         UUID eventId = createEvent(owner, groupId, "STUDY_SESSION",
                 Instant.now().minus(Duration.ofMinutes(5)),

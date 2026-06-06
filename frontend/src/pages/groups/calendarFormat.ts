@@ -6,6 +6,7 @@
  * inside a chat link bubble). Two callers in the same feature folder = co-locate.
  */
 import { CalendarEventType } from '../../api/calendar'
+import { formatRange } from '../../i18n/datetime'
 
 /** Tailwind badge classes per event type. */
 export const TYPE_COLORS: Record<CalendarEventType, string> = {
@@ -30,17 +31,13 @@ export function monthRange(year: number, month0: number): { from: Date; to: Date
   }
 }
 
-/** Human label for an event's start/end pair. Collapses same-day ranges to one date line. */
+/**
+ * Human label for an event's start/end pair. Collapses same-day ranges to one
+ * date line. Thin re-export of the centralized locale-aware {@link formatRange}
+ * so existing `CalendarLinkCard` / `CalendarPanel` callers don't change.
+ */
 export function fmtRange(start: string, end: string): string {
-  const s = new Date(start)
-  const e = new Date(end)
-  const dateFmt: Intl.DateTimeFormatOptions = { weekday: 'short', month: 'short', day: 'numeric' }
-  const timeFmt: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit' }
-  const sameDay = s.toDateString() === e.toDateString()
-  if (sameDay) {
-    return `${s.toLocaleDateString(undefined, dateFmt)} · ${s.toLocaleTimeString(undefined, timeFmt)} – ${e.toLocaleTimeString(undefined, timeFmt)}`
-  }
-  return `${s.toLocaleString(undefined, { ...dateFmt, ...timeFmt })} – ${e.toLocaleString(undefined, { ...dateFmt, ...timeFmt })}`
+  return formatRange(start, end)
 }
 
 /** ISO → `<input type="datetime-local">` value (local-time, no timezone suffix). */

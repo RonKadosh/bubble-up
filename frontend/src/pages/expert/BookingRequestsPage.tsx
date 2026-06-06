@@ -10,6 +10,7 @@ import {
 import { useAuthStore } from '../../store/authStore'
 import { Card } from '../../components/Card'
 import { Button } from '../../components/Button'
+import { formatClock, formatDateTime } from '../../i18n/datetime'
 
 /**
  * Booking-request inbox / outbox. The same page renders both views because
@@ -102,7 +103,7 @@ export default function BookingRequestsPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-sm text-base">
-                        {new Date(r.proposedStartsAt).toLocaleString()} → {new Date(r.proposedEndsAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {formatDateTime(r.proposedStartsAt)} → {formatClock(r.proposedEndsAt)}
                       </span>
                       <span
                         className={`text-xs px-2 py-0.5 rounded-full ${

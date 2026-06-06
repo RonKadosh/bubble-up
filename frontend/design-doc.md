@@ -1,7 +1,8 @@
 # Bubble.up — Design System
 
-> The product is StudySync in code (CLAUDE.md still says so) but **Bubble.up** in
-> every place the user sees a name. Study groups are **Bubbles**.
+> The product is **Bubble.up** everywhere the user sees a name. Study groups are
+> **Bubbles**. (Some code symbols like `Group` / `StudyGroup` are deliberately
+> kept — see [`CLAUDE.md`](./CLAUDE.md).)
 
 This doc is the source of truth for what the app *feels* like and how to keep
 it that way as we add features. It pairs with [`CLAUDE.md`](./CLAUDE.md) — read

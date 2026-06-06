@@ -50,16 +50,24 @@ public abstract class IntegrationTest {
                         "No seeded course — is CatalogSeeder enabled in the test profile?"));
     }
 
+    private CourseOffering seedOffering() {
+        return courseOfferingRepository.findAll().stream()
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException(
+                        "No seeded offering — is CatalogSeeder enabled in the test profile?"));
+    }
+
     /**
      * Any seeded offering id. Same source as {@link #seedCourseId()} — the seeder
      * creates offerings for the placeholder courses in the current term.
      */
     protected UUID seedOfferingId() {
-        return courseOfferingRepository.findAll().stream()
-                .findFirst()
-                .map(CourseOffering::getId)
-                .orElseThrow(() -> new IllegalStateException(
-                        "No seeded offering — is CatalogSeeder enabled in the test profile?"));
+        return seedOffering().getId();
+    }
+
+    /** The courseId of {@link #seedOfferingId()} — what you enroll in to be allowed into that offering's bubbles. */
+    protected UUID seedOfferingCourseId() {
+        return seedOffering().getCourseId();
     }
 
     /** Any seeded university id (the catalog seeder produces one — BGU in dev/test). */
@@ -100,6 +108,30 @@ public abstract class IntegrationTest {
     protected AuthedUser registerWithAffiliation() throws Exception {
         AuthedUser u = registerAndLogin();
         setAffiliation(u, seedUniversityId(), seedDepartmentId());
+        return u;
+    }
+
+    /**
+     * Enroll an (affiliated) user in a course via {@code POST /api/enrollments}.
+     * The backend resolves the course's current-term offering.
+     */
+    protected void enroll(AuthedUser u, UUID courseId) throws Exception {
+        mvc.perform(post("/api/enrollments")
+                        .with(bearer(u))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"courseId\":\"" + courseId + "\"}"))
+                .andExpect(status().isCreated());
+    }
+
+    /**
+     * Register + affiliate + enroll in the seed offering's course in one call.
+     * This is the baseline actor for any group test: bubble membership (create /
+     * join / be-added) is gated on enrollment in the bubble's offering, and the
+     * seed offering is what {@link #seedOfferingId()} / {@code createGroup} use.
+     */
+    protected AuthedUser registerEnrolled() throws Exception {
+        AuthedUser u = registerWithAffiliation();
+        enroll(u, seedOfferingCourseId());
         return u;
     }
 

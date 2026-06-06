@@ -15,6 +15,7 @@ import { RequestBookingModal } from './expert/RequestBookingModal'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
 import { Avatar } from '../components/Avatar'
+import { formatDateTime } from '../i18n/datetime'
 
 /**
  * `/experts/:userId` — public view of an expert: headline / bio / tags + the
@@ -148,7 +149,7 @@ export default function ExpertPublicProfilePage() {
                       <div className="text-sm font-medium text-base">{s.title}</div>
                       {s.startsAt && (
                         <div className="text-xs text-muted">
-                          {new Date(s.startsAt).toLocaleString()} · {t('expert.publicProfile.groupsCount', { count: s.enrolledGroupCount, capacity: s.capacity })}
+                          {formatDateTime(s.startsAt)} · {t('expert.publicProfile.groupsCount', { count: s.enrolledGroupCount, capacity: s.capacity })}
                         </div>
                       )}
                       {myGroups.length > 0 && (

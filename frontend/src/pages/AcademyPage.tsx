@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Card } from '../components/Card'
 import { Button, IconButton } from '../components/Button'
+import { PageHeader, PageWidth, SectionLabel } from '../components/PageHeader'
 import { gradientFor } from '../components/Avatar'
 import {
   AtomIcon,
@@ -42,6 +43,7 @@ import {
   unenroll as unenrollApi,
 } from '../api/enrollment'
 import { describeError } from '../api/errors'
+import { useOnboardingStore } from '../store/onboardingStore'
 
 const TERM_ALL = '__all__'
 
@@ -191,6 +193,8 @@ export default function AcademyPage() {
     try {
       await enrollInCourse(courseId)
       await refreshEnrollments()
+      // Refresh onboarding so the "enroll" arrival callout flips to done.
+      void useOnboardingStore.getState().refresh()
     } catch (e) {
       setActionError(describeError(e, t, {
         ENROLLMENT_NO_CURRENT_OFFERING: 'academy.error.noCurrentOffering',
@@ -218,45 +222,43 @@ export default function AcademyPage() {
 
   return (
     <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-      <header className="px-4 tablet:px-6 desktop:px-8 pt-6 tablet:pt-8 pb-4 shrink-0 flex flex-wrap items-end justify-between gap-4">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2.5 mb-1">
-            <span className="flex items-center gap-1" aria-hidden="true">
-              <span className="w-2.5 h-2.5 rounded-full bg-bubble-magenta shadow-sm" />
-              <span className="w-1.5 h-1.5 rounded-full bg-bubble-green" />
+      <header className="pt-6 tablet:pt-8 pb-4 shrink-0">
+        <PageWidth>
+        <PageHeader
+          title={t('academy.title')}
+          subtitle={t('academy.subtitle')}
+          titleAfter={university && (
+            <span className="ms-1 text-xs font-medium px-2 py-0.5 rounded-md bg-surface-muted text-secondary border border-line">
+              {university.shortCode}
             </span>
-            <h1 className="text-2xl tablet:text-3xl font-bold tracking-tight text-base">{t('academy.title')}</h1>
-            {university && (
-              <span className="ms-1 text-xs font-medium px-2 py-0.5 rounded-md bg-surface-muted text-secondary border border-line">
-                {university.shortCode}
-              </span>
-            )}
-          </div>
-          <p className="text-sm text-muted">{t('academy.subtitle')}</p>
-        </div>
-
-        <div className="flex items-center gap-2 shrink-0">
-          <label className="text-xs text-muted" htmlFor="academy-term">
-            {t('academy.term.label')}
-          </label>
-          <select
-            id="academy-term"
-            value={selectedTermId}
-            onChange={(e) => setSelectedTermId(e.target.value)}
-            disabled={loadingShell || terms.length === 0}
-            className="border border-line bg-surface rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:border-primary-400 disabled:opacity-50"
-          >
-            <option value={TERM_ALL}>{t('academy.term.all')}</option>
-            {terms.map((tm) => (
-              <option key={tm.id} value={tm.id}>
-                {tm.name} · {tm.academicYear}
-              </option>
-            ))}
-          </select>
-        </div>
+          )}
+          actions={
+            <>
+              <label className="text-xs text-muted" htmlFor="academy-term">
+                {t('academy.term.label')}
+              </label>
+              <select
+                id="academy-term"
+                value={selectedTermId}
+                onChange={(e) => setSelectedTermId(e.target.value)}
+                disabled={loadingShell || terms.length === 0}
+                className="border border-line bg-surface rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:border-primary-400 disabled:opacity-50"
+              >
+                <option value={TERM_ALL}>{t('academy.term.all')}</option>
+                {terms.map((tm) => (
+                  <option key={tm.id} value={tm.id}>
+                    {tm.name} · {tm.academicYear}
+                  </option>
+                ))}
+              </select>
+            </>
+          }
+        />
+        </PageWidth>
       </header>
 
-      <div className="flex-1 min-h-0 px-4 tablet:px-6 desktop:px-8 pb-6 tablet:pb-8 overflow-y-auto">
+      <div className="flex-1 min-h-0 pb-6 tablet:pb-8 overflow-y-auto">
+        <PageWidth>
         {error && (
           <p className="mb-3 text-sm text-danger">{error}</p>
         )}
@@ -279,9 +281,9 @@ export default function AcademyPage() {
         />
 
         <section className="mt-6">
-          <h2 className="text-sm font-semibold text-secondary mb-2">
+          <SectionLabel className="mb-2">
             {t('academy.browseHeading')}
-          </h2>
+          </SectionLabel>
           <div className="h-[clamp(28rem,60vh,40rem)] grid grid-cols-1 tablet:grid-cols-[16rem_minmax(0,20rem)_minmax(0,1fr)] gap-3 min-h-0">
             <Pane title={t('academy.column.departments')}>
               {loadingShell ? (
@@ -357,6 +359,7 @@ export default function AcademyPage() {
             </Pane>
           </div>
         </section>
+        </PageWidth>
       </div>
 
       <ConfirmDialog

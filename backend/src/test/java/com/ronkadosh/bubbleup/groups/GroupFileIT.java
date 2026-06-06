@@ -28,7 +28,7 @@ class GroupFileIT extends IntegrationTest {
 
     @Test
     void member_can_upload_and_list() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         MockMultipartFile file = new MockMultipartFile(
                 "file", "notes.txt", "text/plain", "study hard".getBytes());
@@ -47,8 +47,8 @@ class GroupFileIT extends IntegrationTest {
 
     @Test
     void non_member_cannot_upload_or_list_or_download() throws Exception {
-        AuthedUser owner = registerAndLogin();
-        AuthedUser outsider = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
+        AuthedUser outsider = registerEnrolled();
         UUID groupId = createGroup(owner);
         UUID fileId = uploadFile(owner, groupId, "x.txt", "text/plain", "x".getBytes());
 
@@ -67,7 +67,7 @@ class GroupFileIT extends IntegrationTest {
 
     @Test
     void blocked_extension_rejected() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         MockMultipartFile evil = new MockMultipartFile(
                 "file", "virus.exe", "application/octet-stream", "MZ".getBytes());
@@ -78,7 +78,7 @@ class GroupFileIT extends IntegrationTest {
 
     @Test
     void blocked_mime_rejected() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         MockMultipartFile evil = new MockMultipartFile(
                 "file", "harmless.bin", "application/x-msdownload", "MZ".getBytes());
@@ -89,7 +89,7 @@ class GroupFileIT extends IntegrationTest {
 
     @Test
     void download_returns_bytes_and_headers() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         byte[] content = "hello bytes".getBytes();
         UUID fileId = uploadFile(owner, groupId, "n.txt", "text/plain", content);
@@ -104,8 +104,8 @@ class GroupFileIT extends IntegrationTest {
 
     @Test
     void uploader_can_delete_own_file() throws Exception {
-        AuthedUser owner = registerAndLogin();
-        AuthedUser member = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
+        AuthedUser member = registerEnrolled();
         UUID groupId = createGroup(owner);
         joinGroup(member, groupId);
         UUID fileId = uploadFile(member, groupId, "mine.txt", "text/plain", "m".getBytes());
@@ -116,8 +116,8 @@ class GroupFileIT extends IntegrationTest {
 
     @Test
     void owner_can_delete_anyones_file() throws Exception {
-        AuthedUser owner = registerAndLogin();
-        AuthedUser member = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
+        AuthedUser member = registerEnrolled();
         UUID groupId = createGroup(owner);
         joinGroup(member, groupId);
         UUID fileId = uploadFile(member, groupId, "theirs.txt", "text/plain", "t".getBytes());
@@ -128,9 +128,9 @@ class GroupFileIT extends IntegrationTest {
 
     @Test
     void other_member_cannot_delete_someone_elses_file() throws Exception {
-        AuthedUser owner = registerAndLogin();
-        AuthedUser member1 = registerAndLogin();
-        AuthedUser member2 = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
+        AuthedUser member1 = registerEnrolled();
+        AuthedUser member2 = registerEnrolled();
         UUID groupId = createGroup(owner);
         joinGroup(member1, groupId);
         joinGroup(member2, groupId);
@@ -143,7 +143,7 @@ class GroupFileIT extends IntegrationTest {
 
     @Test
     void deleting_group_cascades_files() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         UUID fileIdRow = uploadFile(owner, groupId, "x.txt", "text/plain", "x".getBytes());
         String storageId = fileRepository.findById(fileIdRow).orElseThrow().getFileId();

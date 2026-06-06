@@ -9,6 +9,7 @@ public enum ErrorCode {
     INTERNAL_ERROR(ErrorCategory.INTERNAL, HttpStatus.INTERNAL_SERVER_ERROR),
     FORBIDDEN(ErrorCategory.FORBIDDEN, HttpStatus.FORBIDDEN),
     METHOD_NOT_ALLOWED(ErrorCategory.VALIDATION, HttpStatus.METHOD_NOT_ALLOWED),
+    TOO_MANY_REQUESTS(ErrorCategory.RATE_LIMIT, HttpStatus.TOO_MANY_REQUESTS),
 
     // Auth
     INVALID_CREDENTIALS(ErrorCategory.UNAUTHORIZED, HttpStatus.UNAUTHORIZED),

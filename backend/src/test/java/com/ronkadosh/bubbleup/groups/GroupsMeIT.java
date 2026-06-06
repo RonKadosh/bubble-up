@@ -25,7 +25,7 @@ class GroupsMeIT extends IntegrationTest {
 
     @Test
     void returns_only_groups_the_user_joined() throws Exception {
-        AuthedUser owner = registerWithAffiliation();
+        AuthedUser owner = registerEnrolled();
         UUID courseId = seedCourseId();
         // Owner creates a public group on the seeded course.
         String create = String.format(
@@ -47,7 +47,7 @@ class GroupsMeIT extends IntegrationTest {
                 .andExpect(jsonPath("$.data[0].id").value(groupId.toString()));
 
         // A second user who hasn't joined sees zero.
-        AuthedUser stranger = registerAndLogin();
+        AuthedUser stranger = registerEnrolled();
         mvc.perform(get("/api/groups/me").with(bearer(stranger)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.length()").value(0));

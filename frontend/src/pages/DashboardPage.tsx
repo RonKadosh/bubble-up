@@ -1,14 +1,41 @@
-import { ReactNode, useEffect, useState } from 'react'
+import { ComponentType, ReactNode, SVGProps, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Feed, FeedCta, FeedItem, FeedItemKind, FeedSectionKey, getFeed } from '../api/feed'
 import { Group, getGroup, joinGroup } from '../api/groups'
+import { listMyCurrentEnrollments } from '../api/enrollment'
 import { describeError } from '../api/errors'
 import { Avatar } from '../components/Avatar'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
+import { PageHeader, PageWidth, SectionLabel } from '../components/PageHeader'
+import {
+  VideoIcon, PeopleIcon, CalendarIcon, UserPlusIcon, UserMinusIcon,
+  ChatIcon, FileIcon, SparkleIcon, TrendIcon,
+} from '../components/Icons'
+import { OnboardingWizard } from './dashboard/OnboardingWizard'
+import { useOnboardingStore, isOnboarded } from '../store/onboardingStore'
+import { formatRange } from '../i18n/datetime'
 
 type Translate = (key: string, opts?: Record<string, unknown>) => string
+type IconType = ComponentType<SVGProps<SVGSVGElement>>
+
+// A feed line: a small type glyph + text. `tone` colors the icon (live = green,
+// discovery = magenta, activity = muted). Used by every renderer so the icons feel
+// like one set instead of scattered emoji. `title` styles the primary (bold) line.
+function FeedLine({ icon: Icon, tone = 'text-muted', title = false, children }: {
+  icon: IconType
+  tone?: string
+  title?: boolean
+  children: ReactNode
+}) {
+  return (
+    <p className={`flex items-center gap-2 min-w-0 ${title ? 'font-semibold text-base' : 'text-sm text-secondary'}`}>
+      <Icon className={`shrink-0 ${title ? 'w-[1.05rem] h-[1.05rem]' : 'w-4 h-4'} ${tone}`} />
+      <span className="truncate">{children}</span>
+    </p>
+  )
+}
 
 // ---------------------------------------------------------------------------
 // Section presentation. Sections render in this fixed order and are *always*
@@ -44,8 +71,8 @@ const ITEM_RENDERERS: Record<FeedItemKind, (item: FeedItem, t: Translate) => Ren
     return {
       body: (
         <>
-          <p className="font-semibold text-base truncate">🎥 {item.title}</p>
-          <p className="text-sm text-muted truncate">
+          <FeedLine icon={VideoIcon} tone="text-bubble-green" title>{item.title}</FeedLine>
+          <p className="text-sm text-muted truncate ps-[1.65rem]">
             {n > 0 ? t('dashboard.live.roomParticipants', { count: n }) : liveLabel(item, t)}
             {item.groupName ? ` · ${item.groupName}` : ''}
           </p>
@@ -60,10 +87,10 @@ const ITEM_RENDERERS: Record<FeedItemKind, (item: FeedItem, t: Translate) => Ren
     return {
       body: (
         <>
-          <p className="font-semibold text-base truncate">
-            🟢 {n > 0 ? t('dashboard.live.roomParticipants', { count: n }) : t('dashboard.live.roomLiveNow')}
-          </p>
-          <p className="text-sm text-muted truncate">{item.groupName}</p>
+          <FeedLine icon={PeopleIcon} tone="text-bubble-green" title>
+            {n > 0 ? t('dashboard.live.roomParticipants', { count: n }) : t('dashboard.live.roomLiveNow')}
+          </FeedLine>
+          <p className="text-sm text-muted truncate ps-[1.65rem]">{item.groupName}</p>
         </>
       ),
       ctaLabel: n > 0 ? t('dashboard.cta.hopIn') : t('dashboard.cta.joinRoom'),
@@ -73,9 +100,11 @@ const ITEM_RENDERERS: Record<FeedItemKind, (item: FeedItem, t: Translate) => Ren
   upcomingEvent: (item, t) => ({
     body: (
       <>
-        <p className="font-semibold text-base truncate">📅 {item.title || humanizeType(item.eventType)}</p>
-        <p className="text-sm text-muted truncate">
-          {fmtEventRange(item.startsAt, item.endsAt)}{item.groupName ? ` · ${item.groupName}` : ''}
+        <FeedLine icon={CalendarIcon} tone="text-bubble-magenta" title>
+          {item.title || humanizeType(item.eventType)}
+        </FeedLine>
+        <p className="text-sm text-muted truncate ps-[1.65rem]">
+          {item.startsAt ? formatRange(item.startsAt, item.endsAt) : ''}{item.groupName ? ` · ${item.groupName}` : ''}
         </p>
       </>
     ),
@@ -83,64 +112,77 @@ const ITEM_RENDERERS: Record<FeedItemKind, (item: FeedItem, t: Translate) => Ren
   }),
 
   memberJoin: (item, t) => ({
-    body: (
-      <p className="text-sm text-secondary">
-        🫧 {t('dashboard.membership.joined', {
-          name: item.subtitle || t('dashboard.membership.someone'),
-          bubble: item.groupName,
-        })}
-      </p>
-    ),
+    body: <FeedLine icon={UserPlusIcon}>{membershipText(item, t, 'joined')}</FeedLine>,
   }),
 
   memberLeave: (item, t) => ({
-    body: (
-      <p className="text-sm text-secondary">
-        👋 {t('dashboard.membership.left', {
-          name: item.subtitle || t('dashboard.membership.someone'),
-          bubble: item.groupName,
-        })}
-      </p>
-    ),
+    body: <FeedLine icon={UserMinusIcon}>{membershipText(item, t, 'left')}</FeedLine>,
   }),
 
   unread: (item, t) => ({
     body: (
-      <p className="text-sm text-secondary">
-        💬 {t('dashboard.unread.count', { count: item.unreadCount ?? 0, bubble: item.groupName })}
-      </p>
+      <FeedLine icon={ChatIcon}>
+        {t('dashboard.unread.count', { count: item.unreadCount ?? 0, bubble: item.groupName })}
+      </FeedLine>
     ),
     ctaLabel: t('dashboard.cta.open'),
   }),
 
-  file: (item, t) => ({
-    body: (
-      <p className="text-sm text-secondary truncate">
-        📄 {t('dashboard.file.uploaded', { name: item.title, bubble: item.groupName })}
-      </p>
-    ),
-  }),
+  file: (item, t) => {
+    const labels = item.collapsedLabels ?? []
+    const total = item.collapsedCount ?? labels.length
+    const lead = labels[0] ?? ''
+    const extra = total - 1
+    const key = extra > 0 ? 'dashboard.file.uploadedOverflow' : 'dashboard.file.uploaded'
+    return {
+      body: <FeedLine icon={FileIcon}>{t(key, { name: lead, count: extra, bubble: item.groupName })}</FeedLine>,
+    }
+  },
 
-  recommendation: (item, t) => ({
-    body: (
-      <>
-        <p className="text-xs text-muted">
-          {t(item.displayMode === 'TRENDING'
-            ? 'dashboard.discovery.trendingBadge'
-            : 'dashboard.discovery.recommended')}
-        </p>
-        <p className="font-semibold text-base truncate">🫧 {item.title}</p>
-        <p className="text-sm text-muted truncate">{discoveryMeta(item, t)}</p>
-      </>
-    ),
-    ctaLabel: t('dashboard.cta.viewBubble'),
-  }),
+  recommendation: (item, t) => {
+    const trending = item.displayMode === 'TRENDING'
+    const course = courseLabel(item)
+    return {
+      body: (
+        <>
+          <p className="text-xs text-bubble-magenta flex items-center gap-1.5">
+            {trending
+              ? <TrendIcon className="w-3.5 h-3.5 shrink-0" />
+              : <SparkleIcon className="w-3.5 h-3.5 shrink-0" />}
+            {t(trending ? 'dashboard.discovery.trendingBadge' : 'dashboard.discovery.recommended')}
+          </p>
+          <p className="font-semibold text-base truncate">{item.title}</p>
+          {course && <p className="text-sm text-muted truncate">{t('dashboard.discovery.fromCourse', { course })}</p>}
+          <p className="text-sm text-muted truncate">{discoveryMeta(item, t)}</p>
+        </>
+      ),
+      ctaLabel: t('dashboard.cta.viewBubble'),
+    }
+  },
+}
+
+// "CS101 · Operating Systems" when a code exists, else just the course name.
+function courseLabel(item: FeedItem): string {
+  if (!item.courseName) return ''
+  return item.courseCode ? `${item.courseCode} · ${item.courseName}` : item.courseName
 }
 
 export default function DashboardPage() {
   const { t } = useTranslation()
+  // Gate: until onboarding is finished, home IS the wizard (not the feed). Uses
+  // the session-cached status (ensureHydrated) so an onboarded user never refetches.
+  const onbStatus = useOnboardingStore((s) => s.status)
+  const ensureOnboarding = useOnboardingStore((s) => s.ensureHydrated)
+  useEffect(() => { ensureOnboarding() }, [ensureOnboarding])
+
   const [feed, setFeed] = useState<Feed | null>(null)
   const [loading, setLoading] = useState(true)
+  /**
+   * Current-term enrolment count. Lets the empty Discovery state tell apart
+   * "you haven't enrolled in anything" (→ enroll) from "your courses just have
+   * no Bubbles yet" (→ start one). Null while loading.
+   */
+  const [enrollmentCount, setEnrollmentCount] = useState<number | null>(null)
   /** When set, a non-member is previewing a discovery Bubble before joining. */
   const [preview, setPreview] = useState<FeedItem | null>(null)
 
@@ -148,8 +190,11 @@ export default function DashboardPage() {
     let cancelled = false
     ;(async () => {
       try {
-        const data = await getFeed()
-        if (!cancelled) setFeed(data)
+        const [data, enrollments] = await Promise.all([
+          getFeed(),
+          listMyCurrentEnrollments().catch(() => []),
+        ])
+        if (!cancelled) { setFeed(data); setEnrollmentCount(enrollments.length) }
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -157,55 +202,111 @@ export default function DashboardPage() {
     return () => { cancelled = true }
   }, [])
 
+  // Onboarding gate: a not-yet-onboarded user sees the wizard in place of the feed.
+  // `null` until status loads avoids a flash of the feed before the wizard appears.
+  if (!onbStatus) return null
+  if (!isOnboarded(onbStatus)) return <OnboardingWizard />
+
   const itemsByKey: Partial<Record<FeedSectionKey, FeedItem[]>> = {}
   for (const s of feed?.sections ?? []) itemsByKey[s.key] = s.items
 
   return (
     <div className="flex-1 overflow-y-auto">
-      <div className="max-w-2xl mx-auto px-4 tablet:px-6 desktop:px-8 py-6 tablet:py-8">
+      <PageWidth className="py-6 tablet:py-8">
         <header className="mb-6">
-          <div className="flex items-center gap-3 mb-1">
-            <div className="w-2.5 h-2.5 rounded-full bg-bubble-magenta shadow-sm" />
-            <div className="w-1.5 h-1.5 rounded-full bg-bubble-green" />
-            <h1 className="text-2xl font-bold text-base">{t('dashboard.title')}</h1>
-          </div>
-          <p className="text-sm text-muted ms-[1.6rem]">{t('dashboard.subtitle')}</p>
+          <PageHeader title={t('dashboard.title')} subtitle={t('dashboard.subtitle')} />
         </header>
 
         {loading ? (
           <FeedSkeleton />
         ) : (
           <div className="flex flex-col gap-8">
-            {SECTION_ORDER.map((key) => {
-              const items = itemsByKey[key] ?? []
-              return (
-                <section key={key}>
-                  <h2 className="text-sm font-semibold uppercase tracking-wide text-muted mb-3 ms-1">
-                    {t(SECTION_META[key].labelKey)}
-                  </h2>
-                  {items.length === 0 ? (
-                    <p className="rounded-2xl border border-dashed border-line bg-surface/40 px-4 py-6 text-center text-sm text-muted">
-                      {t(SECTION_META[key].emptyKey)}
-                    </p>
-                  ) : (
-                    <div className="flex flex-col gap-3">
-                      {items.map((item, i) => (
-                        <FeedItemCard
-                          key={`${key}-${i}-${item.cta?.targetId ?? item.groupId ?? ''}`}
-                          item={item}
-                          onPreview={setPreview}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </section>
-              )
-            })}
+            {SECTION_ORDER.map((key) => (
+              <section key={key}>
+                <SectionLabel className="mb-3 ms-1">
+                  {t(SECTION_META[key].labelKey)}
+                </SectionLabel>
+                <SectionItems
+                  items={itemsByKey[key] ?? []}
+                  emptyKey={SECTION_META[key].emptyKey}
+                  sectionKey={key}
+                  enrollmentCount={enrollmentCount}
+                  onPreview={setPreview}
+                />
+              </section>
+            ))}
           </div>
         )}
-      </div>
+      </PageWidth>
 
       {preview && <PublicBubbleModal item={preview} onClose={() => setPreview(null)} />}
+    </div>
+  )
+}
+
+// One section's body in the stacked list: the feed-item cards, the actionable
+// Discovery empty state, or a plain dashed empty hint for the other sections.
+function SectionItems({
+  items,
+  emptyKey,
+  sectionKey,
+  enrollmentCount,
+  onPreview,
+}: {
+  items: FeedItem[]
+  emptyKey: string
+  sectionKey: FeedSectionKey
+  enrollmentCount: number | null
+  onPreview: (item: FeedItem) => void
+}) {
+  const { t } = useTranslation()
+  if (items.length === 0) {
+    // Discovery's empty state is actionable: it routes the user toward either
+    // enrolling (no enrolments) or starting the first Bubble (enrolled, no Bubbles).
+    if (sectionKey === 'DISCOVERY') {
+      return <DiscoveryEmpty enrollmentCount={enrollmentCount} />
+    }
+    return (
+      <p className="rounded-2xl border border-dashed border-line bg-surface/40 px-4 py-6 text-center text-sm text-muted">
+        {t(emptyKey)}
+      </p>
+    )
+  }
+  return (
+    <div className="flex flex-col gap-3">
+      {items.map((item, i) => (
+        <FeedItemCard
+          key={`${i}-${item.cta?.targetId ?? item.groupId ?? ''}`}
+          item={item}
+          onPreview={onPreview}
+        />
+      ))}
+    </div>
+  )
+}
+
+// Actionable empty state for Discovery. Two distinct dead-ends, two distinct
+// nudges: no enrolments → go enroll; enrolled but no Bubbles → start the first
+// one (opens the create form on the hub). Membership is enrollment-gated, so
+// these are the only two ways the section can be empty.
+function DiscoveryEmpty({ enrollmentCount }: { enrollmentCount: number | null }) {
+  const { t } = useTranslation()
+  const navigate = useNavigate()
+  const enrolled = (enrollmentCount ?? 0) > 0
+  return (
+    <div className="rounded-2xl border border-dashed border-line bg-surface/40 px-4 py-6 text-center flex flex-col items-center gap-3">
+      <p className="text-sm text-muted max-w-[42ch]">
+        {t(enrolled ? 'dashboard.empty.discoveryEnrolled' : 'dashboard.empty.discovery')}
+      </p>
+      <Button
+        size="sm"
+        variant={enrolled ? 'primary' : 'secondary'}
+        onClick={() => enrolled
+          ? navigate('/groups', { state: { openCreate: true } })
+          : navigate('/academy')}
+      >
+        {t(enrolled ? 'dashboard.discovery.startBubble' : 'dashboard.discovery.browseCourses')}
+      </Button>
     </div>
   )
 }
@@ -295,6 +396,7 @@ function PublicBubbleModal({ item, onClose }: { item: FeedItem; onClose: () => v
         GROUP_IS_FULL: 'dashboard.publicBubble.full',
         GROUP_NOT_PUBLIC: 'dashboard.publicBubble.privateNote',
         ALREADY_GROUP_MEMBER: 'dashboard.publicBubble.alreadyMember',
+        NOT_ENROLLED_IN_COURSE: 'dashboard.publicBubble.notEnrolled',
       }, 'dashboard.publicBubble.joinError'))
       setJoining(false)
     }
@@ -315,8 +417,11 @@ function PublicBubbleModal({ item, onClose }: { item: FeedItem; onClose: () => v
         <div className="px-4 py-3 border-b border-line flex items-center gap-3">
           <Avatar id={groupId} name={item.groupName ?? item.title ?? '?'} size="md" ring />
           <div className="flex-1 min-w-0">
-            <p className="text-xs text-muted">{badge}</p>
+            <p className="text-xs text-bubble-magenta">{badge}</p>
             <h3 className="font-semibold truncate">{item.groupName ?? item.title}</h3>
+            {courseLabel(item) && (
+              <p className="text-xs text-muted truncate">{t('dashboard.discovery.fromCourse', { course: courseLabel(item) })}</p>
+            )}
           </div>
           <button type="button" onClick={onClose} className="text-muted hover:text-secondary text-xl leading-none">×</button>
         </div>
@@ -375,6 +480,20 @@ function isJoinCta(cta: FeedCta): boolean {
   return cta.type === 'JOIN_SESSION' || cta.type === 'JOIN_ROOM' || cta.type === 'JOIN_BUBBLE'
 }
 
+// Collapsed membership rollup → localized string. Lists up to the lead names the
+// backend sent, then "+N others" via the plural overflow key. Falls back to the
+// "someone" label when no actor name resolved (deleted user / lookup miss).
+function membershipText(item: FeedItem, t: Translate, verb: 'joined' | 'left'): string {
+  const labels = item.collapsedLabels ?? []
+  const total = item.collapsedCount ?? labels.length
+  const names = labels.length > 0 ? labels : [t('dashboard.membership.someone')]
+  const extra = total - names.length
+  const key = extra > 0
+    ? `dashboard.membership.${verb}Overflow`
+    : `dashboard.membership.${verb}`
+  return t(key, { names: names.join(', '), count: extra, bubble: item.groupName })
+}
+
 function liveLabel(item: FeedItem, t: Translate): string {
   const mins = minutesUntil(item.startsAt)
   return mins <= 0 ? t('dashboard.live.liveNow') : t('dashboard.live.startsIn', { count: mins })
@@ -418,33 +537,20 @@ function minutesUntil(iso?: string): number {
   return Math.max(0, Math.round((new Date(iso).getTime() - Date.now()) / 60000))
 }
 
-function fmtEventRange(start?: string, end?: string): string {
-  if (!start) return ''
-  const s = new Date(start)
-  const dateFmt: Intl.DateTimeFormatOptions = { weekday: 'short', month: 'short', day: 'numeric' }
-  const timeFmt: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit' }
-  if (!end) return `${s.toLocaleDateString(undefined, dateFmt)} · ${s.toLocaleTimeString(undefined, timeFmt)}`
-  const e = new Date(end)
-  const sameDay = s.toDateString() === e.toDateString()
-  if (sameDay) {
-    return `${s.toLocaleDateString(undefined, dateFmt)} · ${s.toLocaleTimeString(undefined, timeFmt)} – ${e.toLocaleTimeString(undefined, timeFmt)}`
-  }
-  return `${s.toLocaleDateString(undefined, dateFmt)} – ${e.toLocaleDateString(undefined, dateFmt)}`
-}
-
+// Stacked-list loading placeholder — one header bar + two card blocks per section,
+// matching the loaded layout so the load → loaded transition doesn't jump.
 function FeedSkeleton() {
   return (
-    <div className="flex flex-col gap-3">
-      {[0, 1, 2, 3].map((i) => (
-        <Card key={i} size="lg" className="p-4 animate-pulse">
-          <div className="flex gap-3">
-            <div className="w-11 h-11 rounded-full bg-surface-muted shrink-0" />
-            <div className="flex-1 space-y-2">
-              <div className="h-3 bg-surface-muted rounded-full w-1/3" />
-              <div className="h-3 bg-surface-muted rounded-full w-2/3 mt-2" />
-            </div>
+    <div className="flex flex-col gap-8">
+      {SECTION_ORDER.map((key) => (
+        <section key={key}>
+          <div className="h-4 w-24 bg-surface-muted/60 rounded mb-3 ms-1 animate-pulse" />
+          <div className="flex flex-col gap-3">
+            {[0, 1].map((i) => (
+              <div key={i} className="h-20 rounded-2xl bg-surface-muted/50 animate-pulse" />
+            ))}
           </div>
-        </Card>
+        </section>
       ))}
     </div>
   )

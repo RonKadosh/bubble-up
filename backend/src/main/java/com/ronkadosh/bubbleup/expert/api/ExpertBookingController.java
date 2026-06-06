@@ -6,6 +6,8 @@ import com.ronkadosh.bubbleup.common.context.CurrentUser;
 import com.ronkadosh.bubbleup.common.context.CurrentUserProvider;
 import com.ronkadosh.bubbleup.expert.api.dto.BookingRequestResponse;
 import com.ronkadosh.bubbleup.expert.api.dto.CreateBookingRequest;
+import com.ronkadosh.bubbleup.common.ratelimit.RateLimit;
+import com.ronkadosh.bubbleup.common.ratelimit.RateLimitScope;
 import com.ronkadosh.bubbleup.expert.application.ExpertBookingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +34,7 @@ public class ExpertBookingController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @RateLimit(limit = 20, windowSeconds = 60, scope = RateLimitScope.PER_USER)
     public ApiResponse<BookingRequestResponse> create(@Valid @RequestBody CreateBookingRequest request) {
         CurrentUser me = currentUserProvider.get();
         return ApiResponse.success(bookings.createRequest(me.id(), request));

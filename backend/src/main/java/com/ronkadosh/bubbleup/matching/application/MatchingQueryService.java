@@ -1,6 +1,7 @@
 package com.ronkadosh.bubbleup.matching.application;
 
 import com.ronkadosh.bubbleup.catalog.internal.CatalogInternalService;
+import com.ronkadosh.bubbleup.catalog.internal.dto.OfferingRef;
 import com.ronkadosh.bubbleup.common.config.MatchingProperties;
 import com.ronkadosh.bubbleup.common.datetime.TimeProvider;
 import com.ronkadosh.bubbleup.common.error.AppException;
@@ -11,6 +12,7 @@ import com.ronkadosh.bubbleup.matching.api.dto.GroupRecommendationDto;
 import com.ronkadosh.bubbleup.matching.api.dto.NextQuestionResponse;
 import com.ronkadosh.bubbleup.matching.api.dto.QuizOptionDto;
 import com.ronkadosh.bubbleup.matching.api.dto.RecommendationsResponse;
+import com.ronkadosh.bubbleup.matching.internal.dto.MatchingReliability;
 import com.ronkadosh.bubbleup.matching.model.*;
 import com.ronkadosh.bubbleup.matching.persistence.*;
 import lombok.RequiredArgsConstructor;
@@ -80,6 +82,22 @@ public class MatchingQueryService {
                 now.plus(props.quizCooldown()));
     }
 
+    /**
+     * The user's own profile strength: user_confidence + the matched threshold. A
+     * pure read — uses {@code findByUserId} (never {@code getOrCreate}) so fetching
+     * reliability does not create a profile row. Absent profile → zero confidence.
+     */
+    @Transactional(readOnly = true)
+    public MatchingReliability getReliability(UUID userId) {
+        Optional<UserProfile> profile = userProfileRepository.findByUserId(userId);
+        int answered = profile.map(UserProfile::getAnsweredQuestions).orElse(0);
+        int behavior = profile.map(UserProfile::getMeaningfulBehaviorEvents).orElse(0);
+        double confidence = MatchingScorer.userConfidence(answered, behavior, props);
+        double threshold = props.matchedDisplayThreshold();
+        return new MatchingReliability(
+                confidence, threshold, confidence >= threshold, answered, props.quizQuestionCap());
+    }
+
     @Transactional(readOnly = true)
     public RecommendationsResponse getRecommendations(UUID userId, UUID courseId) {
         if (courseId != null && !catalogInternalService.courseExists(courseId)) {
@@ -113,28 +131,38 @@ public class MatchingQueryService {
 
     private RecommendationsResponse computeLive(UUID userId, UUID courseId,
                                                  UserProfile profile, double reliability) {
-        List<UUID> userCourseIds;
+        List<UUID> offeringIds;
         if (courseId != null) {
-            userCourseIds = List.of(courseId);
+            // Course-filtered discovery: the course's current-term offering (resolved
+            // via the course's own university), never a past-term offering of the
+            // same course. Independent of the viewer's affiliation.
+            offeringIds = catalogInternalService.getCourseRef(courseId)
+                    .flatMap(c -> catalogInternalService.currentTermFor(c.universityId()))
+                    .flatMap(term -> catalogInternalService.offeringIdForCourseAndTerm(courseId, term.id()))
+                    .map(List::of).orElseGet(List::of);
         } else {
-            // "Your courses" for discovery = what you're enrolled in this term,
-            // not the courses of bubbles you already joined. This lets a freshly
-            // enrolled student get course-relevant recommendations before joining
-            // anything; an unenrolled user falls through to global trending below.
-            userCourseIds = enrollmentInternalService.enrolledCourseIdsForCurrentTerm(userId);
+            // "Your courses" for discovery = the current-term offerings you're
+            // enrolled in. Keeping the offering (not collapsing to course) is what
+            // keeps candidates scoped to this term instead of every past offering.
+            offeringIds = enrollmentInternalService.enrolledOfferingIdsForCurrentTerm(userId);
         }
 
-        List<UUID> candidateIds = userCourseIds.isEmpty()
-                ? groupInternalService.getTopPublicGroupIds(userId, props.recommendationLimit())
-                : groupInternalService.getCandidateGroupIds(
-                        userCourseIds, userId, props.candidateLimitPerCourse());
+        if (offeringIds.isEmpty()) {
+            // No current-term enrolments → nothing the user can actually join
+            // (membership is enrollment-gated). Don't surface trending they can't
+            // join; Discovery shows the enroll nudge for this empty result instead.
+            return new RecommendationsResponse(MatchResultType.TRENDING.name(), reliability, List.of());
+        }
+
+        List<UUID> candidateIds = groupInternalService.getCandidateGroupIdsByOffering(
+                offeringIds, userId, props.candidateLimitPerCourse());
 
         if (candidateIds.isEmpty()) {
             return new RecommendationsResponse(MatchResultType.TRENDING.name(), reliability, List.of());
         }
 
         List<GroupProfile> groupProfiles = groupProfileRepository.findAllByGroupIdIn(candidateIds);
-        int daysActive = (int) ChronoUnit.DAYS.between(profile.getUpdatedAt(), Instant.now());
+        int daysActive = (int) ChronoUnit.DAYS.between(profile.getUpdatedAt(), timeProvider.now());
         double[] userFinal = MatchingScorer.userFinalScores(profile, daysActive, props);
         double userConfidence = MatchingScorer.userConfidence(
                 profile.getAnsweredQuestions(), profile.getMeaningfulBehaviorEvents(), props);
@@ -159,13 +187,19 @@ public class MatchingQueryService {
                                          double matchingConfidence, UUID userId) {
         String groupName = groupInternalService.getGroupName(groupId).orElse("Unknown");
         boolean alreadyMember = groupInternalService.isMember(groupId, userId);
+        // Which course this Bubble belongs to — the Discovery card shows it so the user
+        // knows the subject before joining. Resolved offering → course via the catalog.
+        Optional<OfferingRef> offering = groupInternalService.getOfferingIdForGroup(groupId)
+                .flatMap(catalogInternalService::getOfferingRef);
+        String courseCode = offering.map(OfferingRef::courseCode).orElse(null);
+        String courseName = offering.map(OfferingRef::courseName).orElse(null);
         Optional<GroupProfile> gp = groupProfileRepository.findByGroupId(groupId);
         int memberCount = gp.map(GroupProfile::getMemberCount).orElse(0);
         List<String> reasons = (mode == MatchResultType.TRENDING && gp.isPresent())
                 ? trendingReasons(gp.get())
                 : List.of();
-        return new GroupRecommendationDto(groupId, groupName, matchPercent, memberCount,
-                alreadyMember, mode.name(), matchingConfidence, reasons);
+        return new GroupRecommendationDto(groupId, groupName, courseCode, courseName, matchPercent,
+                memberCount, alreadyMember, mode.name(), matchingConfidence, reasons);
     }
 
     /** The top 1–2 trending signals driving a bubble, as machine codes the client localizes. */

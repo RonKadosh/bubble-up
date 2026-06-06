@@ -38,13 +38,12 @@ public interface GroupInternalService {
     List<GroupFileActivityItem> findRecentFilesForGroups(Set<UUID> groupIds, int limit);
 
     /**
-     * Candidate groups for matching, clustered by course. The catalog resolves
-     * {@code courseIds} to offering IDs before the bubble query — matching keeps
-     * thinking in courses.
+     * Candidate groups for matching, scoped to the given current-term offerings.
+     * Each offering is queried independently (PUBLIC, excluding groups the user is
+     * already in) up to {@code limitPerOffering}, so candidate selection stays
+     * term-precise and never re-broadens to a course's past-term offerings.
      */
-    List<UUID> getCandidateGroupIds(List<UUID> courseIds, UUID excludeUserId, int limitPerCourse);
-
-    List<UUID> getTopPublicGroupIds(UUID excludeUserId, int limit);
+    List<UUID> getCandidateGroupIdsByOffering(List<UUID> offeringIds, UUID excludeUserId, int limitPerOffering);
 
     Optional<UUID> getCourseIdForGroup(UUID groupId);
 

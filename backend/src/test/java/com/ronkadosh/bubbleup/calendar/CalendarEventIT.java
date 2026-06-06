@@ -23,7 +23,7 @@ class CalendarEventIT extends IntegrationTest {
 
     @Test
     void member_can_create_event() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
 
         mvc.perform(post("/api/calendars/events")
@@ -39,8 +39,8 @@ class CalendarEventIT extends IntegrationTest {
 
     @Test
     void non_member_cannot_create_event() throws Exception {
-        AuthedUser owner = registerAndLogin();
-        AuthedUser outsider = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
+        AuthedUser outsider = registerEnrolled();
         UUID groupId = createGroup(owner);
 
         mvc.perform(post("/api/calendars/events")
@@ -53,7 +53,7 @@ class CalendarEventIT extends IntegrationTest {
 
     @Test
     void invalid_time_range_rejected() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
 
         mvc.perform(post("/api/calendars/events")
@@ -66,7 +66,7 @@ class CalendarEventIT extends IntegrationTest {
 
     @Test
     void list_returns_overlapping_events_in_range() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         createEvent(owner, groupId, "STUDY_SESSION", futurePlus(1), futurePlus(2));
         createEvent(owner, groupId, "EXAM", futurePlus(100), futurePlus(101));
@@ -86,7 +86,7 @@ class CalendarEventIT extends IntegrationTest {
 
     @Test
     void second_overlapping_study_session_rejected() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         // First Live Bubble: [+1h, +2h].
         createEvent(owner, groupId, "STUDY_SESSION", futurePlus(1), futurePlus(2));
@@ -103,7 +103,7 @@ class CalendarEventIT extends IntegrationTest {
 
     @Test
     void non_overlapping_study_session_allowed() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         createEvent(owner, groupId, "STUDY_SESSION", futurePlus(1), futurePlus(2));
 
@@ -119,7 +119,7 @@ class CalendarEventIT extends IntegrationTest {
 
     @Test
     void create_event_in_past_rejected() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
 
         // The calendar is fixated: you can't schedule an event whose start is
@@ -134,7 +134,7 @@ class CalendarEventIT extends IntegrationTest {
 
     @Test
     void update_already_started_event_rejected() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         // Seed a past event directly (the create endpoint refuses past starts).
         UUID eventId = eventRepository.save(CalendarEvent.builder()
@@ -157,7 +157,7 @@ class CalendarEventIT extends IntegrationTest {
 
     @Test
     void delete_already_started_event_rejected() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         UUID eventId = eventRepository.save(CalendarEvent.builder()
                 .ownerType(CalendarOwnerType.GROUP)
@@ -176,7 +176,7 @@ class CalendarEventIT extends IntegrationTest {
 
     @Test
     void update_own_event_happy() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         UUID eventId = createEvent(owner, groupId, "STUDY_SESSION", futurePlus(1), futurePlus(2));
 
@@ -191,8 +191,8 @@ class CalendarEventIT extends IntegrationTest {
 
     @Test
     void group_owner_can_update_other_members_event() throws Exception {
-        AuthedUser owner = registerAndLogin();
-        AuthedUser member = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
+        AuthedUser member = registerEnrolled();
         UUID groupId = createGroup(owner);
         joinGroup(member, groupId);
         UUID eventId = createEvent(member, groupId, "MEETING", futurePlus(1), futurePlus(2));
@@ -207,9 +207,9 @@ class CalendarEventIT extends IntegrationTest {
 
     @Test
     void non_owner_non_author_cannot_update() throws Exception {
-        AuthedUser owner = registerAndLogin();
-        AuthedUser m1 = registerAndLogin();
-        AuthedUser m2 = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
+        AuthedUser m1 = registerEnrolled();
+        AuthedUser m2 = registerEnrolled();
         UUID groupId = createGroup(owner);
         joinGroup(m1, groupId);
         joinGroup(m2, groupId);
@@ -225,7 +225,7 @@ class CalendarEventIT extends IntegrationTest {
 
     @Test
     void author_can_delete_own_event() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         UUID eventId = createEvent(owner, groupId, "STUDY_SESSION", futurePlus(1), futurePlus(2));
 
@@ -237,7 +237,7 @@ class CalendarEventIT extends IntegrationTest {
 
     @Test
     void deleting_group_cascades_events() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         UUID eventId = createEvent(owner, groupId, "EXAM", futurePlus(1), futurePlus(2));
 

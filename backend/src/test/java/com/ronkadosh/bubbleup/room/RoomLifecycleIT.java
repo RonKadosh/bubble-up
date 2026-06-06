@@ -31,7 +31,7 @@ class RoomLifecycleIT extends IntegrationTest {
 
     @Test
     void study_session_event_creates_room() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
 
         UUID eventId = createEvent(owner, groupId, "STUDY_SESSION", futurePlus(1), futurePlus(2));
@@ -46,7 +46,7 @@ class RoomLifecycleIT extends IntegrationTest {
 
     @Test
     void non_study_session_event_does_not_create_room() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
 
         UUID eventId = createEvent(owner, groupId, "MEETING", futurePlus(1), futurePlus(2));
@@ -57,7 +57,7 @@ class RoomLifecycleIT extends IntegrationTest {
 
     @Test
     void deleting_event_deletes_room() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         UUID eventId = createEvent(owner, groupId, "STUDY_SESSION", futurePlus(1), futurePlus(2));
         assertTrue(roomRepository.existsByCalendarEventId(eventId));
@@ -71,7 +71,7 @@ class RoomLifecycleIT extends IntegrationTest {
 
     @Test
     void updating_event_from_study_session_deletes_room() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         UUID eventId = createEvent(owner, groupId, "STUDY_SESSION", futurePlus(1), futurePlus(2));
         assertTrue(roomRepository.existsByCalendarEventId(eventId));
@@ -88,7 +88,7 @@ class RoomLifecycleIT extends IntegrationTest {
 
     @Test
     void updating_event_to_study_session_creates_room() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         UUID eventId = createEvent(owner, groupId, "MEETING", futurePlus(1), futurePlus(2));
         assertFalse(roomRepository.existsByCalendarEventId(eventId));
@@ -105,7 +105,7 @@ class RoomLifecycleIT extends IntegrationTest {
 
     @Test
     void deleting_group_cascades_rooms() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         UUID eventId = createEvent(owner, groupId, "STUDY_SESSION", futurePlus(1), futurePlus(2));
         UUID roomId = roomRepository.findByCalendarEventId(eventId).orElseThrow().getId();

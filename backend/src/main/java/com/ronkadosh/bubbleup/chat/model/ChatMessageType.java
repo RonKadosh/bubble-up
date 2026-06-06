@@ -1,5 +1,8 @@
 package com.ronkadosh.bubbleup.chat.model;
 
+import java.util.EnumSet;
+import java.util.Set;
+
 public enum ChatMessageType {
     TEXT,
     SYSTEM_JOIN,
@@ -23,5 +26,13 @@ public enum ChatMessageType {
      * Carries an EXPERT_SESSION link so members can jump straight into the room
      * (chat + whiteboard live; video opens at {@code startsAt}).
      */
-    SYSTEM_EXPERT_SESSION_OPEN
+    SYSTEM_EXPERT_SESSION_OPEN;
+
+    /**
+     * Human-authored content (a real message or a deliberate share) — the only
+     * types that count toward "unread". SYSTEM_* rows are notices the chat renders
+     * inline (and the dashboard surfaces as activity); they must never inflate an
+     * unread badge or the feed's unread rollup.
+     */
+    public static final Set<ChatMessageType> CONTENT_TYPES = EnumSet.of(TEXT, LINK);
 }

@@ -13,6 +13,7 @@ import com.ronkadosh.bubbleup.common.error.ErrorCode;
 import com.ronkadosh.bubbleup.common.events.BehaviorEventType;
 import com.ronkadosh.bubbleup.common.events.GroupMembershipChangedEvent;
 import com.ronkadosh.bubbleup.common.events.UserBehaviorEvent;
+import com.ronkadosh.bubbleup.enrollment.internal.EnrollmentInternalService;
 import com.ronkadosh.bubbleup.groups.internal.GroupFileInternalService;
 import com.ronkadosh.bubbleup.groups.api.dto.AddMemberRequest;
 import com.ronkadosh.bubbleup.groups.api.dto.CreateGroupRequest;
@@ -45,6 +46,7 @@ public class GroupCommandService {
     private final GroupFileInternalService groupFileInternalService;
     private final CalendarInternalService calendarInternalService;
     private final CatalogInternalService catalogInternalService;
+    private final EnrollmentInternalService enrollmentInternalService;
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
@@ -54,6 +56,10 @@ public class GroupCommandService {
                 : resolveCurrentOfferingForCourse(request.courseId());
         if (!catalogInternalService.offeringExists(offeringId)) {
             throw new AppException(ErrorCode.OFFERING_NOT_FOUND);
+        }
+        // The creator becomes OWNER, so they must be enrolled in the offering.
+        if (!enrollmentInternalService.isEnrolledInOffering(requesterId, offeringId)) {
+            throw new AppException(ErrorCode.NOT_ENROLLED_IN_COURSE);
         }
         StudyGroup group = StudyGroup.builder()
                 .name(request.name())
@@ -95,6 +101,9 @@ public class GroupCommandService {
             throw new AppException(ErrorCode.GROUP_NOT_PUBLIC);
         }
         requireActive(group);
+        if (!enrollmentInternalService.isEnrolledInOffering(requesterId, group.getOfferingId())) {
+            throw new AppException(ErrorCode.NOT_ENROLLED_IN_COURSE);
+        }
         if (memberRepository.existsByGroupIdAndUserId(groupId, requesterId)) {
             throw new AppException(ErrorCode.ALREADY_GROUP_MEMBER);
         }
@@ -118,6 +127,10 @@ public class GroupCommandService {
         UUID targetUserId = request.userId();
         if (!authInternalService.userExists(targetUserId)) {
             throw new AppException(ErrorCode.USER_NOT_FOUND);
+        }
+        if (!enrollmentInternalService.isEnrolledInOffering(targetUserId, group.getOfferingId())) {
+            throw new AppException(ErrorCode.NOT_ENROLLED_IN_COURSE,
+                    "User is not enrolled in this Bubble's course");
         }
         if (memberRepository.existsByGroupIdAndUserId(groupId, targetUserId)) {
             throw new AppException(ErrorCode.ALREADY_GROUP_MEMBER);

@@ -6,5 +6,6 @@ public enum ErrorCategory {
     FORBIDDEN,
     UNAUTHORIZED,
     VALIDATION,
+    RATE_LIMIT,
     INTERNAL
 }

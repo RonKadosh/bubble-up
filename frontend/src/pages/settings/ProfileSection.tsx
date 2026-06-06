@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../../store/authStore'
+import { useOnboardingStore } from '../../store/onboardingStore'
 import { Avatar } from '../../components/Avatar'
 import { Button } from '../../components/Button'
 import { Card } from '../../components/Card'
@@ -13,6 +14,7 @@ import {
 } from '../../api/users'
 import { Department, University, getDepartments, getUniversities } from '../../api/catalog'
 import { describeError } from '../../api/errors'
+import { formatDate } from '../../i18n/datetime'
 
 /**
  * The current user's own profile — view + inline edit + avatar upload/delete.
@@ -96,6 +98,9 @@ export default function ProfileSection() {
       setEditing(false)
       // Keep the store in sync so the chat sender row + any avatar usages update immediately.
       updateAuthUser({ displayName: updated.displayName, avatarUrl: updated.avatarUrl })
+      // Refresh onboarding so the "set up your profile" arrival callout flips to done
+      // (green dot + back-to-setup) the moment affiliation is saved.
+      void useOnboardingStore.getState().refresh()
     } catch (err) {
       setError(describeError(err, t, {}, 'profile.errorSave'))
     } finally {
@@ -134,16 +139,10 @@ export default function ProfileSection() {
     }
   }
 
-  const joinedLabel = useMemo(() => {
-    if (!profile?.createdAt) return ''
-    try {
-      return new Date(profile.createdAt).toLocaleDateString(i18n.language, {
-        year: 'numeric', month: 'short', day: 'numeric',
-      })
-    } catch {
-      return profile.createdAt
-    }
-  }, [profile?.createdAt, i18n.language])
+  const joinedLabel = useMemo(
+    () => (profile?.createdAt ? formatDate(profile.createdAt, { year: 'numeric', month: 'short', day: 'numeric' }) : ''),
+    [profile?.createdAt, i18n.language],
+  )
 
   if (loading || !profile) {
     return <p className="text-muted text-sm">{t('common.loading')}</p>

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../store/authStore'
+import { useQuizPromptStore } from '../store/quizPromptStore'
+import { useOnboardingStore, isOnboarded } from '../store/onboardingStore'
 import { getNextQuestion, submitAnswer, type NextQuestion } from '../api/matching'
 import { Button } from './Button'
 
@@ -24,10 +26,20 @@ const MAX_DELAY_MS = 24 * 60 * 60 * 1000   // cap setTimeout at 24h so we re-syn
 export function QuizPrompt() {
   const { t } = useTranslation()
   const accessToken = useAuthStore((s) => s.accessToken)
+  // Gate on the shared onboarding store (no dedicated HTTP — it's already hydrated
+  // app-wide). Inert during L1–L4 so the first question only pops at L5.
+  const ensureOnboarding = useOnboardingStore((s) => s.ensureHydrated)
+  const refreshOnboarding = useOnboardingStore((s) => s.refresh)
+  const onbStatus = useOnboardingStore((s) => s.status)
+  const wizardLevel = useOnboardingStore((s) => s.wizardLevel)
+  const onboarded = onbStatus ? isOnboarded(onbStatus) : false
+  const active = onboarded || wizardLevel === 5
   const [question, setQuestion] = useState<NextQuestion | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const timerRef = useRef<number | null>(null)
+
+  useEffect(() => { ensureOnboarding() }, [ensureOnboarding])
 
   const clearTimer = useCallback(() => {
     if (timerRef.current != null) {
@@ -63,14 +75,24 @@ export function QuizPrompt() {
   }, [scheduleAt, clearTimer])
 
   useEffect(() => {
-    if (!accessToken) {
+    // Auto-poll only once onboarded (ongoing Daily Drops). During the wizard the
+    // first question must NOT pop on its own — it surfaces only when the user
+    // clicks "Answer a Daily Drop" on L5 (the openSignal trigger below).
+    if (!accessToken || !onboarded) {
       clearTimer()
       setQuestion(null)
       return
     }
     poll()
     return clearTimer
-  }, [accessToken, poll, clearTimer])
+  }, [accessToken, onboarded, poll, clearTimer])
+
+  // Explicit trigger: the L5 "Answer a Daily Drop" button (or any post-onboarding
+  // re-open). Polls to surface a question; no-op if none is available.
+  const openSignal = useQuizPromptStore((s) => s.openSignal)
+  useEffect(() => {
+    if (openSignal > 0 && accessToken && active) poll()
+  }, [openSignal, accessToken, active, poll])
 
   async function onAnswer(answerId: string) {
     if (!question?.questionId) return
@@ -80,7 +102,15 @@ export function QuizPrompt() {
       await submitAnswer(question.questionId, answerId)
       const scheduleAtIso = question.nextAvailableAt
       setQuestion(null)
-      scheduleAt(scheduleAtIso, poll)
+      if (onboarded) {
+        // Ongoing Daily Drops — reschedule the next poll.
+        scheduleAt(scheduleAtIso, poll)
+      } else {
+        // L5 first answer — don't auto-reschedule (no surprise pop while still on
+        // L5); just refresh so the wizard's `answeredQuestions` updates and Finish
+        // enables.
+        refreshOnboarding()
+      }
     } catch (e) {
       console.warn('[QuizPrompt] submit failed', e)
       setError(t('matching.error'))

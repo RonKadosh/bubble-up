@@ -17,11 +17,11 @@ class FeedControllerIT extends IntegrationTest {
 
     @Test
     void feed_groups_activity_and_upcoming_into_sections() throws Exception {
-        AuthedUser owner = registerAndLogin();
-        AuthedUser joiner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
+        AuthedUser joiner = registerEnrolled();
         UUID groupId = createGroup(owner);
 
-        // A self-join posts a SYSTEM_JOIN (→ membership event + unread for the owner).
+        // A self-join posts a SYSTEM_JOIN (→ membership activity, but NOT unread).
         mvc.perform(post("/api/groups/{id}/join", groupId).with(bearer(joiner)))
                 .andExpect(status().isOk());
         // A future event (→ Upcoming).
@@ -40,8 +40,35 @@ class FeedControllerIT extends IntegrationTest {
         JsonNode activity = section(data, "ACTIVITY");
         assertThat(activity).as("ACTIVITY section present").isNotNull();
         assertThat(kinds(activity)).contains("memberJoin");
-        // The owner hasn't read the join message → an unread rollup card is present too.
-        assertThat(kinds(activity)).contains("unread");
+        // The only chat activity is the SYSTEM_JOIN, which is surfaced as the memberJoin
+        // card — it must NOT also show up as an unread rollup.
+        assertThat(kinds(activity)).doesNotContain("unread");
+    }
+
+    @Test
+    void membership_events_collapse_into_one_card_per_bubble() throws Exception {
+        AuthedUser owner = registerEnrolled();
+        AuthedUser joinerA = registerEnrolled();
+        AuthedUser joinerB = registerEnrolled();
+        UUID groupId = createGroup(owner);
+
+        mvc.perform(post("/api/groups/{id}/join", groupId).with(bearer(joinerA))).andExpect(status().isOk());
+        mvc.perform(post("/api/groups/{id}/join", groupId).with(bearer(joinerB))).andExpect(status().isOk());
+
+        String json = mvc.perform(get("/api/feed").with(bearer(owner)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        JsonNode activity = section(om.readTree(json).get("data"), "ACTIVITY");
+
+        // Two joins in the same Bubble → a single collapsed memberJoin card, count 2.
+        JsonNode joinCard = null;
+        for (JsonNode i : activity.get("items")) {
+            if ("memberJoin".equals(i.get("kind").asText())) joinCard = i;
+        }
+        assertThat(joinCard).as("one collapsed memberJoin card").isNotNull();
+        assertThat(kinds(activity).stream().filter("memberJoin"::equals).count()).isEqualTo(1);
+        assertThat(joinCard.get("collapsedCount").asInt()).isEqualTo(2);
+        assertThat(joinCard.get("collapsedLabels")).isNotEmpty();
     }
 
     @Test

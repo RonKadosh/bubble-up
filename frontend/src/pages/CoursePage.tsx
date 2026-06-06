@@ -136,6 +136,13 @@ export default function CoursePage() {
                 joinedGroupIds={joinedGroupIds}
                 onJoin={handleJoin}
                 onOpenBubbles={() => navigate('/groups')}
+                onStartFirst={() => navigate('/groups', {
+                  state: {
+                    openCreate: true,
+                    courseId: state.course.id,
+                    deptId: state.course.departmentIds[0],
+                  },
+                })}
               />
             </>
           )}
@@ -247,6 +254,7 @@ function GroupsSection({
   joinedGroupIds,
   onJoin,
   onOpenBubbles,
+  onStartFirst,
 }: {
   groups: Group[]
   filters: GroupsByCourseFilters
@@ -254,6 +262,7 @@ function GroupsSection({
   joinedGroupIds: Set<string>
   onJoin: (groupId: string) => void
   onOpenBubbles: () => void
+  onStartFirst: () => void
 }) {
   const { t } = useTranslation()
   const filtersActive =
@@ -316,7 +325,7 @@ function GroupsSection({
       </div>
 
       {groups.length === 0 ? (
-        <GroupsEmpty filtered={filtersActive} />
+        <GroupsEmpty filtered={filtersActive} onStartFirst={onStartFirst} />
       ) : (
         <ul className="grid grid-cols-1 tablet:grid-cols-2 gap-3">
           {groups.map((g) => (
@@ -389,7 +398,7 @@ function VisibilityChip({ visibility }: { visibility: Visibility }) {
   )
 }
 
-function GroupsEmpty({ filtered }: { filtered: boolean }) {
+function GroupsEmpty({ filtered, onStartFirst }: { filtered: boolean; onStartFirst: () => void }) {
   const { t } = useTranslation()
   return (
     <Card size="lg" className="px-6 py-10 text-center flex flex-col items-center">
@@ -400,6 +409,13 @@ function GroupsEmpty({ filtered }: { filtered: boolean }) {
       <p className="mt-1 text-sm text-muted max-w-[42ch]">
         {filtered ? t('course.groups.emptyFiltered') : t('course.groups.emptyBody')}
       </p>
+      {/* Enrolled (this view is only reached when enrolled) → offer to start the
+          first Bubble. Hidden under an active filter, where "empty" just means no match. */}
+      {!filtered && (
+        <Button size="sm" className="mt-4" onClick={onStartFirst}>
+          {t('course.groups.startFirst')}
+        </Button>
+      )}
     </Card>
   )
 }

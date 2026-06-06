@@ -8,6 +8,8 @@ import com.ronkadosh.bubbleup.chat.application.PollQueryService;
 import com.ronkadosh.bubbleup.common.api.ApiPaths;
 import com.ronkadosh.bubbleup.common.api.ApiResponse;
 import com.ronkadosh.bubbleup.common.context.CurrentUserProvider;
+import com.ronkadosh.bubbleup.common.ratelimit.RateLimit;
+import com.ronkadosh.bubbleup.common.ratelimit.RateLimitScope;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -32,6 +34,7 @@ public class PollController {
 
     @PostMapping("/rooms/{roomId}/polls")
     @ResponseStatus(HttpStatus.CREATED)
+    @RateLimit(limit = 5, windowSeconds = 60, scope = RateLimitScope.PER_USER_PER_ROOM)
     public ApiResponse<PollResponse> createPoll(
             @PathVariable UUID roomId,
             @Valid @RequestBody CreatePollRequest request) {
@@ -46,6 +49,7 @@ public class PollController {
     }
 
     @PostMapping("/polls/{pollId}/vote")
+    @RateLimit(limit = 30, windowSeconds = 60, scope = RateLimitScope.PER_USER)
     public ApiResponse<PollResponse> vote(
             @PathVariable UUID pollId,
             @Valid @RequestBody VotePollRequest request) {

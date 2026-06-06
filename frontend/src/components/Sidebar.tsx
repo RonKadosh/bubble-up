@@ -1,17 +1,25 @@
-import { type ComponentType } from 'react'
+import { type ComponentType, useEffect } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../store/authStore'
 import { useThemeStore } from '../store/themeStore'
+import {
+  useOnboardingStore,
+  isNavUnlocked,
+  NAV_UNLOCK_AT,
+  type LockableFeature,
+} from '../store/onboardingStore'
 import { logout as logoutApi } from '../api/auth'
 import { PersistentVideo } from './PersistentVideo'
 import { QuizPrompt } from './QuizPrompt'
+import { OnboardingGuide } from './OnboardingGuide'
 import { UserProfileCard } from './UserProfileCard'
 import {
   BubbleLogo,
   BulbIcon,
   CapIcon,
   HelpIcon,
+  LockIcon,
   LogoutIcon,
   MoonIcon,
   PeopleIcon,
@@ -30,21 +38,45 @@ interface NavRowProps {
   label: string
   variant?: 'default' | 'danger'
   ariaLabel?: string
+  /** When set, the row is greyed + lock-badged and non-interactive (onboarding). */
+  locked?: boolean
+  lockedLabel?: string
 }
 
-function NavRow({ to, onClick, Icon, label, variant = 'default', ariaLabel }: NavRowProps) {
+function NavRow({ to, onClick, Icon, label, variant = 'default', ariaLabel, locked = false, lockedLabel }: NavRowProps) {
   const base =
     'group relative flex items-center justify-center w-11 h-11 mx-auto rounded-full transition-all bubble-pop'
   const danger = variant === 'danger'
 
+  const hoverLabel = (text: string) => (
+    <span className="pointer-events-none absolute start-full ms-2 z-50 whitespace-nowrap rounded-full bg-surface text-base px-2.5 py-1 text-xs font-medium border border-line shadow-themed opacity-0 group-hover:opacity-100 transition-opacity">
+      {text}
+    </span>
+  )
+
   const content = () => (
     <>
       <Icon className="w-5 h-5 shrink-0" />
-      <span className="pointer-events-none absolute start-full ms-2 z-50 whitespace-nowrap rounded-full bg-surface text-base px-2.5 py-1 text-xs font-medium border border-line shadow-themed opacity-0 group-hover:opacity-100 transition-opacity">
-        {label}
-      </span>
+      {hoverLabel(label)}
     </>
   )
+
+  // Locked (onboarding) — non-interactive, greyed, with a lock badge + "unlocks at" tooltip.
+  if (locked) {
+    return (
+      <div
+        aria-label={lockedLabel ?? label}
+        aria-disabled="true"
+        className={`${base} text-on-brand/40 cursor-not-allowed transition-opacity`}
+      >
+        <Icon className="w-5 h-5 shrink-0" />
+        <span className="absolute -bottom-1 -end-1 grid place-items-center w-4 h-4 rounded-full bg-surface text-secondary shadow-sm">
+          <LockIcon className="w-2.5 h-2.5" />
+        </span>
+        {hoverLabel(lockedLabel ?? label)}
+      </div>
+    )
+  }
 
   if (to) {
     return (
@@ -88,6 +120,16 @@ export default function Layout() {
   const theme = useThemeStore((s) => s.theme)
   const toggleTheme = useThemeStore((s) => s.toggle)
 
+  // Progressive feature unlocking: lockable nav greys out until the onboarding
+  // wizard reaches the level that unlocks it. Onboarded/loading → nothing locked.
+  const onbStatus = useOnboardingStore((s) => s.status)
+  const ensureOnboarding = useOnboardingStore((s) => s.ensureHydrated)
+  useEffect(() => { ensureOnboarding() }, [ensureOnboarding])
+  const lockProps = (feature: LockableFeature) =>
+    isNavUnlocked(feature, onbStatus)
+      ? {}
+      : { locked: true, lockedLabel: t('nav.locked', { n: NAV_UNLOCK_AT[feature] - 1 }) }
+
   async function handleLogout() {
     const rt = useAuthStore.getState().refreshToken
     if (rt) {
@@ -126,9 +168,9 @@ export default function Layout() {
         </div>
 
         <nav className="flex-1 flex flex-col gap-2 px-2 py-4">
-          <NavRow to="/groups" Icon={PeopleIcon} label={t('nav.myBubbles')} />
-          <NavRow to="/academy" Icon={CapIcon} label={t('nav.academy')} />
-          <NavRow to="/experts" Icon={BulbIcon} label={t('nav.experts')} />
+          <NavRow to="/groups" Icon={PeopleIcon} label={t('nav.myBubbles')} {...lockProps('bubbles')} />
+          <NavRow to="/academy" Icon={CapIcon} label={t('nav.academy')} {...lockProps('academy')} />
+          <NavRow to="/experts" Icon={BulbIcon} label={t('nav.experts')} {...lockProps('experts')} />
           {(me?.role === 'EXPERT' || me?.role === 'ADMIN') && (
             <NavRow to="/expert" Icon={CapIcon} label={t('expert.hubNav')} />
           )}
@@ -143,7 +185,7 @@ export default function Layout() {
             Icon={theme === 'dark' ? SunIcon : MoonIcon}
             label={theme === 'dark' ? t('nav.lightMode') : t('nav.darkMode')}
           />
-          <NavRow to="/settings" Icon={SettingsIcon} label={t('nav.settings')} />
+          <NavRow to="/settings" Icon={SettingsIcon} label={t('nav.settings')} {...lockProps('settings')} />
           <NavRow onClick={handleHelp} Icon={HelpIcon} label={t('nav.help')} />
           <NavRow onClick={handleReport} Icon={ReportIcon} label={t('nav.report')} />
           <NavRow onClick={handleLogout} Icon={LogoutIcon} label={t('nav.logout')} variant="danger" />
@@ -151,6 +193,7 @@ export default function Layout() {
       </aside>
 
       <main className="relative flex-1 min-h-0 flex flex-col overflow-hidden bg-surface rounded-[1.5rem] tablet:rounded-[2rem] shadow-themed border border-line">
+        <OnboardingGuide />
         <Outlet />
       </main>
       <PersistentVideo />

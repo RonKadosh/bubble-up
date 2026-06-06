@@ -45,6 +45,15 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> 
 
     long countByRoomId(UUID roomId);
 
+    /**
+     * Unread counters: only the given message types (see {@link ChatMessageType#CONTENT_TYPES})
+     * so SYSTEM_* notices never inflate an unread badge or the feed's unread rollup.
+     */
+    long countByRoomIdAndMessageTypeIn(UUID roomId, Collection<ChatMessageType> types);
+
+    long countByRoomIdAndSentAtGreaterThanAndMessageTypeIn(
+            UUID roomId, Instant after, Collection<ChatMessageType> types);
+
     /** Newest-first messages across a set of rooms. Used for feed unread-rollup ordering. */
     List<ChatMessage> findByRoomIdInOrderBySentAtDesc(Collection<UUID> roomIds, Pageable pageable);
 

@@ -27,6 +27,13 @@ class GroupsByCourseIT extends IntegrationTest {
         AuthedUser me = registerWithAffiliation();
         UUID courseId = seedCourseId();
 
+        // Enroll first — creating a bubble is now gated on enrollment in its course.
+        mvc.perform(post("/api/enrollments")
+                        .with(bearer(me))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(String.format("{\"courseId\":\"%s\"}", courseId)))
+                .andExpect(status().isCreated());
+
         // Create a group under this course (auto-attaches to current offering) so
         // the list is non-empty.
         String create = String.format(
@@ -36,13 +43,6 @@ class GroupsByCourseIT extends IntegrationTest {
                         .with(bearer(me))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(create))
-                .andExpect(status().isCreated());
-
-        // Enroll.
-        mvc.perform(post("/api/enrollments")
-                        .with(bearer(me))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(String.format("{\"courseId\":\"%s\"}", courseId)))
                 .andExpect(status().isCreated());
 
         // List by course succeeds and includes the group we just created.
@@ -67,6 +67,12 @@ class GroupsByCourseIT extends IntegrationTest {
     void search_filter_works() throws Exception {
         AuthedUser me = registerWithAffiliation();
         UUID courseId = seedCourseId();
+        // Enroll first — creating a bubble is now gated on enrollment in its course.
+        mvc.perform(post("/api/enrollments")
+                        .with(bearer(me))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(String.format("{\"courseId\":\"%s\"}", courseId)))
+                .andExpect(status().isCreated());
         // Create two groups with different names.
         mvc.perform(post("/api/groups")
                         .with(bearer(me))
@@ -81,11 +87,6 @@ class GroupsByCourseIT extends IntegrationTest {
                         .content(String.format(
                                 "{\"name\":\"Beta\",\"description\":\"\",\"visibility\":\"PUBLIC\",\"maxMembers\":6,\"courseId\":\"%s\"}",
                                 courseId)))
-                .andExpect(status().isCreated());
-        mvc.perform(post("/api/enrollments")
-                        .with(bearer(me))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(String.format("{\"courseId\":\"%s\"}", courseId)))
                 .andExpect(status().isCreated());
 
         mvc.perform(get("/api/groups/by-course/" + courseId + "?q=alph").with(bearer(me)))

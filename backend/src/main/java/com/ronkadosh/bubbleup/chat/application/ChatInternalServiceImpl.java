@@ -130,15 +130,18 @@ public class ChatInternalServiceImpl implements ChatInternalService {
     }
 
     private long unreadCount(UUID roomId, MessageReadCursor cursor, Map<UUID, ChatMessage> cursorMessagesById) {
+        // Only human-authored content counts as unread — SYSTEM_* join/leave/lifecycle
+        // notices are surfaced as activity, not unread chat (see ChatMessageType.CONTENT_TYPES).
         if (cursor == null) {
-            return chatMessageRepository.countByRoomId(roomId);
+            return chatMessageRepository.countByRoomIdAndMessageTypeIn(roomId, ChatMessageType.CONTENT_TYPES);
         }
         ChatMessage cursorMsg = cursorMessagesById.get(cursor.getLastReadMessageId());
         if (cursorMsg == null) {
             // Cursor points at a missing message — treat as no cursor.
-            return chatMessageRepository.countByRoomId(roomId);
+            return chatMessageRepository.countByRoomIdAndMessageTypeIn(roomId, ChatMessageType.CONTENT_TYPES);
         }
-        return chatMessageRepository.countByRoomIdAndSentAtGreaterThan(roomId, cursorMsg.getSentAt());
+        return chatMessageRepository.countByRoomIdAndSentAtGreaterThanAndMessageTypeIn(
+                roomId, cursorMsg.getSentAt(), ChatMessageType.CONTENT_TYPES);
     }
 
     @Override

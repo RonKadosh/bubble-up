@@ -14,7 +14,7 @@ class LinkMessageIT extends IntegrationTest {
 
     @Test
     void member_can_send_link_message_to_calendar_event() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         UUID roomId = defaultRoomId(owner);
         UUID eventId = UUID.randomUUID();   // backend doesn't validate the target; FE resolves.
@@ -36,7 +36,7 @@ class LinkMessageIT extends IntegrationTest {
     void link_with_nonexistent_target_id_still_accepted() throws Exception {
         // Locked decision: chat does not validate the target exists. FE renders "Link unavailable"
         // on resolver 404/403. This keeps chat decoupled from every future linkable module.
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         UUID roomId = defaultRoomId(owner);
 
@@ -52,7 +52,7 @@ class LinkMessageIT extends IntegrationTest {
 
     @Test
     void link_without_link_target_id_rejected() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         UUID roomId = defaultRoomId(owner);
 
@@ -66,7 +66,7 @@ class LinkMessageIT extends IntegrationTest {
 
     @Test
     void link_without_link_target_type_rejected() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         UUID roomId = defaultRoomId(owner);
 
@@ -81,7 +81,7 @@ class LinkMessageIT extends IntegrationTest {
 
     @Test
     void text_with_link_fields_rejected() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         UUID roomId = defaultRoomId(owner);
 
@@ -97,7 +97,7 @@ class LinkMessageIT extends IntegrationTest {
 
     @Test
     void system_message_type_cannot_be_sent_via_http() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         UUID roomId = defaultRoomId(owner);
 

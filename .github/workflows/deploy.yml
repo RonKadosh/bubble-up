@@ -1,17 +1,15 @@
 name: deploy
 
-# Runs after ci.yml finishes on a v*.*.* tag. ci.yml has already pushed the
-# images to GHCR; this workflow tells the EC2 box to pull them.
+# Runs after ci.yml finishes on a v*.*.* tag (or manually via workflow_dispatch).
+# Strategy: embed docker-compose.prod.yml + Caddyfile INLINE in the SSM payload
+# so the EC2 box never needs to fetch anything from a private GitHub repo. The
+# box only pulls images from GHCR (authenticated with a PAT stored in SSM).
 #
-# Inputs (configured in GitHub repo Settings → Secrets and variables → Actions):
-#   variables:
-#     AWS_REGION         e.g. us-east-1
-#     AWS_DEPLOY_ROLE_ARN  arn:aws:iam::<account>:role/bubbleup-github-deploy
-#     EC2_INSTANCE_ID    i-0abc...
-#     CADDY_DOMAIN       bubbleup.<eip-with-dashes>.nip.io
-#
-# Trigger: workflow_run after the 'ci' workflow concludes. We re-check that
-# the head_ref was a v* tag and that ci succeeded before doing anything.
+# GitHub repo Settings → Secrets and variables → Actions → Variables (set by infra/README.md):
+#   AWS_REGION              e.g. us-east-1
+#   AWS_DEPLOY_ROLE_ARN     arn:aws:iam::<acct>:role/bubbleup-github-deploy
+#   EC2_INSTANCE_ID         i-...
+#   CADDY_DOMAIN            bubbleup.<eip-with-dashes>.nip.io
 
 on:
   workflow_run:
@@ -20,7 +18,7 @@ on:
   workflow_dispatch:
     inputs:
       image_tag:
-        description: "Image tag to deploy (e.g. v0.1.0 or latest)"
+        description: "Image tag to deploy (e.g. 0.1.0 — without the leading v, or 'latest')"
         required: true
         default: "latest"
 
@@ -31,23 +29,36 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    # Only run when:
-    #  - manually dispatched, OR
-    #  - the source ci run was on a v*.*.* tag AND succeeded.
     if: >
       github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.conclusion == 'success' &&
        startsWith(github.event.workflow_run.head_branch, 'v'))
 
     steps:
-      - name: Resolve image tag
+      - uses: actions/checkout@v4
+        with:
+          # Check out the tag the CI run built; for manual dispatch, current ref.
+          ref: ${{ github.event.workflow_run.head_branch || github.ref }}
+
+      - name: Resolve image tag (strip leading v if present)
         id: tag
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "tag=${{ github.event.inputs.image_tag }}" >> "$GITHUB_OUTPUT"
+            RAW="${{ github.event.inputs.image_tag }}"
           else
-            echo "tag=${{ github.event.workflow_run.head_branch }}" >> "$GITHUB_OUTPUT"
+            RAW="${{ github.event.workflow_run.head_branch }}"
           fi
+          TAG="${RAW#v}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Resolved image tag: $TAG"
+
+      - name: Base64-encode compose + Caddyfile
+        id: files
+        run: |
+          COMPOSE_B64=$(base64 -w0 docker-compose.prod.yml)
+          CADDY_B64=$(base64 -w0 Caddyfile)
+          echo "compose_b64=$COMPOSE_B64" >> "$GITHUB_OUTPUT"
+          echo "caddy_b64=$CADDY_B64" >> "$GITHUB_OUTPUT"
 
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
@@ -61,19 +72,69 @@ jobs:
           IMAGE_TAG: ${{ steps.tag.outputs.tag }}
           CADDY_DOMAIN: ${{ vars.CADDY_DOMAIN }}
           INSTANCE_ID: ${{ vars.EC2_INSTANCE_ID }}
+          COMPOSE_B64: ${{ steps.files.outputs.compose_b64 }}
+          CADDY_B64: ${{ steps.files.outputs.caddy_b64 }}
         run: |
           set -euo pipefail
+
+          # Build the remote bootstrap script. Note: $ on the remote side needs
+          # escaping here — we use a single-quoted heredoc so nothing local
+          # expands, then string-replace the placeholders we DO want filled.
+          cat > /tmp/remote.sh <<'REMOTE'
+          set -e
+          mkdir -p /opt/bubbleup
+          echo "__COMPOSE_B64__" | base64 -d > /opt/bubbleup/docker-compose.prod.yml
+          echo "__CADDY_B64__"   | base64 -d > /opt/bubbleup/Caddyfile
+          cd /opt/bubbleup
+          get_param() {
+            aws ssm get-parameter --region "__REGION__" --name "/bubbleup/prod/$1" --with-decryption --query Parameter.Value --output text
+          }
+          GHCR_USER=$(aws ssm get-parameter --region "__REGION__" --name /bubbleup/prod/GHCR_USER --query Parameter.Value --output text)
+          GHCR_PAT=$(get_param GHCR_PAT)
+          echo "$GHCR_PAT" | docker login ghcr.io -u "$GHCR_USER" --password-stdin >/dev/null
+          DB_PASSWORD=$(get_param DB_PASSWORD)
+          JWT_SECRET=$(get_param JWT_SECRET)
+          APP_JITSI_APP_ID=$(get_param APP_JITSI_APP_ID)
+          APP_JITSI_KID=$(get_param APP_JITSI_KID)
+          APP_JITSI_PRIVATE_KEY_PEM=$(get_param APP_JITSI_PRIVATE_KEY_PEM)
+          umask 077
+          cat > /opt/bubbleup/.env <<ENV
+          IMAGE_TAG=__IMAGE_TAG__
+          CADDY_DOMAIN=__CADDY_DOMAIN__
+          CADDY_ACME_EMAIL=aamit@post.bgu.ac.il
+          DB_NAME=bubbleup
+          DB_USERNAME=bubbleup
+          DB_PASSWORD=${DB_PASSWORD}
+          JWT_SECRET=${JWT_SECRET}
+          JWT_ACCESS_EXPIRATION_MS=900000
+          REFRESH_TOKEN_EXPIRATION_MS=2592000000
+          APP_JITSI_APP_ID=${APP_JITSI_APP_ID}
+          APP_JITSI_KID=${APP_JITSI_KID}
+          APP_JITSI_PRIVATE_KEY_PEM=${APP_JITSI_PRIVATE_KEY_PEM}
+          APP_JITSI_SERVER_URL=https://8x8.vc
+          APP_JITSI_TOKEN_TTL=PT2H
+          ENV
+          docker compose -f docker-compose.prod.yml --env-file .env pull
+          docker compose -f docker-compose.prod.yml --env-file .env up -d
+          docker image prune -af --filter "until=72h" || true
+          sleep 5
+          docker ps --format 'table {{.Names}}\t{{.Status}}'
+          REMOTE
+
+          sed -i "s|__COMPOSE_B64__|$COMPOSE_B64|g" /tmp/remote.sh
+          sed -i "s|__CADDY_B64__|$CADDY_B64|g" /tmp/remote.sh
+          sed -i "s|__IMAGE_TAG__|$IMAGE_TAG|g" /tmp/remote.sh
+          sed -i "s|__CADDY_DOMAIN__|$CADDY_DOMAIN|g" /tmp/remote.sh
+          sed -i "s|__REGION__|${{ vars.AWS_REGION }}|g" /tmp/remote.sh
+
+          # Build SSM parameters JSON from the script
+          jq -Rs '{commands: [.]}' /tmp/remote.sh > /tmp/params.json
+
           CMD_ID=$(aws ssm send-command \
             --instance-ids "$INSTANCE_ID" \
             --document-name "AWS-RunShellScript" \
             --comment "deploy bubbleup ${IMAGE_TAG}" \
-            --parameters commands="[
-              \"export IMAGE_TAG=${IMAGE_TAG}\",
-              \"export CADDY_DOMAIN=${CADDY_DOMAIN}\",
-              \"export GIT_REF=${IMAGE_TAG}\",
-              \"/opt/bubbleup/deploy.sh\"
-            ]" \
-            --cloud-watch-output-config CloudWatchOutputEnabled=false \
+            --parameters file:///tmp/params.json \
             --query Command.CommandId \
             --output text)
           echo "cmd_id=$CMD_ID" >> "$GITHUB_OUTPUT"
@@ -85,7 +146,7 @@ jobs:
           INSTANCE_ID: ${{ vars.EC2_INSTANCE_ID }}
         run: |
           set -euo pipefail
-          for i in $(seq 1 60); do
+          for i in $(seq 1 90); do
             STATUS=$(aws ssm get-command-invocation \
               --command-id "$CMD_ID" \
               --instance-id "$INSTANCE_ID" \
@@ -96,11 +157,6 @@ jobs:
               Success) exit 0 ;;
               Cancelled|TimedOut|Failed)
                 echo "SSM command failed: $STATUS"
-                aws ssm get-command-invocation \
-                  --command-id "$CMD_ID" \
-                  --instance-id "$INSTANCE_ID" \
-                  --query "{stdout: StandardOutputContent, stderr: StandardErrorContent}" \
-                  --output json
                 exit 1 ;;
             esac
             sleep 10

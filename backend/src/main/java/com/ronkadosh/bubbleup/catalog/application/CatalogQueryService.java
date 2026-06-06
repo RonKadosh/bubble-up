@@ -9,6 +9,7 @@ import com.ronkadosh.bubbleup.catalog.internal.CatalogInternalService;
 import com.ronkadosh.bubbleup.catalog.model.Course;
 import com.ronkadosh.bubbleup.catalog.model.CourseDepartment;
 import com.ronkadosh.bubbleup.catalog.model.CourseOffering;
+import com.ronkadosh.bubbleup.catalog.model.Term;
 import com.ronkadosh.bubbleup.catalog.persistence.CourseDepartmentRepository;
 import com.ronkadosh.bubbleup.catalog.persistence.CourseOfferingRepository;
 import com.ronkadosh.bubbleup.catalog.persistence.CourseRepository;
@@ -23,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -114,14 +116,21 @@ public class CatalogQueryService {
 
     @Transactional(readOnly = true)
     public List<OfferingSummary> listOfferingsForCourse(UUID courseId) {
-        if (!courseRepository.existsById(courseId)) {
-            throw new AppException(ErrorCode.COURSE_NOT_FOUND);
-        }
-        return courseOfferingRepository.findAllByCourseId(courseId).stream()
-                .map(CourseOffering::getId)
-                .map(catalogInternalService::getOfferingRef)
-                .flatMap(java.util.Optional::stream)
-                .map(OfferingSummary::from)
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_FOUND));
+        List<CourseOffering> offerings = courseOfferingRepository.findAllByCourseId(courseId);
+        if (offerings.isEmpty()) return List.of();
+        // One course (the same for every offering) + one batched term lookup, instead of
+        // re-fetching the offering, its course, and its term per row via getOfferingRef.
+        List<UUID> termIds = offerings.stream().map(CourseOffering::getTermId).distinct().toList();
+        Map<UUID, Term> termsById = termRepository.findAllById(termIds).stream()
+                .collect(Collectors.toMap(Term::getId, t -> t));
+        return offerings.stream()
+                .map(o -> {
+                    Term term = termsById.get(o.getTermId());
+                    return term == null ? null : OfferingSummary.from(o, course, term);
+                })
+                .filter(Objects::nonNull)
                 .toList();
     }
 
@@ -147,8 +156,7 @@ public class CatalogQueryService {
     }
 
     private Map<UUID, List<UUID>> deptsByCourseFor(List<UUID> courseIds) {
-        return courseIds.stream()
-                .flatMap(cid -> courseDepartmentRepository.findAllByCourseId(cid).stream())
+        return courseDepartmentRepository.findAllByCourseIdIn(courseIds).stream()
                 .collect(Collectors.groupingBy(
                         CourseDepartment::getCourseId,
                         Collectors.mapping(CourseDepartment::getDepartmentId, Collectors.toList())

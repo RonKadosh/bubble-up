@@ -5,6 +5,7 @@ import { useUserCardStore } from '../store/userCardStore'
 import { useAuthStore } from '../store/authStore'
 import { UserProfile, getUserProfile } from '../api/users'
 import { errorCode } from '../api/errors'
+import { formatDate } from '../i18n/datetime'
 import { Avatar } from './Avatar'
 import { Button } from './Button'
 
@@ -53,16 +54,10 @@ export function UserProfileCard() {
     return () => window.removeEventListener('keydown', onKey)
   }, [userId, close])
 
-  const joinedLabel = useMemo(() => {
-    if (!profile?.createdAt) return ''
-    try {
-      return new Date(profile.createdAt).toLocaleDateString(i18n.language, {
-        year: 'numeric', month: 'short', day: 'numeric',
-      })
-    } catch {
-      return profile.createdAt
-    }
-  }, [profile?.createdAt, i18n.language])
+  const joinedLabel = useMemo(
+    () => (profile?.createdAt ? formatDate(profile.createdAt, { year: 'numeric', month: 'short', day: 'numeric' }) : ''),
+    [profile?.createdAt, i18n.language],
+  )
 
   if (!userId) return null
 

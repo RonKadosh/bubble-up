@@ -14,7 +14,7 @@ class GroupCommandIT extends IntegrationTest {
 
     @Test
     void create_public_group_defaults_to_PUBLIC_and_count_1() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         mvc.perform(post("/api/groups")
                         .with(bearer(owner))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -28,7 +28,7 @@ class GroupCommandIT extends IntegrationTest {
 
     @Test
     void create_group_exposes_chosen_maxMembers() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         mvc.perform(post("/api/groups")
                         .with(bearer(owner))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -39,7 +39,7 @@ class GroupCommandIT extends IntegrationTest {
 
     @Test
     void create_group_with_maxMembers_below_min_is_rejected() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         mvc.perform(post("/api/groups")
                         .with(bearer(owner))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -50,7 +50,7 @@ class GroupCommandIT extends IntegrationTest {
 
     @Test
     void create_group_with_maxMembers_above_max_is_rejected() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         mvc.perform(post("/api/groups")
                         .with(bearer(owner))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -61,7 +61,7 @@ class GroupCommandIT extends IntegrationTest {
 
     @Test
     void create_private_group_respects_visibility() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         mvc.perform(post("/api/groups")
                         .with(bearer(owner))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -71,8 +71,20 @@ class GroupCommandIT extends IntegrationTest {
     }
 
     @Test
+    void create_group_when_not_enrolled_is_rejected() throws Exception {
+        // Affiliated but NOT enrolled in the seed offering's course.
+        AuthedUser u = registerWithAffiliation();
+        mvc.perform(post("/api/groups")
+                        .with(bearer(u))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"NoEnroll\",\"maxMembers\":6,\"offeringId\":\"" + seedOfferingId() + "\"}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("NOT_ENROLLED_IN_COURSE"));
+    }
+
+    @Test
     void get_by_id_returns_group() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner, "Calc", "PUBLIC");
         mvc.perform(get("/api/groups/{id}", groupId).with(bearer(owner)))
                 .andExpect(status().isOk())
@@ -82,7 +94,7 @@ class GroupCommandIT extends IntegrationTest {
 
     @Test
     void get_by_id_not_found_returns_404() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         mvc.perform(get("/api/groups/{id}", UUID.randomUUID()).with(bearer(owner)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error.code").value("GROUP_NOT_FOUND"));
@@ -90,7 +102,7 @@ class GroupCommandIT extends IntegrationTest {
 
     @Test
     void update_changes_name_and_visibility() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner, "Old", "PUBLIC");
         mvc.perform(patch("/api/groups/{id}", groupId)
                         .with(bearer(owner))
@@ -103,8 +115,8 @@ class GroupCommandIT extends IntegrationTest {
 
     @Test
     void update_by_non_owner_rejected() throws Exception {
-        AuthedUser owner = registerAndLogin();
-        AuthedUser other = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
+        AuthedUser other = registerEnrolled();
         UUID groupId = createGroup(owner, "Mine", "PUBLIC");
         mvc.perform(patch("/api/groups/{id}", groupId)
                         .with(bearer(other))
@@ -116,7 +128,7 @@ class GroupCommandIT extends IntegrationTest {
 
     @Test
     void delete_empty_group_succeeds() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner, "Solo", "PUBLIC");
         mvc.perform(delete("/api/groups/{id}", groupId).with(bearer(owner)))
                 .andExpect(status().isOk());
@@ -126,7 +138,7 @@ class GroupCommandIT extends IntegrationTest {
 
     @Test
     void create_group_auto_creates_default_chat_room() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner, "Algebra", "PUBLIC");
         mvc.perform(get("/api/chat/rooms").with(bearer(owner)))
                 .andExpect(status().isOk())
@@ -137,8 +149,8 @@ class GroupCommandIT extends IntegrationTest {
 
     @Test
     void delete_non_empty_group_rejected() throws Exception {
-        AuthedUser owner = registerAndLogin();
-        AuthedUser joiner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
+        AuthedUser joiner = registerEnrolled();
         UUID groupId = createGroup(owner, "Crowd", "PUBLIC");
         mvc.perform(post("/api/groups/{id}/join", groupId).with(bearer(joiner)))
                 .andExpect(status().isOk());

@@ -53,6 +53,16 @@ export interface FeedItem {
   displayMode?: 'MATCHED' | 'TRENDING'
   /** Trending reason codes (TRENDING_ACTIVE | _GROWING | _POPULAR | _UPCOMING), localized client-side. */
   reasonLabels?: string[]
+  /** Discovery: which course a recommended Bubble belongs to (shown on the card + preview). */
+  courseCode?: string
+  courseName?: string
+  /**
+   * Collapsed rollup (memberJoin / memberLeave / file). `collapsedLabels` is the lead
+   * items (resolved actor names or file names, capped ~3); `collapsedCount` is the total
+   * distinct count. `collapsedCount > collapsedLabels.length` → render "+N others/more".
+   */
+  collapsedLabels?: string[]
+  collapsedCount?: number
   cta?: FeedCta
 }
 

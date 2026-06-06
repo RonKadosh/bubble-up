@@ -9,6 +9,8 @@ import com.ronkadosh.bubbleup.expert.api.dto.EnrollGroupRequest;
 import com.ronkadosh.bubbleup.expert.api.dto.ExpertSessionParticipantResponse;
 import com.ronkadosh.bubbleup.expert.api.dto.ExpertSessionResponse;
 import com.ronkadosh.bubbleup.expert.api.dto.GrantWhiteboardWriteRequest;
+import com.ronkadosh.bubbleup.common.ratelimit.RateLimit;
+import com.ronkadosh.bubbleup.common.ratelimit.RateLimitScope;
 import com.ronkadosh.bubbleup.expert.application.ExpertSessionCommandService;
 import com.ronkadosh.bubbleup.expert.application.ExpertSessionQueryService;
 import jakarta.validation.Valid;
@@ -37,6 +39,7 @@ public class ExpertSessionController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @RateLimit(limit = 20, windowSeconds = 60, scope = RateLimitScope.PER_USER)
     public ApiResponse<ExpertSessionResponse> create(@Valid @RequestBody CreateExpertSessionRequest request) {
         CurrentUser me = currentUserProvider.get();
         return ApiResponse.success(commands.createSession(me.id(), request));
@@ -88,6 +91,7 @@ public class ExpertSessionController {
 
     @PostMapping("/{id}/enroll")
     @ResponseStatus(HttpStatus.CREATED)
+    @RateLimit(limit = 20, windowSeconds = 60, scope = RateLimitScope.PER_USER)
     public ApiResponse<Void> enroll(@PathVariable UUID id, @Valid @RequestBody EnrollGroupRequest request) {
         CurrentUser me = currentUserProvider.get();
         commands.enrollGroup(id, request.groupId(), me.id());

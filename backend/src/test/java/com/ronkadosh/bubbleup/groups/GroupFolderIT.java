@@ -19,7 +19,7 @@ class GroupFolderIT extends IntegrationTest {
 
     @Test
     void member_can_create_and_list_folders() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
 
         mvc.perform(post("/api/groups/{id}/folders", groupId)
@@ -38,7 +38,7 @@ class GroupFolderIT extends IntegrationTest {
 
     @Test
     void create_folder_duplicate_sibling_name_409() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         createFolder(owner, groupId, "Lectures", null);
 
@@ -52,7 +52,7 @@ class GroupFolderIT extends IntegrationTest {
 
     @Test
     void create_folder_invalid_name_rejected() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
 
         mvc.perform(post("/api/groups/{id}/folders", groupId)
@@ -65,7 +65,7 @@ class GroupFolderIT extends IntegrationTest {
 
     @Test
     void create_subfolder_inside_parent() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         UUID parentId = createFolder(owner, groupId, "Year 1", null);
 
@@ -79,7 +79,7 @@ class GroupFolderIT extends IntegrationTest {
 
     @Test
     void upload_to_folder_succeeds() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         UUID folderId = createFolder(owner, groupId, "Lectures", null);
         MockMultipartFile file = new MockMultipartFile(
@@ -110,7 +110,7 @@ class GroupFolderIT extends IntegrationTest {
 
     @Test
     void upload_to_folder_from_other_group_404() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         UUID otherGroupId = createGroup(owner);
         UUID foreignFolderId = createFolder(owner, otherGroupId, "Lectures", null);
@@ -127,7 +127,7 @@ class GroupFolderIT extends IntegrationTest {
 
     @Test
     void delete_empty_folder_succeeds() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         UUID folderId = createFolder(owner, groupId, "ToDelete", null);
 
@@ -140,7 +140,7 @@ class GroupFolderIT extends IntegrationTest {
 
     @Test
     void delete_folder_with_file_409_NOT_EMPTY() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         UUID folderId = createFolder(owner, groupId, "Lectures", null);
         MockMultipartFile file = new MockMultipartFile(
@@ -158,7 +158,7 @@ class GroupFolderIT extends IntegrationTest {
 
     @Test
     void delete_folder_with_subfolder_409_NOT_EMPTY() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         UUID parentId = createFolder(owner, groupId, "Year 1", null);
         createFolder(owner, groupId, "Week 1", parentId);
@@ -170,12 +170,12 @@ class GroupFolderIT extends IntegrationTest {
 
     @Test
     void non_creator_non_owner_cannot_delete() throws Exception {
-        AuthedUser owner = registerAndLogin();
-        AuthedUser member = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
+        AuthedUser member = registerEnrolled();
         UUID groupId = createGroup(owner);
         joinGroup(member, groupId);
         UUID folderId = createFolder(member, groupId, "Mine", null);
-        AuthedUser other = registerAndLogin();
+        AuthedUser other = registerEnrolled();
         joinGroup(other, groupId);
 
         mvc.perform(delete("/api/groups/{id}/folders/{fid}", groupId, folderId).with(bearer(other)))
@@ -185,8 +185,8 @@ class GroupFolderIT extends IntegrationTest {
 
     @Test
     void non_member_cannot_list_or_create() throws Exception {
-        AuthedUser owner = registerAndLogin();
-        AuthedUser outsider = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
+        AuthedUser outsider = registerEnrolled();
         UUID groupId = createGroup(owner);
 
         mvc.perform(get("/api/groups/{id}/folders", groupId).with(bearer(outsider)))
@@ -203,7 +203,7 @@ class GroupFolderIT extends IntegrationTest {
 
     @Test
     void download_inline_disposition_uses_inline_header() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         UUID fileId = uploadFile(owner, groupId, "doc.pdf", "application/pdf", "%PDF".getBytes());
 
@@ -216,7 +216,7 @@ class GroupFolderIT extends IntegrationTest {
 
     @Test
     void file_metadata_one_shot_endpoint() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         UUID fileId = uploadFile(owner, groupId, "n.txt", "text/plain", "x".getBytes());
 

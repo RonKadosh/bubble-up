@@ -3,6 +3,7 @@ package com.ronkadosh.bubbleup.matching.application;
 import com.ronkadosh.bubbleup.matching.api.dto.RecommendationsResponse;
 import com.ronkadosh.bubbleup.matching.internal.MatchingInternalService;
 import com.ronkadosh.bubbleup.matching.internal.dto.GroupRecommendation;
+import com.ronkadosh.bubbleup.matching.internal.dto.MatchingReliability;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -22,11 +23,18 @@ public class MatchingInternalServiceImpl implements MatchingInternalService {
                 .map(g -> new GroupRecommendation(
                         g.groupId(),
                         g.groupName(),
+                        g.courseCode(),
+                        g.courseName(),
                         g.matchPercent(),
                         g.memberCount(),
                         g.alreadyMember(),
                         g.displayMode(),
                         g.reasonLabels()))
                 .toList();
+    }
+
+    @Override
+    public MatchingReliability getReliability(UUID userId) {
+        return queryService.getReliability(userId);
     }
 }

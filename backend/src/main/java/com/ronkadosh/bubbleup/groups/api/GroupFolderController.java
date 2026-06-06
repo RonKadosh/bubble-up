@@ -3,6 +3,8 @@ package com.ronkadosh.bubbleup.groups.api;
 import com.ronkadosh.bubbleup.common.api.ApiPaths;
 import com.ronkadosh.bubbleup.common.api.ApiResponse;
 import com.ronkadosh.bubbleup.common.context.CurrentUserProvider;
+import com.ronkadosh.bubbleup.common.ratelimit.RateLimit;
+import com.ronkadosh.bubbleup.common.ratelimit.RateLimitScope;
 import com.ronkadosh.bubbleup.groups.api.dto.CreateFolderRequest;
 import com.ronkadosh.bubbleup.groups.api.dto.GroupFolderResponse;
 import com.ronkadosh.bubbleup.groups.application.GroupFolderCommandService;
@@ -26,6 +28,7 @@ public class GroupFolderController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @RateLimit(limit = 20, windowSeconds = 60, scope = RateLimitScope.PER_USER_PER_GROUP)
     public ApiResponse<GroupFolderResponse> create(
             @PathVariable UUID groupId,
             @Valid @RequestBody CreateFolderRequest req

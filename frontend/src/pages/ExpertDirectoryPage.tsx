@@ -14,6 +14,8 @@ import { useAuthStore } from '../store/authStore'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
 import { Avatar } from '../components/Avatar'
+import { PageHeader, PageWidth, SectionLabel } from '../components/PageHeader'
+import { formatClock, formatDateTime } from '../i18n/datetime'
 
 /**
  * `/experts` — directory + open-sessions browse view.
@@ -66,21 +68,20 @@ export default function ExpertDirectoryPage() {
   }, [experts, query])
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 sm:p-8">
-      <div className="max-w-4xl mx-auto space-y-8">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-3">
-            <div className="w-2.5 h-2.5 rounded-full bg-bubble-magenta shadow-sm" />
-            <div className="w-1.5 h-1.5 rounded-full bg-bubble-green" />
-            <h1 className="text-2xl font-bold text-base">{t('expert.directory.title')}</h1>
-          </div>
-          <Link to="/become-expert" className="text-sm text-link underline">
-            {t('expert.directory.becomeLink')}
-          </Link>
-        </div>
+    <div className="flex-1 overflow-y-auto">
+      <PageWidth className="py-6 tablet:py-8 space-y-8">
+        <PageHeader
+          title={t('expert.directory.title')}
+          subtitle={t('expert.directory.subtitle')}
+          actions={
+            <Link to="/become-expert" className="text-sm text-link underline">
+              {t('expert.directory.becomeLink')}
+            </Link>
+          }
+        />
 
         <section>
-          <h2 className="text-lg font-bold text-base mb-3">{t('expert.directory.openSessionsHeading')}</h2>
+          <SectionLabel className="mb-3">{t('expert.directory.openSessionsHeading')}</SectionLabel>
           {loading ? (
             <p className="text-sm text-muted">{t('common.loading')}</p>
           ) : sessions.length === 0 ? (
@@ -100,20 +101,20 @@ export default function ExpertDirectoryPage() {
         </section>
 
         <section>
-          <h2 className="text-lg font-bold text-base mb-3">{t('expert.directory.expertsHeading')}</h2>
+          <SectionLabel className="mb-3">{t('expert.directory.expertsHeading')}</SectionLabel>
           <input
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t('expert.directory.searchPlaceholder')}
-            className="w-full border border-line bg-base text-base rounded-lg px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="w-full border border-line bg-surface text-base rounded-xl px-3 py-2 mb-4 focus:outline-none focus:border-primary-400"
           />
           {loading ? (
             <p className="text-sm text-muted">{t('common.loading')}</p>
           ) : filteredExperts.length === 0 ? (
             <p className="text-sm text-muted">{t('expert.directory.noMatches')}</p>
           ) : (
-            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <ul className="grid grid-cols-1 tablet:grid-cols-2 gap-3">
               {filteredExperts.map((e) => (
                 <li key={e.id}>
                   <Link to={`/experts/${e.userId}`} className="block h-full">
@@ -146,7 +147,7 @@ export default function ExpertDirectoryPage() {
             </ul>
           )}
         </section>
-      </div>
+      </PageWidth>
     </div>
   )
 }
@@ -187,7 +188,7 @@ function OpenSessionCard({ session, ownedGroups, onEnrolled }: OpenSessionCardPr
   }
 
   const timeLabel = session.startsAt
-    ? `${new Date(session.startsAt).toLocaleString()} → ${session.endsAt ? new Date(session.endsAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}`
+    ? `${formatDateTime(session.startsAt)} → ${session.endsAt ? formatClock(session.endsAt) : ''}`
     : ''
 
   return (

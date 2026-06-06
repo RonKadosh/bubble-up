@@ -6,6 +6,7 @@ import com.ronkadosh.bubbleup.chat.api.dto.ChatMessageResponse;
 import com.ronkadosh.bubbleup.chat.api.dto.ChatRoomResponse;
 import com.ronkadosh.bubbleup.chat.internal.ChatInternalService;
 import com.ronkadosh.bubbleup.chat.model.ChatMessage;
+import com.ronkadosh.bubbleup.chat.model.ChatMessageType;
 import com.ronkadosh.bubbleup.chat.model.ChatRoom;
 import com.ronkadosh.bubbleup.chat.model.MessageReadCursor;
 import com.ronkadosh.bubbleup.chat.persistence.ChatMessageRepository;
@@ -71,16 +72,20 @@ public class ChatQueryService {
                 .map(r -> {
                     MessageReadCursor cursor = cursorsByRoom.get(r.getId());
                     long unread;
+                    // Only human-authored content counts as unread — SYSTEM_* notices are
+                    // rendered inline, never as an unread badge (see ChatMessageType.CONTENT_TYPES).
                     if (cursor == null) {
-                        unread = chatMessageRepository.countByRoomId(r.getId());
+                        unread = chatMessageRepository.countByRoomIdAndMessageTypeIn(
+                                r.getId(), ChatMessageType.CONTENT_TYPES);
                     } else {
                         ChatMessage cursorMsg = cursorMessagesById.get(cursor.getLastReadMessageId());
                         if (cursorMsg == null) {
                             // Cursor points at a missing message — treat as no cursor.
-                            unread = chatMessageRepository.countByRoomId(r.getId());
+                            unread = chatMessageRepository.countByRoomIdAndMessageTypeIn(
+                                    r.getId(), ChatMessageType.CONTENT_TYPES);
                         } else {
-                            unread = chatMessageRepository.countByRoomIdAndSentAtGreaterThan(
-                                    r.getId(), cursorMsg.getSentAt());
+                            unread = chatMessageRepository.countByRoomIdAndSentAtGreaterThanAndMessageTypeIn(
+                                    r.getId(), cursorMsg.getSentAt(), ChatMessageType.CONTENT_TYPES);
                         }
                     }
                     return ChatRoomResponse.from(r, unread);

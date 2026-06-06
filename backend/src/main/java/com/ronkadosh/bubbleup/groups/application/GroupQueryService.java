@@ -22,6 +22,9 @@ import com.ronkadosh.bubbleup.groups.model.StudyGroup;
 import com.ronkadosh.bubbleup.groups.persistence.GroupMemberRepository;
 import com.ronkadosh.bubbleup.groups.persistence.GroupRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -191,6 +194,45 @@ public class GroupQueryService {
                 .filter(g -> !joinedOnly || joinedGroupIds.contains(g.getId()))
                 .toList();
         return mapToResponses(filtered);
+    }
+
+    /**
+     * Public, not-yet-joined bubbles across the caller's current-term enrolled
+     * courses — powers the onboarding "Find a Bubble" step. Returns empty (never
+     * throws) when there's no affiliation / current term / enrolment, so the
+     * caller can simply offer "create the first one" instead.
+     */
+    @Transactional(readOnly = true)
+    public List<GroupResponse> getDiscoverableForMyCourses(UUID userId) {
+        UserProfile profile = authInternalService.getProfile(userId).orElse(null);
+        if (profile == null || profile.universityId() == null) return List.of();
+
+        UUID termId = catalogInternalService.currentTermFor(profile.universityId())
+                .map(TermRef::id)
+                .orElse(null);
+        if (termId == null) return List.of();
+
+        List<UUID> courseIds = enrollmentInternalService.enrolledCourseIdsForCurrentTerm(userId);
+        if (courseIds.isEmpty()) return List.of();
+
+        Set<UUID> offeringIds = new HashSet<>();
+        for (UUID courseId : courseIds) {
+            catalogInternalService.offeringIdForCourseAndTerm(courseId, termId).ifPresent(offeringIds::add);
+        }
+        if (offeringIds.isEmpty()) return List.of();
+
+        Set<UUID> joinedGroupIds = memberRepository.findAllByUserId(userId).stream()
+                .map(GroupMember::getGroupId)
+                .collect(java.util.stream.Collectors.toSet());
+
+        // Newest bubbles first — fresh ones surface ahead of the 50-item cap.
+        Pageable cap = PageRequest.of(0, 50, Sort.by(Sort.Direction.DESC, "createdAt"));
+        List<StudyGroup> groups = joinedGroupIds.isEmpty()
+                ? groupRepository.findByOfferingIdInAndVisibilityAndStatus(
+                        offeringIds, GroupVisibility.PUBLIC, GroupStatus.ACTIVE, cap)
+                : groupRepository.findByOfferingIdInAndVisibilityAndStatusAndIdNotIn(
+                        offeringIds, GroupVisibility.PUBLIC, GroupStatus.ACTIVE, joinedGroupIds, cap);
+        return mapToResponses(groups);
     }
 
     @Transactional(readOnly = true)

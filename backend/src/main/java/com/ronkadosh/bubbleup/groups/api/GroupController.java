@@ -5,6 +5,8 @@ import com.ronkadosh.bubbleup.common.api.ApiPaths;
 import com.ronkadosh.bubbleup.common.api.ApiResponse;
 import com.ronkadosh.bubbleup.common.context.CurrentUser;
 import com.ronkadosh.bubbleup.common.context.CurrentUserProvider;
+import com.ronkadosh.bubbleup.common.ratelimit.RateLimit;
+import com.ronkadosh.bubbleup.common.ratelimit.RateLimitScope;
 import com.ronkadosh.bubbleup.groups.api.dto.AddMemberRequest;
 import com.ronkadosh.bubbleup.groups.api.dto.CreateGroupRequest;
 import com.ronkadosh.bubbleup.groups.api.dto.GroupMemberResponse;
@@ -85,6 +87,17 @@ public class GroupController {
                 me.id(), includeOtherDepartments, includeOtherUniversities, termIdOverride));
     }
 
+    /**
+     * Public, not-yet-joined bubbles across the caller's current-term enrolled
+     * courses — the onboarding "Find a Bubble" step. Empty (not an error) when the
+     * user has no affiliation / current term / enrolment.
+     */
+    @GetMapping("/discoverable")
+    public ApiResponse<List<GroupResponse>> listDiscoverable() {
+        CurrentUser me = currentUserProvider.get();
+        return ApiResponse.success(queries.getDiscoverableForMyCourses(me.id()));
+    }
+
     @GetMapping("/{id}")
     public ApiResponse<GroupResponse> getById(@PathVariable UUID id) {
         return ApiResponse.success(queries.getGroupById(id));
@@ -92,12 +105,14 @@ public class GroupController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @RateLimit(limit = 10, windowSeconds = 60, scope = RateLimitScope.PER_USER)
     public ApiResponse<GroupResponse> create(@Valid @RequestBody CreateGroupRequest request) {
         CurrentUser me = currentUserProvider.get();
         return ApiResponse.success(commands.createGroup(request, me.id()));
     }
 
     @PatchMapping("/{id}")
+    @RateLimit(limit = 20, windowSeconds = 60, scope = RateLimitScope.PER_USER_PER_GROUP)
     public ApiResponse<GroupResponse> update(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateGroupRequest request
@@ -120,6 +135,7 @@ public class GroupController {
     }
 
     @PostMapping("/{id}/join")
+    @RateLimit(limit = 15, windowSeconds = 60, scope = RateLimitScope.PER_USER)
     public ApiResponse<GroupMemberResponse> join(@PathVariable UUID id) {
         CurrentUser me = currentUserProvider.get();
         return ApiResponse.success(commands.joinGroup(id, me.id()));
@@ -127,6 +143,7 @@ public class GroupController {
 
     @PostMapping("/{id}/members")
     @ResponseStatus(HttpStatus.CREATED)
+    @RateLimit(limit = 20, windowSeconds = 60, scope = RateLimitScope.PER_USER_PER_GROUP)
     public ApiResponse<GroupMemberResponse> addMember(
             @PathVariable UUID id,
             @Valid @RequestBody AddMemberRequest request
@@ -136,6 +153,7 @@ public class GroupController {
     }
 
     @DeleteMapping("/{id}/members/me")
+    @RateLimit(limit = 15, windowSeconds = 60, scope = RateLimitScope.PER_USER)
     public ApiResponse<Void> leave(@PathVariable UUID id) {
         CurrentUser me = currentUserProvider.get();
         commands.leaveGroup(id, me.id());

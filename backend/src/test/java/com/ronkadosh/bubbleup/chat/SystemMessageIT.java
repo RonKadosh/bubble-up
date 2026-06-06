@@ -14,8 +14,8 @@ class SystemMessageIT extends IntegrationTest {
 
     @Test
     void join_emits_system_join_in_default_room() throws Exception {
-        AuthedUser owner = registerAndLogin();
-        AuthedUser joiner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
+        AuthedUser joiner = registerEnrolled();
         UUID groupId = createGroup(owner, "PUBLIC");
         UUID defaultRoomId = defaultRoomId(owner);
 
@@ -33,8 +33,8 @@ class SystemMessageIT extends IntegrationTest {
 
     @Test
     void leave_emits_system_leave() throws Exception {
-        AuthedUser owner = registerAndLogin();
-        AuthedUser joiner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
+        AuthedUser joiner = registerEnrolled();
         UUID groupId = createGroup(owner, "PUBLIC");
         UUID defaultRoomId = defaultRoomId(owner);
 
@@ -54,7 +54,7 @@ class SystemMessageIT extends IntegrationTest {
 
     @Test
     void owner_create_does_not_emit_system_message() throws Exception {
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         createGroup(owner, "PUBLIC");
         UUID defaultRoomId = defaultRoomId(owner);
 
@@ -68,7 +68,7 @@ class SystemMessageIT extends IntegrationTest {
         // Owner is the only member; leaving cascades the delete. The plan calls out that
         // the cascade branch deliberately skips posting a SYSTEM_LEAVE (room is going away
         // anyway). Easiest assertion: no exception, group is gone, rooms list is empty.
-        AuthedUser owner = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner, "PUBLIC");
 
         mvc.perform(delete("/api/groups/{id}/members/me", groupId).with(bearer(owner)))
@@ -83,8 +83,8 @@ class SystemMessageIT extends IntegrationTest {
     void owner_add_member_does_not_emit_join() throws Exception {
         // Owner-initiated add is not the same as a self-join; the plan intentionally
         // skips system messages for add (and kick/transfer/rename/visibility-change).
-        AuthedUser owner = registerAndLogin();
-        AuthedUser invitee = registerAndLogin();
+        AuthedUser owner = registerEnrolled();
+        AuthedUser invitee = registerEnrolled();
         UUID groupId = createGroup(owner, "PRIVATE");
         UUID defaultRoomId = defaultRoomId(owner);
 

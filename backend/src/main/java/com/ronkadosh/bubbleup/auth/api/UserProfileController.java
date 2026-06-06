@@ -11,6 +11,8 @@ import com.ronkadosh.bubbleup.common.context.CurrentUser;
 import com.ronkadosh.bubbleup.common.context.CurrentUserProvider;
 import com.ronkadosh.bubbleup.common.error.AppException;
 import com.ronkadosh.bubbleup.common.error.ErrorCode;
+import com.ronkadosh.bubbleup.common.ratelimit.RateLimit;
+import com.ronkadosh.bubbleup.common.ratelimit.RateLimitScope;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.CacheControl;
@@ -48,6 +50,7 @@ public class UserProfileController {
     }
 
     @PatchMapping("/me/profile")
+    @RateLimit(limit = 20, windowSeconds = 60, scope = RateLimitScope.PER_USER)
     public ApiResponse<UserProfileResponse> updateMyProfile(@Valid @RequestBody UpdateProfileRequest req) {
         CurrentUser me = currentUserProvider.get();
         return ApiResponse.success(commands.updateProfile(me.id(), req));
@@ -60,6 +63,7 @@ public class UserProfileController {
     }
 
     @PostMapping("/me/avatar")
+    @RateLimit(limit = 5, windowSeconds = 60, scope = RateLimitScope.PER_USER)
     public ApiResponse<UserProfileResponse> uploadMyAvatar(@RequestParam("file") MultipartFile file) {
         CurrentUser me = currentUserProvider.get();
         if (file == null || file.isEmpty()) {

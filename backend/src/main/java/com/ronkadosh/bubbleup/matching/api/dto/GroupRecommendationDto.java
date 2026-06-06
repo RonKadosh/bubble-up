@@ -12,6 +12,8 @@ import java.util.UUID;
 public record GroupRecommendationDto(
         UUID groupId,
         String groupName,
+        String courseCode,
+        String courseName,
         Integer matchPercent,
         int memberCount,
         boolean alreadyMember,
