@@ -1,8 +1,11 @@
 package com.ronkadosh.bubbleup.admin.application;
 
 import com.ronkadosh.bubbleup.admin.api.dto.AdminCatalogDtos;
+import com.ronkadosh.bubbleup.admin.audit.AdminAuditService;
+import com.ronkadosh.bubbleup.catalog.internal.CatalogInternalService;
 import com.ronkadosh.bubbleup.catalog.internal.CatalogAdminInternalService;
 import com.ronkadosh.bubbleup.catalog.internal.dto.admin.CatalogCommands;
+import com.ronkadosh.bubbleup.catalog.internal.dto.admin.OfferingAdminDto;
 import com.ronkadosh.bubbleup.common.error.AppException;
 import com.ronkadosh.bubbleup.common.error.ErrorCode;
 import com.ronkadosh.bubbleup.common.pagination.PageMapper;
@@ -13,6 +16,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
@@ -22,7 +26,9 @@ import java.util.UUID;
 public class AdminCatalogService {
 
     private final CatalogAdminInternalService catalogAdmin;
+    private final CatalogInternalService catalogInternal;
     private final GroupAdminInternalService groupAdmin;
+    private final AdminAuditService audit;
     private final AdminGuards guards;
     private final PageMapper pageMapper;
 
@@ -87,11 +93,14 @@ public class AdminCatalogService {
     }
 
     public AdminCatalogDtos.Term createTerm(UUID universityId, AdminCatalogDtos.CreateTermRequest req) {
-        return AdminCatalogDtos.Term.from(
+        var term = AdminCatalogDtos.Term.from(
                 catalogAdmin.createTerm(new CatalogCommands.CreateTerm(
                         universityId, req.code(), req.name(), req.kind(),
                         req.academicYear(), req.startsOn(), req.endsOn()))
         );
+        audit.record("TERM_CREATED", "TERM", term.id(), null,
+                "{\"code\":\"" + term.code() + "\"}");
+        return term;
     }
 
     public AdminCatalogDtos.Term updateTerm(UUID id, AdminCatalogDtos.UpdateTermRequest req) {
@@ -105,6 +114,34 @@ public class AdminCatalogService {
     public void deleteTerm(UUID id, AdminCatalogDtos.DeleteReasonRequest req) {
         guards.requireReason(req.reason());
         catalogAdmin.deleteTerm(id);
+        audit.record("TERM_DELETED", "TERM", id, req.reason(), null);
+    }
+
+    @Transactional
+    public AdminCatalogDtos.RolloverTermResponse rolloverTerm(UUID sourceTermId, AdminCatalogDtos.RolloverTermRequest req) {
+        guards.requireReason(req.reason());
+        var source = catalogAdmin.getTerm(sourceTermId);
+        var next = AdminCatalogDtos.Term.from(catalogAdmin.createTerm(new CatalogCommands.CreateTerm(
+                source.universityId(), req.code(), req.name(), req.kind(),
+                req.academicYear(), req.startsOn(), req.endsOn()
+        )));
+
+        List<OfferingAdminDto> sourceOfferings = catalogInternal.offeringIdsForTerm(sourceTermId).stream()
+                .map(catalogAdmin::getOffering)
+                .toList();
+        int copied = 0;
+        for (OfferingAdminDto offering : sourceOfferings) {
+            catalogAdmin.createOffering(offering.courseId(), next.id());
+            copied++;
+        }
+        int archivedGroups = groupAdmin.setGroupStatusForOfferings(
+                sourceOfferings.stream().map(OfferingAdminDto::id).toList(),
+                com.ronkadosh.bubbleup.groups.model.GroupStatus.ARCHIVED
+        );
+        audit.record("TERM_ROLLED_OVER", "TERM", next.id(), req.reason(),
+                "{\"sourceTermId\":\"" + sourceTermId + "\",\"copiedOfferings\":" + copied +
+                        ",\"archivedGroups\":" + archivedGroups + "}");
+        return new AdminCatalogDtos.RolloverTermResponse(next, copied, archivedGroups);
     }
 
     // ─── Courses ──────────────────────────────────────────────────────────────

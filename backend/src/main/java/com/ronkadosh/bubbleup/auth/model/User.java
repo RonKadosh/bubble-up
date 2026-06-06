@@ -34,6 +34,20 @@ public class User {
     @Setter
     private UserRole role;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 16)
+    @Setter
+    @Builder.Default
+    private UserStatus status = UserStatus.ACTIVE;
+
+    @Column(name = "suspended_until")
+    @Setter
+    private Instant suspendedUntil;
+
+    @Column(name = "status_reason", length = 500)
+    @Setter
+    private String statusReason;
+
     @Column(name = "display_name", nullable = false, length = 100)
     @Setter
     private String displayName;
@@ -69,6 +83,9 @@ public class User {
     protected void onCreate() {
         if (createdAt == null) {
             createdAt = Instant.now();
+        }
+        if (status == null) {
+            status = UserStatus.ACTIVE;
         }
     }
 }

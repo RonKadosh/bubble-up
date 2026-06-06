@@ -1,5 +1,6 @@
 package com.ronkadosh.bubbleup.groups.internal;
 
+import com.ronkadosh.bubbleup.groups.model.GroupStatus;
 import com.ronkadosh.bubbleup.groups.internal.dto.admin.GroupAdminDetail;
 import com.ronkadosh.bubbleup.groups.internal.dto.admin.GroupAdminDto;
 import org.springframework.data.domain.Page;
@@ -27,12 +28,17 @@ public interface GroupAdminInternalService {
     /** Cascades through files, folders, calendar events, chat rooms, members, then the group itself. */
     void deleteGroupAsAdmin(UUID groupId);
 
+    GroupAdminDto setGroupStatus(UUID groupId, GroupStatus status);
+
+    int setGroupStatusForOfferings(Collection<UUID> offeringIds, GroupStatus status);
+
     // Cross-module cascade checks used by the catalog admin path.
     long countGroupsForOffering(UUID offeringId);
     long countGroupsForOfferings(Collection<UUID> offeringIds);
 
     // Overview helpers.
     long countTotalGroups();
+    long countGroupsByStatus(GroupStatus status);
     long countGroupsCreatedAfter(Instant since);
     List<GroupAdminDto> findRecentGroups(int limit);
 }

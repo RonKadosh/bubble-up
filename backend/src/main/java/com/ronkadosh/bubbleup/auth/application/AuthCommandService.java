@@ -8,6 +8,7 @@ import com.ronkadosh.bubbleup.auth.api.dto.RegisterRequest;
 import com.ronkadosh.bubbleup.auth.internal.dto.UserIdentity;
 import com.ronkadosh.bubbleup.auth.model.RefreshToken;
 import com.ronkadosh.bubbleup.auth.model.User;
+import com.ronkadosh.bubbleup.auth.model.UserStatus;
 import com.ronkadosh.bubbleup.auth.persistence.UserRepository;
 import com.ronkadosh.bubbleup.common.context.UserRole;
 import com.ronkadosh.bubbleup.common.error.AppException;
@@ -17,6 +18,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
 
 @Service
 @RequiredArgsConstructor
@@ -47,6 +50,7 @@ public class AuthCommandService {
     public AuthResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new AppException(ErrorCode.INVALID_CREDENTIALS));
+        requireAccountActive(user);
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             throw new AppException(ErrorCode.INVALID_CREDENTIALS);
         }
@@ -58,6 +62,7 @@ public class AuthCommandService {
         RefreshToken consumed = refreshTokenService.consume(request.refreshToken());
         User user = userRepository.findById(consumed.getUserId())
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        requireAccountActive(user);
         RefreshTokenService.IssuedRefresh next = refreshTokenService.issue(user.getId(), consumed.getId());
         String accessToken = jwtService.generateToken(user.getId(), user.getEmail(), user.getRole());
         return buildAuthResponse(accessToken, next.rawToken(), user);
@@ -72,6 +77,22 @@ public class AuthCommandService {
         String accessToken = jwtService.generateToken(user.getId(), user.getEmail(), user.getRole());
         RefreshTokenService.IssuedRefresh refresh = refreshTokenService.issue(user.getId(), null);
         return buildAuthResponse(accessToken, refresh.rawToken(), user);
+    }
+
+    private void requireAccountActive(User user) {
+        if (user.getStatus() == UserStatus.BANNED) {
+            throw new AppException(ErrorCode.ACCOUNT_BANNED);
+        }
+        if (user.getStatus() == UserStatus.SUSPENDED) {
+            Instant until = user.getSuspendedUntil();
+            if (until == null || until.isAfter(Instant.now())) {
+                throw new AppException(ErrorCode.ACCOUNT_SUSPENDED);
+            }
+            user.setStatus(UserStatus.ACTIVE);
+            user.setSuspendedUntil(null);
+            user.setStatusReason(null);
+            userRepository.save(user);
+        }
     }
 
     private static AuthResponse buildAuthResponse(String accessToken, String refreshToken, User user) {

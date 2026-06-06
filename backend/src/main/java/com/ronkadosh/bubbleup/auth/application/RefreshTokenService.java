@@ -86,6 +86,11 @@ public class RefreshTokenService {
         });
     }
 
+    @Transactional
+    public void revokeAllForUser(UUID userId) {
+        repo.revokeAllByUserId(userId, timeProvider.now());
+    }
+
     private static String sha256Hex(String input) {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");

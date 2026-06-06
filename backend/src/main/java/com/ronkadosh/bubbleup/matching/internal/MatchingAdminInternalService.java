@@ -29,4 +29,8 @@ public interface MatchingAdminInternalService {
     QuizOptionAdminDto updateOption(UUID optionId, QuizCommands.UpdateOption cmd);
 
     void deleteOption(UUID optionId);
+
+    void purgeGroupRecommendations(UUID groupId);
+
+    void purgeGroupRecommendations(List<UUID> groupIds);
 }

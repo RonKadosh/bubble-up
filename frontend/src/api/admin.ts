@@ -3,8 +3,10 @@ import client, { ApiSuccess } from './client'
 // ─── Shared types ────────────────────────────────────────────────────────────
 
 export type UserRole = 'STUDENT' | 'EXPERT' | 'ADMIN'
+export type UserStatus = 'ACTIVE' | 'SUSPENDED' | 'BANNED'
 export type VerificationStatus = 'PENDING' | 'VERIFIED' | 'REJECTED'
 export type Visibility = 'PUBLIC' | 'PRIVATE'
+export type GroupStatus = 'ACTIVE' | 'ARCHIVED' | 'SUSPENDED'
 export type TermKind = 'FALL' | 'SPRING' | 'SUMMER' | 'WINTER' | 'OTHER'
 export type MembershipRole = 'OWNER' | 'MEMBER'
 
@@ -62,11 +64,15 @@ export interface AdminUser {
   universityId: string | null
   departmentId: string | null
   enrollmentYear: number | null
+  status: UserStatus
+  suspendedUntil: string | null
+  statusReason: string | null
   createdAt: string
 }
 
 export interface UserSearchParams {
   role?: UserRole
+  status?: UserStatus
   q?: string
   createdAfter?: string
   page?: number
@@ -87,6 +93,18 @@ export async function getUser(id: string): Promise<AdminUser> {
 
 export async function changeUserRole(id: string, newRole: UserRole, reason: string): Promise<AdminUser> {
   const res = await client.patch<ApiSuccess<AdminUser>>(`/admin/users/${id}/role`, { newRole, reason })
+  return res.data.data
+}
+export async function suspendUser(id: string, reason: string, suspendedUntil?: string): Promise<AdminUser> {
+  const res = await client.post<ApiSuccess<AdminUser>>(`/admin/users/${id}/suspend`, { reason, suspendedUntil })
+  return res.data.data
+}
+export async function banUser(id: string, reason: string): Promise<AdminUser> {
+  const res = await client.post<ApiSuccess<AdminUser>>(`/admin/users/${id}/ban`, { reason })
+  return res.data.data
+}
+export async function reactivateUser(id: string, reason: string): Promise<AdminUser> {
+  const res = await client.post<ApiSuccess<AdminUser>>(`/admin/users/${id}/reactivate`, { reason })
   return res.data.data
 }
 
@@ -193,6 +211,10 @@ export async function createTerm(universityId: string, body: { code: string; nam
   const res = await client.post<ApiSuccess<Term>>(`/admin/catalog/universities/${universityId}/terms`, body)
   return res.data.data
 }
+export async function rolloverTerm(sourceTermId: string, body: { code: string; name: string; kind: TermKind; academicYear: number; startsOn: string; endsOn: string; reason: string }): Promise<{ term: Term; copiedOfferings: number; archivedGroups: number }> {
+  const res = await client.post<ApiSuccess<{ term: Term; copiedOfferings: number; archivedGroups: number }>>(`/admin/catalog/terms/${sourceTermId}/rollover`, body)
+  return res.data.data
+}
 export async function updateTerm(id: string, body: Partial<{ code: string; name: string; kind: TermKind; academicYear: number; startsOn: string; endsOn: string }>): Promise<Term> {
   const res = await client.patch<ApiSuccess<Term>>(`/admin/catalog/terms/${id}`, body)
   return res.data.data
@@ -263,6 +285,7 @@ export interface AdminGroup {
   name: string
   description: string | null
   visibility: Visibility
+  status: GroupStatus
   offeringId: string
   courseId: string | null
   createdBy: string
@@ -301,6 +324,18 @@ export async function getGroupDetail(id: string): Promise<AdminGroupDetail> {
 }
 export async function deleteGroup(id: string, reason: string): Promise<void> {
   await client.delete(`/admin/groups/${id}`, { data: { reason } })
+}
+export async function archiveGroup(id: string, reason: string): Promise<AdminGroup> {
+  const res = await client.post<ApiSuccess<AdminGroup>>(`/admin/groups/${id}/archive`, { reason })
+  return res.data.data
+}
+export async function activateGroup(id: string, reason: string): Promise<AdminGroup> {
+  const res = await client.post<ApiSuccess<AdminGroup>>(`/admin/groups/${id}/activate`, { reason })
+  return res.data.data
+}
+export async function archiveTermGroups(termId: string, reason: string): Promise<{ affectedGroups: number }> {
+  const res = await client.post<ApiSuccess<{ affectedGroups: number }>>(`/admin/groups/terms/${termId}/archive`, { reason })
+  return res.data.data
 }
 
 // ─── Quiz ────────────────────────────────────────────────────────────────────
@@ -405,5 +440,33 @@ export async function rejectExpert(userId: string, reason: string): Promise<void
 }
 export async function revokeExpert(userId: string, reason: string): Promise<AdminExpert> {
   const res = await client.post<ApiSuccess<AdminExpert>>(`/admin/experts/${userId}/revoke`, { reason })
+  return res.data.data
+}
+
+// ─── Audit ───────────────────────────────────────────────────────────────────
+
+export interface AuditLogEntry {
+  id: string
+  actorId: string | null
+  actorEmail: string | null
+  action: string
+  targetType: string
+  targetId: string | null
+  reason: string | null
+  metadata: string | null
+  createdAt: string
+}
+
+export interface AuditSearchParams {
+  action?: string
+  targetType?: string
+  actorId?: string
+  createdAfter?: string
+  page?: number
+  size?: number
+}
+
+export async function searchAudit(params: AuditSearchParams = {}): Promise<PageResponse<AuditLogEntry>> {
+  const res = await client.get<ApiSuccess<PageResponse<AuditLogEntry>>>('/admin/audit', { params })
   return res.data.data
 }

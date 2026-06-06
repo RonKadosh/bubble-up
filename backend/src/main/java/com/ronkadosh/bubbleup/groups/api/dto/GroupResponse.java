@@ -1,6 +1,7 @@
 package com.ronkadosh.bubbleup.groups.api.dto;
 
 import com.ronkadosh.bubbleup.groups.model.GroupVisibility;
+import com.ronkadosh.bubbleup.groups.model.GroupStatus;
 import com.ronkadosh.bubbleup.groups.model.StudyGroup;
 
 import java.time.Instant;
@@ -11,6 +12,7 @@ public record GroupResponse(
         String name,
         String description,
         GroupVisibility visibility,
+        GroupStatus status,
         UUID offeringId,
         UUID createdBy,
         UUID ownerId,
@@ -24,6 +26,7 @@ public record GroupResponse(
                 group.getName(),
                 group.getDescription(),
                 group.getVisibility(),
+                group.getStatus(),
                 group.getOfferingId(),
                 group.getCreatedBy(),
                 ownerId,

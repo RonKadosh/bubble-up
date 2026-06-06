@@ -35,6 +35,12 @@ public class StudyGroup {
     @Builder.Default
     private GroupVisibility visibility = GroupVisibility.PUBLIC;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 16)
+    @Setter
+    @Builder.Default
+    private GroupStatus status = GroupStatus.ACTIVE;
+
     @Column(name = "offering_id", nullable = false, updatable = false)
     private UUID offeringId;
 
@@ -55,6 +61,9 @@ public class StudyGroup {
         }
         if (visibility == null) {
             visibility = GroupVisibility.PUBLIC;
+        }
+        if (status == null) {
+            status = GroupStatus.ACTIVE;
         }
     }
 }

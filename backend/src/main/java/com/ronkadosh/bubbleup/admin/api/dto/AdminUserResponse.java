@@ -1,5 +1,6 @@
 package com.ronkadosh.bubbleup.admin.api.dto;
 
+import com.ronkadosh.bubbleup.auth.model.UserStatus;
 import com.ronkadosh.bubbleup.auth.internal.dto.UserAdminSummary;
 import com.ronkadosh.bubbleup.common.context.UserRole;
 
@@ -16,6 +17,9 @@ public record AdminUserResponse(
         UUID universityId,
         UUID departmentId,
         Integer enrollmentYear,
+        UserStatus status,
+        Instant suspendedUntil,
+        String statusReason,
         Instant createdAt
 ) {
     public static AdminUserResponse from(UserAdminSummary s) {
@@ -29,6 +33,9 @@ public record AdminUserResponse(
                 s.universityId(),
                 s.departmentId(),
                 s.enrollmentYear(),
+                s.status(),
+                s.suspendedUntil(),
+                s.statusReason(),
                 s.createdAt()
         );
     }

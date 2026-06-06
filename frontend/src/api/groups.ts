@@ -1,6 +1,7 @@
 import client, { ApiSuccess } from './client'
 
 export type Visibility = 'PUBLIC' | 'PRIVATE'
+export type GroupStatus = 'ACTIVE' | 'ARCHIVED' | 'SUSPENDED'
 export type MembershipRole = 'OWNER' | 'MEMBER'
 
 export interface Group {
@@ -8,6 +9,7 @@ export interface Group {
   name: string
   description: string
   visibility: Visibility
+  status: GroupStatus
   offeringId: string
   createdBy: string
   ownerId: string

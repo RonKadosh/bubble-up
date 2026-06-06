@@ -138,4 +138,20 @@ public final class AdminCatalogDtos {
     public record CreateOfferingRequest(@NotNull UUID termId) {}
 
     public record DeleteReasonRequest(@NotBlank String reason) {}
+
+    public record RolloverTermRequest(
+            @NotBlank @Size(max = 16) String code,
+            @NotBlank String name,
+            @NotNull TermKind kind,
+            int academicYear,
+            @NotNull LocalDate startsOn,
+            @NotNull LocalDate endsOn,
+            @NotBlank String reason
+    ) {}
+
+    public record RolloverTermResponse(
+            Term term,
+            int copiedOfferings,
+            int archivedGroups
+    ) {}
 }

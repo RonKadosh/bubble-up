@@ -1,5 +1,6 @@
 package com.ronkadosh.bubbleup.auth.internal.dto;
 
+import com.ronkadosh.bubbleup.auth.model.UserStatus;
 import com.ronkadosh.bubbleup.common.context.UserRole;
 
 import java.time.Instant;
@@ -15,5 +16,8 @@ public record UserAdminSummary(
         UUID universityId,
         UUID departmentId,
         Integer enrollmentYear,
+        UserStatus status,
+        Instant suspendedUntil,
+        String statusReason,
         Instant createdAt
 ) {}
