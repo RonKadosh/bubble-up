@@ -18,6 +18,13 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<User> findByEmail(String email);
     boolean existsByEmail(String email);
 
+    /**
+     * Primary lookup for OAuth sign-ins. Google's {@code sub} claim is stable
+     * per Google account regardless of email changes, so we always prefer it
+     * over email when resolving an existing user.
+     */
+    Optional<User> findByGoogleSub(String googleSub);
+
     long countByRole(UserRole role);
     long countByCreatedAtAfter(Instant since);
     List<User> findTop50ByOrderByCreatedAtDesc();
