@@ -34,6 +34,8 @@ public class AdminExpertVerificationService {
     public AdminExpertDtos.ExpertResponse verify(UUID userId, AdminExpertDtos.VerifyRequest req, CurrentUser me) {
         guards.requireNotSelf(userId, me);
         var expert = AdminExpertDtos.ExpertResponse.from(expertAdmin.verify(userId, me.id()));
+        // Approval is what grants the EXPERT role (applying only created a PENDING profile).
+        authInternalService.promoteToExpert(userId);
         audit.record("EXPERT_VERIFIED", "USER", userId, req.reason(), null);
         return expert;
     }
@@ -50,6 +52,8 @@ public class AdminExpertVerificationService {
         guards.requireReason(req.reason());
         guards.requireNotSelf(userId, me);
         var expert = AdminExpertDtos.ExpertResponse.from(expertAdmin.revoke(userId));
+        // Revoking returns the profile to PENDING, so the EXPERT role is pulled too.
+        authInternalService.demoteToStudent(userId);
         audit.record("EXPERT_REVOKED", "USER", userId, req.reason(), null);
         return expert;
     }

@@ -28,8 +28,9 @@ public interface ExpertAdminInternalService {
     ExpertAdminProfileDto verify(UUID userId, UUID adminUserId);
 
     /**
-     * Clears the verified flag + verifiedAt + verifiedBy. Keeps the profile row,
-     * keeps the user's role at EXPERT.
+     * Clears the verified flag + verifiedAt + verifiedBy, returning the profile
+     * to PENDING. Keeps the profile row; the admin service follows up with
+     * {@code AuthInternalService.demoteToStudent(userId)} to pull the EXPERT role.
      */
     ExpertAdminProfileDto revoke(UUID userId);
 
@@ -40,4 +41,6 @@ public interface ExpertAdminInternalService {
     void rejectAndDeleteProfile(UUID userId);
 
     long countVerified();
+
+    long countByStatus(VerificationStatus status);
 }

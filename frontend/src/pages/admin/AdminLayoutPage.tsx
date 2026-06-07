@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import AdminOverviewTab from './AdminOverviewTab'
@@ -7,10 +7,16 @@ import AdminCatalogTab from './AdminCatalogTab'
 import AdminGroupsTab from './AdminGroupsTab'
 import AdminQuizTab from './AdminQuizTab'
 import AdminAuditTab from './AdminAuditTab'
-import { Button } from '../../components/Button'
+import AdminExpertRequestsTab from './AdminExpertRequestsTab'
+import AdminReportsTab from './AdminReportsTab'
+import { getInboxCounts, InboxCounts } from '../../api/admin'
+import { PageShell } from '../../components/PageHeader'
+import { Tabs } from '../../components/Tabs'
 
 const TABS = [
   { key: 'overview', labelKey: 'admin.tabs.overview' },
+  { key: 'expert-requests', labelKey: 'admin.tabs.expertRequests' },
+  { key: 'reports', labelKey: 'admin.tabs.reports' },
   { key: 'users', labelKey: 'admin.tabs.users' },
   { key: 'catalog', labelKey: 'admin.tabs.catalog' },
   { key: 'groups', labelKey: 'admin.tabs.bubbles' },
@@ -29,57 +35,39 @@ export default function AdminLayoutPage() {
     return TABS.some((tab) => tab.key === raw) ? (raw as TabKey) : 'overview'
   }, [params.tab])
 
+  const [counts, setCounts] = useState<InboxCounts | null>(null)
+  const refreshCounts = useCallback(() => {
+    getInboxCounts().then(setCounts).catch(() => { /* badge is best-effort */ })
+  }, [])
+  useEffect(() => { refreshCounts() }, [refreshCounts])
+
+  const badgeFor = (key: TabKey): number | undefined => {
+    if (!counts) return undefined
+    if (key === 'expert-requests') return counts.pendingExpertRequests
+    if (key === 'reports') return counts.pendingReports
+    return undefined
+  }
+
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-base">
-      <header className="px-4 tablet:px-6 py-4 border-b border-line flex flex-col tablet:flex-row tablet:items-center tablet:justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="w-2.5 h-2.5 rounded-full bg-bubble-magenta shadow-sm" />
-            <span className="w-1.5 h-1.5 rounded-full bg-bubble-green" />
-            <h1 className="text-2xl font-bold text-base">{t('admin.title')}</h1>
-          </div>
-          <p className="text-sm text-muted ms-[1.6rem]">{t('admin.subtitle')}</p>
-        </div>
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          className="self-start tablet:self-auto"
-          onClick={() => navigate('/admin/experts')}
-        >
-          {t('admin.expertReview')}
-        </Button>
-      </header>
-
-      <nav className="px-4 tablet:px-6 py-3 border-b border-line flex gap-2 overflow-x-auto">
-        {TABS.map((tab) => {
-          const selected = active === tab.key
-          return (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => navigate(tab.key === 'overview' ? '/admin' : `/admin/${tab.key}`)}
-              aria-pressed={selected}
-              className={`shrink-0 px-4 py-2 text-sm rounded-full bubble-pop border transition ${
-                selected
-                  ? 'bg-brand-gradient-strong border-transparent text-on-brand shadow-themed font-semibold'
-                  : 'bg-surface border-line text-secondary hover:text-base hover:border-line-strong'
-              }`}
-            >
-              {t(tab.labelKey)}
-            </button>
-          )
-        })}
-      </nav>
-
-      <main className="flex-1 overflow-y-auto p-4 tablet:p-6">
-        {active === 'overview' && <AdminOverviewTab />}
-        {active === 'users' && <AdminUsersTab />}
-        {active === 'catalog' && <AdminCatalogTab />}
-        {active === 'groups' && <AdminGroupsTab />}
-        {active === 'quiz' && <AdminQuizTab />}
-        {active === 'audit' && <AdminAuditTab />}
-      </main>
-    </div>
+    <PageShell
+      title={t('admin.title')}
+      subtitle={t('admin.subtitle')}
+      tabs={
+        <Tabs
+          items={TABS.map((tab) => ({ key: tab.key, label: t(tab.labelKey), badge: badgeFor(tab.key) }))}
+          active={active}
+          onChange={(key) => navigate(key === 'overview' ? '/admin' : `/admin/${key}`)}
+        />
+      }
+    >
+      {active === 'overview' && <AdminOverviewTab />}
+      {active === 'expert-requests' && <AdminExpertRequestsTab onChanged={refreshCounts} />}
+      {active === 'reports' && <AdminReportsTab onChanged={refreshCounts} />}
+      {active === 'users' && <AdminUsersTab />}
+      {active === 'catalog' && <AdminCatalogTab />}
+      {active === 'groups' && <AdminGroupsTab />}
+      {active === 'quiz' && <AdminQuizTab />}
+      {active === 'audit' && <AdminAuditTab />}
+    </PageShell>
   )
 }

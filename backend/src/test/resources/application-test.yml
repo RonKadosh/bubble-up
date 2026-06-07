@@ -32,6 +32,12 @@ app:
   file-storage:
     type: local
     local-path: /tmp/bubbleup-test-files
+  # Existing expert tests assume instant verification on apply. The runtime
+  # default is now false (admin-gated); pin true here so the suite keeps its
+  # apply->VERIFIED assumption. ExpertVerificationGatingIT opts back into
+  # false via @TestPropertySource to cover the gated path.
+  expert:
+    auto-verify: true
   simulation:
     enabled: false
   agents:

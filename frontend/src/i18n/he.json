@@ -42,7 +42,13 @@
     "tabs": {
       "profile": "פרופיל",
       "matching": "התאמה",
-      "language": "שפה"
+      "preferences": "העדפות"
+    },
+    "theme": {
+      "title": "מראה",
+      "description": "בחר/י כיצד Bubble.up ייראה.",
+      "light": "בהיר",
+      "dark": "כהה"
     },
     "language": {
       "title": "שפה",
@@ -661,10 +667,14 @@
       "tagsHint": "עד 20 תגיות.",
       "submit": "הגש בקשה",
       "submitting": "מגיש…",
-      "errorGeneric": "לא ניתן היה לשלוח את הבקשה. נסה שוב."
+      "errorGeneric": "לא ניתן היה לשלוח את הבקשה. נסה שוב.",
+      "pendingTitle": "הבקשה נשלחה",
+      "pendingBody": "תודה! מנהל יבדוק את בקשתך. אזור המומחים ייפתח עבורך לאחר האישור.",
+      "pendingBackToDashboard": "חזרה ללוח הבקרה"
     },
     "dashboard": {
       "title": "אזור המומחים",
+      "subtitle": "ארח מפגשים חיים ונהל את בקשות ההזמנה שלך.",
       "editProfile": "ערוך פרופיל",
       "bookingsHeading": "בקשות הזמנה",
       "noPendingRequests": "אין בקשות ממתינות.",
@@ -803,11 +813,52 @@
     "expertReview": "בדיקת מומחים",
     "tabs": {
       "overview": "סקירה",
+      "expertRequests": "בקשות מומחים",
+      "reports": "דיווחים",
       "users": "אנשים",
       "catalog": "קטלוג",
       "bubbles": "בועות",
       "quiz": "שאלון",
       "audit": "ביקורת"
+    },
+    "reports": {
+      "errorLoad": "לא ניתן לטעון את הדיווחים.",
+      "empty": "אין דיווחים כאן.",
+      "hasAttachment": "כולל קובץ מצורף",
+      "status": {
+        "PENDING": "ממתין",
+        "RESOLVED": "טופל",
+        "DISMISSED": "נדחה"
+      },
+      "columns": {
+        "category": "קטגוריה",
+        "subject": "נושא",
+        "reporter": "מדווח",
+        "created": "נוצר"
+      },
+      "fields": {
+        "category": "קטגוריה",
+        "status": "סטטוס",
+        "reporter": "מדווח",
+        "created": "נוצר",
+        "description": "תיאור",
+        "attachment": "קובץ מצורף",
+        "resolutionNote": "הערת טיפול"
+      },
+      "actions": {
+        "resolve": "טפל",
+        "dismiss": "דחה"
+      },
+      "prompts": {
+        "resolve": {
+          "title": "טיפול בדיווח",
+          "description": "הוסף הערה קצרה שמתארת כיצד טופל."
+        },
+        "dismiss": {
+          "title": "דחיית דיווח",
+          "description": "הוסף הערה קצרה שמסבירה מדוע אין צורך בפעולה."
+        }
+      }
     },
     "roles": {
       "STUDENT": "סטודנטים",
@@ -1163,6 +1214,37 @@
       "hint": "ענו על שאלות יומיות כדי לחזק.",
       "hintMatched": "חזק מספיק להמלצות מותאמות.",
       "matchedBadge": "התאמה נפתחה"
+    }
+  },
+  "report": {
+    "title": "דיווח על בעיה",
+    "subtitle": "ספרו לנו מה לא בסדר — התעללות, ספאם, חשש בטיחותי או באג. מנהל יבדוק את הדיווח.",
+    "categoryLabel": "במה מדובר?",
+    "category": {
+      "ABUSE": "התעללות",
+      "HARASSMENT": "הטרדה",
+      "SPAM": "ספאם",
+      "SAFETY": "חשש בטיחותי",
+      "TECHNICAL_ISSUE": "תקלה טכנית",
+      "OTHER": "משהו אחר"
+    },
+    "subjectLabel": "נושא",
+    "subjectPlaceholder": "סיכום קצר",
+    "descriptionLabel": "תיאור",
+    "descriptionPlaceholder": "מה קרה? הוסיפו פרטים שיעזרו למנהל להבין.",
+    "imageLabel": "צילום מסך (אופציונלי)",
+    "imageHint": "PNG, JPEG, WebP או GIF, עד 5MB.",
+    "submit": "שלח דיווח",
+    "submitting": "שולח…",
+    "success": {
+      "title": "הדיווח נשלח",
+      "body": "תודה על הדיווח. מנהל יבדוק אותו.",
+      "backToDashboard": "חזרה ללוח הבקרה"
+    },
+    "error": {
+      "imageType": "סוג התמונה אינו נתמך. השתמשו ב-PNG, JPEG, WebP או GIF.",
+      "imageTooLarge": "התמונה גדולה מדי. שמרו על פחות מ-5MB.",
+      "generic": "לא ניתן היה לשלוח את הדיווח. נסו שוב."
     }
   },
   "onboarding": {

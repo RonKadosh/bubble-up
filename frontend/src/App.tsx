@@ -15,7 +15,7 @@ import BookingRequestsPage from './pages/expert/BookingRequestsPage'
 import ExpertDirectoryPage from './pages/ExpertDirectoryPage'
 import ExpertPublicProfilePage from './pages/ExpertPublicProfilePage'
 import AdminLayoutPage from './pages/admin/AdminLayoutPage'
-import AdminExpertVerificationPage from './pages/admin/AdminExpertVerificationPage'
+import ReportPage from './pages/report/ReportPage'
 import CoursePage from './pages/CoursePage'
 import Layout from './components/Sidebar'
 import { useAuthStore } from './store/authStore'
@@ -108,9 +108,11 @@ export default function App() {
           <Route path="/expert/profile/edit" element={<RequireExpert><ExpertProfileEditPage /></RequireExpert>} />
           <Route path="/expert/requests" element={<RequireExpert><BookingRequestsPage /></RequireExpert>} />
           <Route path="/bookings" element={<BookingRequestsPage />} />
+          <Route path="/report" element={<ReportPage />} />
           <Route path="/admin" element={<RequireAdmin><AdminLayoutPage /></RequireAdmin>} />
+          {/* Legacy deep-link: the standalone expert page is now a tab in the admin shell. */}
+          <Route path="/admin/experts" element={<Navigate to="/admin/expert-requests" replace />} />
           <Route path="/admin/:tab" element={<RequireAdmin><AdminLayoutPage /></RequireAdmin>} />
-          <Route path="/admin/experts" element={<RequireAdmin><AdminExpertVerificationPage /></RequireAdmin>} />
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

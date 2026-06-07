@@ -15,6 +15,7 @@ import {
 import { ScheduleExpertSessionModal } from './ScheduleExpertSessionModal'
 import { Card } from '../../components/Card'
 import { Button } from '../../components/Button'
+import { PageShell } from '../../components/PageHeader'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { formatClock, formatDateTime } from '../../i18n/datetime'
 
@@ -104,14 +105,15 @@ export default function ExpertDashboardPage() {
   const activeSessions = sessions.filter((s) => s.status !== 'CANCELLED' && s.status !== 'ENDED')
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 sm:p-8">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <>
+      <PageShell title={t('expert.dashboard.title')} subtitle={t('expert.dashboard.subtitle')}>
+        <div className="space-y-6">
 
         {/* Profile snippet */}
         <Card size="md" className="p-5 flex items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <h1 className="text-lg font-bold text-base">{profile?.headline}</h1>
+              <h2 className="text-lg font-bold text-base">{profile?.headline}</h2>
               <span
                 className={`text-xs px-2 py-0.5 rounded-full ${
                   profile?.verificationStatus === 'VERIFIED'
@@ -236,7 +238,8 @@ export default function ExpertDashboardPage() {
             </ul>
           )}
         </section>
-      </div>
+        </div>
+      </PageShell>
 
       <ScheduleExpertSessionModal
         open={showSchedule}
@@ -254,6 +257,6 @@ export default function ExpertDashboardPage() {
         onConfirm={() => pendingCancel && performCancel(pendingCancel)}
         onClose={() => setPendingCancel(null)}
       />
-    </div>
+    </>
   )
 }

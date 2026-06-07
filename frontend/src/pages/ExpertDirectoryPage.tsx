@@ -14,7 +14,7 @@ import { useAuthStore } from '../store/authStore'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
 import { Avatar } from '../components/Avatar'
-import { PageHeader, PageWidth, SectionLabel } from '../components/PageHeader'
+import { PageShell, SectionLabel } from '../components/PageHeader'
 import { formatClock, formatDateTime } from '../i18n/datetime'
 
 /**
@@ -68,18 +68,16 @@ export default function ExpertDirectoryPage() {
   }, [experts, query])
 
   return (
-    <div className="flex-1 overflow-y-auto">
-      <PageWidth className="py-6 tablet:py-8 space-y-8">
-        <PageHeader
-          title={t('expert.directory.title')}
-          subtitle={t('expert.directory.subtitle')}
-          actions={
-            <Link to="/become-expert" className="text-sm text-link underline">
-              {t('expert.directory.becomeLink')}
-            </Link>
-          }
-        />
-
+    <PageShell
+      title={t('expert.directory.title')}
+      subtitle={t('expert.directory.subtitle')}
+      actions={
+        <Link to="/become-expert" className="text-sm text-link underline">
+          {t('expert.directory.becomeLink')}
+        </Link>
+      }
+    >
+      <div className="space-y-8">
         <section>
           <SectionLabel className="mb-3">{t('expert.directory.openSessionsHeading')}</SectionLabel>
           {loading ? (
@@ -147,8 +145,8 @@ export default function ExpertDirectoryPage() {
             </ul>
           )}
         </section>
-      </PageWidth>
-    </div>
+      </div>
+    </PageShell>
   )
 }
 

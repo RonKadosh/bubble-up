@@ -9,7 +9,13 @@ import com.ronkadosh.bubbleup.catalog.persistence.CourseRepository;
 import com.ronkadosh.bubbleup.catalog.persistence.DepartmentRepository;
 import com.ronkadosh.bubbleup.catalog.persistence.UniversityRepository;
 import com.ronkadosh.bubbleup.common.context.UserRole;
+import com.ronkadosh.bubbleup.common.datetime.TimeProvider;
 import com.ronkadosh.bubbleup.enrollment.application.EnrollmentCommandService;
+import com.ronkadosh.bubbleup.expert.api.dto.ApplyAsExpertRequest;
+import com.ronkadosh.bubbleup.expert.api.dto.CreateExpertSessionRequest;
+import com.ronkadosh.bubbleup.expert.application.ExpertProfileService;
+import com.ronkadosh.bubbleup.expert.application.ExpertSessionCommandService;
+import com.ronkadosh.bubbleup.expert.internal.ExpertAdminInternalService;
 import com.ronkadosh.bubbleup.groups.api.dto.CreateGroupRequest;
 import com.ronkadosh.bubbleup.groups.application.GroupCommandService;
 import com.ronkadosh.bubbleup.groups.model.GroupVisibility;
@@ -21,7 +27,10 @@ import org.springframework.context.event.EventListener;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -54,6 +63,10 @@ public class DemoSeeder {
     private final UniversityRepository universityRepository;
     private final DepartmentRepository departmentRepository;
     private final CourseRepository courseRepository;
+    private final ExpertProfileService expertProfileService;
+    private final ExpertSessionCommandService expertSessionCommandService;
+    private final ExpertAdminInternalService expertAdminInternalService;
+    private final TimeProvider timeProvider;
 
     @EventListener(ApplicationReadyEvent.class)
     public void seed() {
@@ -159,15 +172,59 @@ public class DemoSeeder {
         addMembers(diffusionGroup, henry, isla);                  // 3 members
 
         // ── Admin user — for the /admin panel ──────────────────────────────
-        createUserWithRole(
+        UUID admin = createUserWithRole(
                 "admin@bubble.up",
                 "Demo Admin",
                 UserRole.ADMIN,
                 universityId,
                 departmentId);
 
-        log.info("DemoSeeder: seeded 10 demo users, 1 admin, and 7 Study Bubbles "
-                + "(3 with Bob as member, 4 trending in Bob's courses)");
+        // ── Experts + expert sessions ───────────────────────────────────────
+        // Two verified experts who can host, plus one pending applicant so the
+        // /admin expert-verification queue has something to approve. Verification
+        // is forced through the admin internal service so the population is the
+        // same regardless of the app.expert.auto-verify flag.
+        UUID victor = createVerifiedExpert(
+                "victor@bubble.up", "Victor Vance",
+                "Senior OS Engineer & ex-TA",
+                "Ten years shipping schedulers and allocators. I make paging click.",
+                Set.of("operating-systems", "concurrency", "c"),
+                universityId, departmentId, admin);
+        UUID wendy = createVerifiedExpert(
+                "wendy@bubble.up", "Wendy West",
+                "ML Researcher — attention & transformers",
+                "I teach the math behind the models. Bring your hardest backprop question.",
+                Set.of("deep-learning", "pytorch", "transformers"),
+                universityId, departmentId, admin);
+        createPendingExpert(
+                "xavier@bubble.up", "Xander Xu",
+                "PhD candidate — Distributed Systems",
+                "Consensus, replication, and why your database is lying to you.",
+                Set.of("distributed-systems", "databases"),
+                universityId, departmentId);
+
+        // Live-ish session: starts in 10 min and runs 2h. Enrollment is still
+        // open (closes 5 min before start) AND the room is already enterable
+        // (entry window opens 15 min before start) — this is the one to click into.
+        UUID liveSession = createExpertSession(victor,
+                "OS Exam Crunch — Live Q&A",
+                "Past-paper walkthrough + your questions before the OS final.",
+                10, 120, 4);
+        enrollGroupInSession(liveSession, osGroup, alice);
+        enrollGroupInSession(liveSession, osCrammers, carol);
+
+        // Upcoming session (2 days out): for the directory / advertise surfaces and
+        // for manually testing group enrollment + the sticky-link chat share.
+        UUID upcomingSession = createExpertSession(wendy,
+                "Deep Learning: Attention Deep-Dive",
+                "We derive self-attention from scratch, then read one paper together.",
+                Duration.ofDays(2).toMinutes(), 90, 6);
+        enrollGroupInSession(upcomingSession, dlGroup, isla);
+        enrollGroupInSession(upcomingSession, transformersGroup, jack);
+
+        log.info("DemoSeeder: seeded 10 demo users, 1 admin, 7 Study Bubbles "
+                + "(3 with Bob as member, 4 trending in Bob's courses), "
+                + "3 experts (2 verified + 1 pending), and 2 expert sessions");
     }
 
     private UUID createUser(String email, String displayName, UUID universityId, UUID departmentId) {
@@ -228,6 +285,73 @@ public class DemoSeeder {
             } catch (RuntimeException e) {
                 log.warn("DemoSeeder: failed to add {} to group {}: {}", memberId, groupId, e.getMessage());
             }
+        }
+    }
+
+    /** Creates an expert user + profile and force-verifies it (config-independent). */
+    private UUID createVerifiedExpert(String email, String name, String headline, String bio,
+                                      Set<String> tags, UUID universityId, UUID departmentId, UUID adminId) {
+        UUID userId = applyExpertProfile(email, name, headline, bio, tags, universityId, departmentId);
+        if (userId != null) {
+            try {
+                // Idempotent on already-verified profiles (auto-verify on) — flips
+                // PENDING → VERIFIED when auto-verify is off.
+                expertAdminInternalService.verify(userId, adminId);
+            } catch (RuntimeException e) {
+                log.warn("DemoSeeder: failed to verify expert {}: {}", email, e.getMessage());
+            }
+        }
+        return userId;
+    }
+
+    /** Creates an expert user + profile and forces it back to PENDING for the admin queue. */
+    private UUID createPendingExpert(String email, String name, String headline, String bio,
+                                     Set<String> tags, UUID universityId, UUID departmentId) {
+        UUID userId = applyExpertProfile(email, name, headline, bio, tags, universityId, departmentId);
+        if (userId != null) {
+            try {
+                // revoke() resets to PENDING (keeps the EXPERT role) — undoes the
+                // auto-verify default so the verification queue isn't empty.
+                expertAdminInternalService.revoke(userId);
+            } catch (RuntimeException e) {
+                log.warn("DemoSeeder: failed to reset expert {} to pending: {}", email, e.getMessage());
+            }
+        }
+        return userId;
+    }
+
+    private UUID applyExpertProfile(String email, String name, String headline, String bio,
+                                    Set<String> tags, UUID universityId, UUID departmentId) {
+        UUID userId = createUserWithRole(email, name, UserRole.STUDENT, universityId, departmentId);
+        try {
+            expertProfileService.applyAsExpert(userId, new ApplyAsExpertRequest(headline, bio, tags));
+            return userId;
+        } catch (RuntimeException e) {
+            log.warn("DemoSeeder: failed to create expert profile for {}: {}", email, e.getMessage());
+            return null;
+        }
+    }
+
+    private UUID createExpertSession(UUID expertUserId, String title, String description,
+                                     long startInMinutes, long durationMinutes, int capacity) {
+        if (expertUserId == null) return null;
+        try {
+            Instant startsAt = timeProvider.now().plus(Duration.ofMinutes(startInMinutes));
+            Instant endsAt = startsAt.plus(Duration.ofMinutes(durationMinutes));
+            return expertSessionCommandService.createSession(expertUserId,
+                    new CreateExpertSessionRequest(title, description, startsAt, endsAt, capacity)).id();
+        } catch (RuntimeException e) {
+            log.warn("DemoSeeder: failed to create expert session '{}': {}", title, e.getMessage());
+            return null;
+        }
+    }
+
+    private void enrollGroupInSession(UUID sessionId, UUID groupId, UUID ownerId) {
+        if (sessionId == null || groupId == null) return;
+        try {
+            expertSessionCommandService.enrollGroup(sessionId, groupId, ownerId);
+        } catch (RuntimeException e) {
+            log.warn("DemoSeeder: failed to enroll group {} in session {}: {}", groupId, sessionId, e.getMessage());
         }
     }
 }

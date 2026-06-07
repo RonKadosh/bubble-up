@@ -141,6 +141,13 @@ public enum ErrorCode {
     ADMIN_CATALOG_COURSE_DEPARTMENT_ALREADY_LINKED(ErrorCategory.CONFLICT, HttpStatus.CONFLICT),
     ADMIN_CATALOG_COURSE_DEPARTMENT_NOT_LINKED(ErrorCategory.NOT_FOUND, HttpStatus.NOT_FOUND),
 
+    // Reports (user-submitted abuse / feedback inbox)
+    REPORT_NOT_FOUND(ErrorCategory.NOT_FOUND, HttpStatus.NOT_FOUND),
+    REPORT_IMAGE_TYPE_NOT_ALLOWED(ErrorCategory.VALIDATION, HttpStatus.BAD_REQUEST),
+    REPORT_IMAGE_TOO_LARGE(ErrorCategory.VALIDATION, HttpStatus.PAYLOAD_TOO_LARGE),
+    REPORT_IMAGE_NOT_FOUND(ErrorCategory.NOT_FOUND, HttpStatus.NOT_FOUND),
+    NOT_REPORT_OWNER(ErrorCategory.FORBIDDEN, HttpStatus.FORBIDDEN),
+
     // Enrollment
     ENROLLMENT_ALREADY_EXISTS(ErrorCategory.CONFLICT, HttpStatus.CONFLICT),
     ENROLLMENT_NOT_FOUND(ErrorCategory.NOT_FOUND, HttpStatus.NOT_FOUND),

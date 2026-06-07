@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Card } from '../components/Card'
 import { Button, IconButton } from '../components/Button'
-import { PageHeader, PageWidth, SectionLabel } from '../components/PageHeader'
+import { PageShell, SectionLabel } from '../components/PageHeader'
 import { gradientFor } from '../components/Avatar'
 import {
   AtomIcon,
@@ -221,44 +221,37 @@ export default function AcademyPage() {
   }
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-      <header className="pt-6 tablet:pt-8 pb-4 shrink-0">
-        <PageWidth>
-        <PageHeader
-          title={t('academy.title')}
-          subtitle={t('academy.subtitle')}
-          titleAfter={university && (
-            <span className="ms-1 text-xs font-medium px-2 py-0.5 rounded-md bg-surface-muted text-secondary border border-line">
-              {university.shortCode}
-            </span>
-          )}
-          actions={
-            <>
-              <label className="text-xs text-muted" htmlFor="academy-term">
-                {t('academy.term.label')}
-              </label>
-              <select
-                id="academy-term"
-                value={selectedTermId}
-                onChange={(e) => setSelectedTermId(e.target.value)}
-                disabled={loadingShell || terms.length === 0}
-                className="border border-line bg-surface rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:border-primary-400 disabled:opacity-50"
-              >
-                <option value={TERM_ALL}>{t('academy.term.all')}</option>
-                {terms.map((tm) => (
-                  <option key={tm.id} value={tm.id}>
-                    {tm.name} · {tm.academicYear}
-                  </option>
-                ))}
-              </select>
-            </>
-          }
-        />
-        </PageWidth>
-      </header>
-
-      <div className="flex-1 min-h-0 pb-6 tablet:pb-8 overflow-y-auto">
-        <PageWidth>
+    <>
+      <PageShell
+        title={t('academy.title')}
+        subtitle={t('academy.subtitle')}
+        titleAfter={university && (
+          <span className="ms-1 text-xs font-medium px-2 py-0.5 rounded-md bg-surface-muted text-secondary border border-line">
+            {university.shortCode}
+          </span>
+        )}
+        actions={
+          <>
+            <label className="text-xs text-muted" htmlFor="academy-term">
+              {t('academy.term.label')}
+            </label>
+            <select
+              id="academy-term"
+              value={selectedTermId}
+              onChange={(e) => setSelectedTermId(e.target.value)}
+              disabled={loadingShell || terms.length === 0}
+              className="border border-line bg-surface rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:border-primary-400 disabled:opacity-50"
+            >
+              <option value={TERM_ALL}>{t('academy.term.all')}</option>
+              {terms.map((tm) => (
+                <option key={tm.id} value={tm.id}>
+                  {tm.name} · {tm.academicYear}
+                </option>
+              ))}
+            </select>
+          </>
+        }
+      >
         {error && (
           <p className="mb-3 text-sm text-danger">{error}</p>
         )}
@@ -359,8 +352,7 @@ export default function AcademyPage() {
             </Pane>
           </div>
         </section>
-        </PageWidth>
-      </div>
+      </PageShell>
 
       <ConfirmDialog
         open={pendingUnenroll !== null}
@@ -372,7 +364,7 @@ export default function AcademyPage() {
         onConfirm={() => pendingUnenroll && performUnenroll(pendingUnenroll)}
         onClose={() => setPendingUnenroll(null)}
       />
-    </div>
+    </>
   )
 }
 
