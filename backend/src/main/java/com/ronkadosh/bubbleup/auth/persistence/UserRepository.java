@@ -1,6 +1,7 @@
 package com.ronkadosh.bubbleup.auth.persistence;
 
 import com.ronkadosh.bubbleup.auth.model.User;
+import com.ronkadosh.bubbleup.auth.model.UserStatus;
 import com.ronkadosh.bubbleup.common.context.UserRole;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -24,12 +25,14 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     @Query("""
             select u from User u
             where (:role is null or u.role = :role)
+              and (:status is null or u.status = :status)
               and (:q = '' or lower(u.email) like concat('%', :q, '%')
                           or lower(u.displayName) like concat('%', :q, '%'))
               and u.createdAt > :createdAfter
             """)
     Page<User> searchForAdmin(
             @Param("role") UserRole role,
+            @Param("status") UserStatus status,
             @Param("q") String q,
             @Param("createdAfter") Instant createdAfter,
             Pageable pageable

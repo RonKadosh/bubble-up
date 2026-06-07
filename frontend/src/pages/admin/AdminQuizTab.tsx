@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   createOption,
   createQuestion,
@@ -12,6 +13,9 @@ import {
   updateOption,
   updateQuestion,
 } from '../../api/admin'
+import { errorBody } from '../../api/errors'
+import { Button } from '../../components/Button'
+import { Card } from '../../components/Card'
 import AdminModal from './components/AdminModal'
 
 const WEIGHT_FIELDS = [
@@ -26,17 +30,8 @@ const WEIGHT_FIELDS = [
 
 type WeightField = (typeof WEIGHT_FIELDS)[number]
 
-const WEIGHT_LABELS: Record<WeightField, string> = {
-  weightLeader: 'Leader',
-  weightPlanner: 'Planner',
-  weightExpert: 'Expert',
-  weightCreative: 'Creative',
-  weightCommunicator: 'Communicator',
-  weightTeamPlayer: 'Team player',
-  weightChallenger: 'Challenger',
-}
-
 export default function AdminQuizTab() {
+  const { t } = useTranslation()
   const [items, setItems] = useState<QuizQuestionDetail[]>([])
   const [err, setErr] = useState<string | null>(null)
   const [creatingQ, setCreatingQ] = useState(false)
@@ -47,111 +42,130 @@ export default function AdminQuizTab() {
   async function load() {
     try {
       setItems(await listQuiz())
+      setErr(null)
     } catch (e) {
-      setErr(String(e))
+      setErr(errorBody(e)?.message ?? t('admin.quiz.errorLoad'))
     }
   }
+
   useEffect(() => {
     load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex justify-end">
-        <button
-          onClick={() => setCreatingQ(true)}
-          className="px-3 py-1.5 rounded-full bg-indigo-600 text-on-brand text-sm"
-        >
-          + Add question
-        </button>
-      </div>
-      {err && <p className="text-red-600 text-sm">{err}</p>}
+      <Card size="lg" className="p-4 flex flex-col tablet:flex-row tablet:items-center tablet:justify-between gap-3">
+        <div>
+          <h2 className="text-base font-semibold text-base">{t('admin.quiz.title')}</h2>
+          <p className="text-xs text-muted">{t('admin.quiz.subtitle')}</p>
+        </div>
+        <Button type="button" variant="ghost" size="sm" className="admin-action-button" onClick={() => setCreatingQ(true)}>
+          {t('admin.quiz.addQuestion')}
+        </Button>
+      </Card>
+
+      {err && <p className="text-danger text-sm">{err}</p>}
+
       <ul className="flex flex-col gap-3">
-        {items.map(({ question: q, options }) => (
-          <li key={q.id} className="rounded-2xl border border-line bg-surface p-4">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <div className="text-base font-medium">{q.textEn}</div>
-                {q.textHe && (
-                  <div className="text-sm text-secondary mt-0.5" dir="rtl">{q.textHe}</div>
-                )}
-                <div className="text-xs text-secondary mt-1">
-                  Order #{q.orderIndex} · {q.active ? 'Active' : 'Inactive'}
+        {items.map(({ question, options }) => (
+          <li key={question.id}>
+            <Card size="lg" className="p-4">
+              <div className="flex flex-col desktop:flex-row desktop:items-start desktop:justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-base font-semibold text-base">{question.textEn}</h3>
+                    <StatusBadge active={question.active} />
+                  </div>
+                  {question.textHe && (
+                    <p className="text-sm text-muted mt-1" dir="rtl">{question.textHe}</p>
+                  )}
+                  <p className="text-xs text-muted mt-1">
+                    {t('admin.quiz.orderSummary', { order: question.orderIndex, count: options.length })}
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="xs"
+                    onClick={async () => {
+                      await setQuestionActive(question.id, !question.active)
+                      load()
+                    }}
+                  >
+                    {question.active ? t('admin.quiz.deactivate') : t('admin.quiz.activate')}
+                  </Button>
+                  <Button type="button" variant="secondary" size="xs" onClick={() => setEditingQ(question)}>
+                    {t('common.edit')}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="danger"
+                    size="xs"
+                    onClick={async () => {
+                      if (!window.confirm(t('admin.quiz.confirmDeleteQuestion'))) return
+                      await deleteQuestion(question.id)
+                      load()
+                    }}
+                  >
+                    {t('common.delete')}
+                  </Button>
                 </div>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  onClick={async () => {
-                    await setQuestionActive(q.id, !q.active)
-                    load()
-                  }}
-                  className={`text-xs px-3 py-1 rounded-full border ${
-                    q.active ? 'border-line text-base' : 'border-indigo-300 text-indigo-700'
-                  }`}
-                >
-                  {q.active ? 'Deactivate' : 'Activate'}
-                </button>
-                <button
-                  onClick={() => setEditingQ(q)}
-                  className="text-xs px-3 py-1 rounded-full border border-line"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={async () => {
-                    if (!confirm('Delete this question and all its responses?')) return
-                    await deleteQuestion(q.id)
-                    load()
-                  }}
-                  className="text-xs px-3 py-1 rounded-full border border-red-300 text-red-600"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-            <ul className="mt-3 flex flex-col gap-1">
-              {options.map((o) => (
-                <li
-                  key={o.id}
-                  className="flex items-center justify-between rounded-xl border border-line bg-base px-3 py-1.5 text-sm"
-                >
-                  <div>
-                    <div>{o.textEn}</div>
-                    {o.textHe && <div className="text-xs text-secondary" dir="rtl">{o.textHe}</div>}
-                    <div className="text-[10px] text-secondary mt-0.5">
-                      {WEIGHT_FIELDS.map((w) => `${WEIGHT_LABELS[w]}:${o[w].toFixed(2)}`).join('  ')}
+
+              <ul className="mt-4 flex flex-col gap-2">
+                {options.map((option) => (
+                  <li
+                    key={option.id}
+                    className="rounded-2xl border border-line bg-base px-3 py-3 text-sm"
+                  >
+                    <div className="flex flex-col desktop:flex-row desktop:items-start desktop:justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-medium text-base">{option.textEn}</p>
+                        {option.textHe && <p className="text-xs text-muted mt-0.5" dir="rtl">{option.textHe}</p>}
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {WEIGHT_FIELDS.map((field) => (
+                            <span key={field} className="text-[11px] rounded-full bg-surface-muted text-secondary px-2 py-0.5">
+                              {t(`admin.quiz.weights.${field}`)}: {option[field].toFixed(2)}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex gap-2 shrink-0">
+                        <Button type="button" variant="secondary" size="xs" onClick={() => setEditingO(option)}>
+                          {t('common.edit')}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="danger"
+                          size="xs"
+                          onClick={async () => {
+                            if (!window.confirm(t('admin.quiz.confirmDeleteOption'))) return
+                            await deleteOption(option.id)
+                            load()
+                          }}
+                        >
+                          {t('common.delete')}
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex gap-1">
-                    <button
-                      onClick={() => setEditingO(o)}
-                      className="text-xs px-2 py-0.5 rounded-full border border-line"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={async () => {
-                        if (!confirm('Delete this option?')) return
-                        await deleteOption(o.id)
-                        load()
-                      }}
-                      className="text-xs px-2 py-0.5 rounded-full border border-red-300 text-red-600"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-            <button
-              onClick={() => setAddingOption(q.id)}
-              className="mt-2 text-xs text-indigo-600 hover:underline"
-            >
-              + Add option
-            </button>
+                  </li>
+                ))}
+              </ul>
+
+              <Button type="button" variant="ghost" size="xs" className="mt-3" onClick={() => setAddingOption(question.id)}>
+                {t('admin.quiz.addOption')}
+              </Button>
+            </Card>
           </li>
         ))}
-        {items.length === 0 && <li className="text-secondary text-sm">No questions yet.</li>}
+        {items.length === 0 && (
+          <li>
+            <Card size="lg" className="p-8 text-center text-muted">{t('admin.quiz.empty')}</Card>
+          </li>
+        )}
       </ul>
 
       {creatingQ && (
@@ -209,47 +223,44 @@ function QuestionEditorModal({
   onClose: () => void
   onSave: (body: { textEn: string; textHe?: string; orderIndex?: number; active?: boolean }) => Promise<void>
 }) {
+  const { t } = useTranslation()
   const [textEn, setTextEn] = useState(initial?.textEn ?? '')
   const [textHe, setTextHe] = useState(initial?.textHe ?? '')
   const [orderIndex, setOrderIndex] = useState<number | ''>(initial?.orderIndex ?? '')
   const [active, setActive] = useState(initial?.active ?? true)
   const [err, setErr] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+
+  async function submit() {
+    setSaving(true)
+    setErr(null)
+    try {
+      await onSave({
+        textEn,
+        textHe: textHe.trim() ? textHe : undefined,
+        orderIndex: orderIndex === '' ? undefined : orderIndex,
+        active,
+      })
+    } catch (e) {
+      setErr(errorBody(e)?.message ?? t('admin.quiz.errorSaveQuestion'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
     <AdminModal
-      title={initial ? 'Edit question' : 'Add question'}
+      title={initial ? t('admin.quiz.editQuestion') : t('admin.quiz.addQuestion')}
       onClose={onClose}
-      footer={
-        <div className="flex justify-end gap-2">
-          <button onClick={onClose} className="px-4 py-2 rounded-full border border-line">
-            Cancel
-          </button>
-          <button
-            onClick={async () => {
-              try {
-                await onSave({
-                  textEn,
-                  textHe: textHe.trim() ? textHe : undefined,
-                  orderIndex: orderIndex === '' ? undefined : orderIndex,
-                  active,
-                })
-              } catch (e) {
-                setErr(extractError(e))
-              }
-            }}
-            className="px-4 py-2 rounded-full bg-indigo-600 text-on-brand"
-          >
-            Save
-          </button>
-        </div>
-      }
+      footer={<ModalActions onCancel={onClose} onSubmit={submit} submitting={saving} />}
     >
-      <Labelled label="Question text (English)">
+      <Labelled label={t('admin.quiz.fields.questionEn')}>
         <textarea value={textEn} onChange={(e) => setTextEn(e.target.value)} rows={3} className={inputCls} />
       </Labelled>
-      <Labelled label="Question text (Hebrew)">
+      <Labelled label={t('admin.quiz.fields.questionHe')}>
         <textarea value={textHe} onChange={(e) => setTextHe(e.target.value)} rows={3} className={inputCls} dir="rtl" />
       </Labelled>
-      <Labelled label="Order index">
+      <Labelled label={t('admin.quiz.fields.order')}>
         <input
           type="number"
           value={orderIndex}
@@ -257,11 +268,11 @@ function QuestionEditorModal({
           className={inputCls}
         />
       </Labelled>
-      <label className="flex items-center gap-2 text-sm">
+      <label className="flex items-center gap-2 text-sm text-base">
         <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />
-        Active in live quiz
+        {t('admin.quiz.fields.active')}
       </label>
-      {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
+      {err && <p className="mt-2 text-sm text-danger">{err}</p>}
     </AdminModal>
   )
 }
@@ -275,85 +286,107 @@ function OptionEditorModal({
   onClose: () => void
   onSave: (body: { textEn: string; textHe?: string } & Partial<Record<WeightField, number>>) => Promise<void>
 }) {
+  const { t } = useTranslation()
   const [textEn, setTextEn] = useState(initial?.textEn ?? '')
   const [textHe, setTextHe] = useState(initial?.textHe ?? '')
   const [weights, setWeights] = useState<Record<WeightField, string>>(() => {
     const base: Record<WeightField, string> = {} as Record<WeightField, string>
-    for (const w of WEIGHT_FIELDS) base[w] = initial ? initial[w].toString() : '0'
+    for (const field of WEIGHT_FIELDS) base[field] = initial ? initial[field].toString() : '0'
     return base
   })
   const [err, setErr] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+
+  async function submit() {
+    setSaving(true)
+    setErr(null)
+    try {
+      const body: { textEn: string; textHe?: string } & Partial<Record<WeightField, number>> = {
+        textEn,
+        textHe: textHe.trim() ? textHe : undefined,
+      }
+      for (const field of WEIGHT_FIELDS) {
+        body[field] = parseFloat(weights[field] || '0')
+      }
+      await onSave(body)
+    } catch (e) {
+      setErr(errorBody(e)?.message ?? t('admin.quiz.errorSaveOption'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
     <AdminModal
-      title={initial ? 'Edit option' : 'Add option'}
+      title={initial ? t('admin.quiz.editOption') : t('admin.quiz.addOption')}
       onClose={onClose}
       size="md"
-      footer={
-        <div className="flex justify-end gap-2">
-          <button onClick={onClose} className="px-4 py-2 rounded-full border border-line">
-            Cancel
-          </button>
-          <button
-            onClick={async () => {
-              try {
-                const body: { textEn: string; textHe?: string } & Partial<Record<WeightField, number>> = {
-                  textEn,
-                  textHe: textHe.trim() ? textHe : undefined,
-                }
-                for (const w of WEIGHT_FIELDS) {
-                  body[w] = parseFloat(weights[w] || '0')
-                }
-                await onSave(body)
-              } catch (e) {
-                setErr(extractError(e))
-              }
-            }}
-            className="px-4 py-2 rounded-full bg-indigo-600 text-on-brand"
-          >
-            Save
-          </button>
-        </div>
-      }
+      footer={<ModalActions onCancel={onClose} onSubmit={submit} submitting={saving} />}
     >
-      <Labelled label="Option text (English)">
+      <Labelled label={t('admin.quiz.fields.optionEn')}>
         <input value={textEn} onChange={(e) => setTextEn(e.target.value)} className={inputCls} />
       </Labelled>
-      <Labelled label="Option text (Hebrew)">
+      <Labelled label={t('admin.quiz.fields.optionHe')}>
         <input value={textHe} onChange={(e) => setTextHe(e.target.value)} className={inputCls} dir="rtl" />
       </Labelled>
-      <div className="grid grid-cols-2 gap-2">
-        {WEIGHT_FIELDS.map((w) => (
-          <Labelled key={w} label={WEIGHT_LABELS[w]}>
+      <div className="grid grid-cols-1 tablet:grid-cols-2 gap-2">
+        {WEIGHT_FIELDS.map((field) => (
+          <Labelled key={field} label={t(`admin.quiz.weights.${field}`)}>
             <input
               type="number"
               step="0.05"
-              value={weights[w]}
-              onChange={(e) => setWeights((s) => ({ ...s, [w]: e.target.value }))}
+              value={weights[field]}
+              onChange={(e) => setWeights((state) => ({ ...state, [field]: e.target.value }))}
               className={inputCls}
             />
           </Labelled>
         ))}
       </div>
-      {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
+      {err && <p className="mt-2 text-sm text-danger">{err}</p>}
     </AdminModal>
+  )
+}
+
+function StatusBadge({ active }: { active: boolean }) {
+  const { t } = useTranslation()
+  return (
+    <span className={`text-xs px-2 py-0.5 rounded-md ${
+      active ? 'bg-bubble-green-soft text-bubble-green' : 'bg-surface-muted text-secondary'
+    }`}>
+      {active ? t('admin.quiz.active') : t('admin.quiz.inactive')}
+    </span>
+  )
+}
+
+function ModalActions({
+  onCancel,
+  onSubmit,
+  submitting,
+}: {
+  onCancel: () => void
+  onSubmit: () => void
+  submitting?: boolean
+}) {
+  const { t } = useTranslation()
+  return (
+    <div className="flex justify-end gap-2">
+      <Button type="button" variant="ghost" size="sm" onClick={onCancel} disabled={submitting}>
+        {t('common.cancel')}
+      </Button>
+      <Button type="button" variant="ghost" size="sm" className="admin-action-button" onClick={onSubmit} disabled={submitting}>
+        {submitting ? t('admin.reason.submitting') : t('common.save')}
+      </Button>
+    </div>
   )
 }
 
 function Labelled({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block mb-3">
-      <span className="text-xs text-secondary">{label}</span>
+      <span className="text-xs font-semibold text-muted">{label}</span>
       <div className="mt-1">{children}</div>
     </label>
   )
 }
 
-const inputCls = 'w-full rounded-xl border border-line bg-base px-3 py-2 text-sm'
-
-function extractError(e: unknown): string {
-  if (typeof e === 'object' && e !== null) {
-    const anyE = e as { response?: { data?: { error?: { code?: string; message?: string } } } }
-    return anyE.response?.data?.error?.message ?? anyE.response?.data?.error?.code ?? 'Request failed.'
-  }
-  return 'Request failed.'
-}
+const inputCls = 'w-full rounded-2xl border border-line bg-base px-3 py-2 text-sm focus-bubble'

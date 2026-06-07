@@ -17,6 +17,8 @@ public interface GroupInternalService {
 
     boolean isOwner(UUID groupId, UUID userId);
 
+    boolean isActive(UUID groupId);
+
     Optional<MembershipRole> roleOf(UUID groupId, UUID userId);
 
     List<GroupSummary> getGroupsForUser(UUID userId);

@@ -9,6 +9,7 @@ import com.ronkadosh.bubbleup.groups.internal.GroupAdminInternalService;
 import com.ronkadosh.bubbleup.groups.internal.dto.admin.GroupAdminDetail;
 import com.ronkadosh.bubbleup.groups.internal.dto.admin.GroupAdminDto;
 import com.ronkadosh.bubbleup.groups.model.GroupMember;
+import com.ronkadosh.bubbleup.groups.model.GroupStatus;
 import com.ronkadosh.bubbleup.groups.model.StudyGroup;
 import com.ronkadosh.bubbleup.groups.persistence.GroupMemberRepository;
 import com.ronkadosh.bubbleup.groups.persistence.GroupRepository;
@@ -81,6 +82,24 @@ public class GroupAdminInternalServiceImpl implements GroupAdminInternalService 
     }
 
     @Override
+    @Transactional
+    public GroupAdminDto setGroupStatus(UUID groupId, GroupStatus status) {
+        StudyGroup group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new AppException(ErrorCode.GROUP_NOT_FOUND));
+        group.setStatus(status);
+        return toDto(group);
+    }
+
+    @Override
+    @Transactional
+    public int setGroupStatusForOfferings(Collection<UUID> offeringIds, GroupStatus status) {
+        if (offeringIds == null || offeringIds.isEmpty()) return 0;
+        List<StudyGroup> groups = groupRepository.findAllByOfferingIdIn(offeringIds);
+        groups.forEach(group -> group.setStatus(status));
+        return groups.size();
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public long countGroupsForOffering(UUID offeringId) {
         return groupRepository.countByOfferingId(offeringId);
@@ -97,6 +116,12 @@ public class GroupAdminInternalServiceImpl implements GroupAdminInternalService 
     @Transactional(readOnly = true)
     public long countTotalGroups() {
         return groupRepository.count();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public long countGroupsByStatus(GroupStatus status) {
+        return groupRepository.countByStatus(status);
     }
 
     @Override
@@ -143,6 +168,7 @@ public class GroupAdminInternalServiceImpl implements GroupAdminInternalService 
                 g.getName(),
                 g.getDescription(),
                 g.getVisibility(),
+                g.getStatus(),
                 g.getOfferingId(),
                 l.courseByOffering().get(g.getOfferingId()),
                 g.getCreatedBy(),

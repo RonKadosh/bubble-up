@@ -25,6 +25,10 @@ public interface UserMatchCacheRepository extends JpaRepository<UserMatchCache, 
     void deleteByGroupId(@Param("groupId") UUID groupId);
 
     @Modifying
+    @Query("DELETE FROM UserMatchCache c WHERE c.groupId IN :groupIds")
+    void deleteByGroupIdIn(@Param("groupIds") Collection<UUID> groupIds);
+
+    @Modifying
     @Query("DELETE FROM UserMatchCache c WHERE c.userId = :userId AND c.groupId NOT IN :keepGroupIds")
     void deleteStaleByUserId(@Param("userId") UUID userId, @Param("keepGroupIds") Collection<UUID> keepGroupIds);
 

@@ -134,6 +134,14 @@ public class AdminCatalogController {
         return ApiResponse.success(null);
     }
 
+    @PostMapping("/terms/{sourceTermId}/rollover")
+    public ApiResponse<AdminCatalogDtos.RolloverTermResponse> rolloverTerm(
+            @PathVariable UUID sourceTermId,
+            @Valid @RequestBody AdminCatalogDtos.RolloverTermRequest req
+    ) {
+        return ApiResponse.success(service.rolloverTerm(sourceTermId, req));
+    }
+
     // ─── Courses ──────────────────────────────────────────────────────────────
 
     @GetMapping("/courses")

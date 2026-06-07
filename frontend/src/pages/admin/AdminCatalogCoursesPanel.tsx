@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   Course,
   CourseDetail,
@@ -17,11 +18,15 @@ import {
   University,
   updateCourse,
 } from '../../api/admin'
+import { errorBody } from '../../api/errors'
+import { Button } from '../../components/Button'
+import { Card } from '../../components/Card'
 import AdminModal from './components/AdminModal'
 import AdminTable, { Column } from './components/AdminTable'
 import ReasonPromptModal from './components/ReasonPromptModal'
 
 export default function AdminCatalogCoursesPanel({ uni }: { uni: University }) {
+  const { t } = useTranslation()
   const [items, setItems] = useState<Course[]>([])
   const [q, setQ] = useState('')
   const [opening, setOpening] = useState<Course | null>(null)
@@ -32,50 +37,71 @@ export default function AdminCatalogCoursesPanel({ uni }: { uni: University }) {
     try {
       const res = await searchCourses({ universityId: uni.id, q: q || undefined, size: 100 })
       setItems(res.content)
+      setErr(null)
     } catch (e) {
-      setErr(String(e))
+      setErr(errorBody(e)?.message ?? t('admin.catalog.courses.errorLoad'))
     }
   }
+
   useEffect(() => {
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uni.id])
 
-  const cols: Column<Course>[] = [
-    { header: 'Code', cell: (c) => <span className="font-mono text-xs">{c.code}</span>, width: '100px' },
-    { header: 'Name', cell: (c) => c.name },
-    { header: 'Credits', cell: (c) => c.creditPoints ?? '—', width: '80px' },
-  ]
+  const cols: Column<Course>[] = useMemo(
+    () => [
+      { header: t('admin.catalog.courses.columns.code'), cell: (course) => <span className="font-mono text-xs">{course.code}</span>, width: '100px' },
+      {
+        header: t('admin.catalog.courses.columns.name'),
+        cell: (course) => (
+          <div className="min-w-0">
+            <p className="font-medium text-base truncate">{course.name}</p>
+            {course.description && <p className="text-xs text-muted truncate">{course.description}</p>}
+          </div>
+        ),
+      },
+      {
+        header: t('admin.catalog.courses.columns.credits'),
+        cell: (course) => course.creditPoints ?? '-',
+        width: '90px',
+      },
+    ],
+    [t]
+  )
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap gap-2 items-end">
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && load()}
-          placeholder="search code or name"
-          className="rounded-full border border-line bg-base px-3 py-1.5 text-sm"
-        />
-        <button onClick={load} className="px-3 py-1.5 rounded-full border border-line text-sm">
-          Search
-        </button>
-        <div className="flex-1" />
-        <button
-          onClick={() => setCreating(true)}
-          className="px-3 py-1.5 rounded-full bg-indigo-600 text-on-brand text-sm"
-        >
-          + Add course
-        </button>
-      </div>
-      {err && <p className="text-red-600 text-sm">{err}</p>}
+      <Card size="lg" className="p-4">
+        <div className="flex flex-col tablet:flex-row tablet:items-end gap-3">
+          <label className="flex flex-col gap-1 flex-1 min-w-0">
+            <span className="text-xs font-semibold text-muted">{t('admin.catalog.courses.searchLabel')}</span>
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && load()}
+              placeholder={t('admin.catalog.courses.searchPlaceholder')}
+              className="rounded-full border border-line bg-base px-3 py-2 text-sm focus-bubble"
+            />
+          </label>
+          <Button type="button" variant="secondary" size="sm" onClick={load}>
+            {t('admin.catalog.courses.search')}
+          </Button>
+          <Button type="button" variant="ghost" size="sm" className="admin-action-button" onClick={() => setCreating(true)}>
+            {t('admin.catalog.courses.add')}
+          </Button>
+        </div>
+      </Card>
+
+      {err && <p className="text-danger text-sm">{err}</p>}
+
       <AdminTable
         columns={cols}
         rows={items}
-        keyOf={(c) => c.id}
-        onRowClick={(c) => setOpening(c)}
-        empty="No courses for this university."
+        keyOf={(course) => course.id}
+        onRowClick={(course) => setOpening(course)}
+        empty={t('admin.catalog.courses.empty')}
       />
+
       {opening && (
         <CourseDetailModal
           uni={uni}
@@ -107,11 +133,13 @@ function CreateCourseModal({
   onClose: () => void
   onCreated: () => void
 }) {
+  const { t } = useTranslation()
   const [code, setCode] = useState('')
   const [name, setName] = useState('')
   const [credits, setCredits] = useState('')
   const [description, setDescription] = useState('')
   const [err, setErr] = useState<string | null>(null)
+
   async function submit() {
     setErr(null)
     try {
@@ -124,30 +152,22 @@ function CreateCourseModal({
       })
       onCreated()
     } catch (e) {
-      setErr(extractError(e))
+      setErr(errorBody(e)?.message ?? t('admin.catalog.courses.errorCreate'))
     }
   }
+
   return (
     <AdminModal
-      title="Add course"
+      title={t('admin.catalog.courses.add')}
       onClose={onClose}
       size="md"
-      footer={
-        <div className="flex justify-end gap-2">
-          <button onClick={onClose} className="px-4 py-2 rounded-full border border-line">
-            Cancel
-          </button>
-          <button onClick={submit} className="px-4 py-2 rounded-full bg-indigo-600 text-on-brand">
-            Create
-          </button>
-        </div>
-      }
+      footer={<ModalActions onCancel={onClose} onSubmit={submit} submitLabel={t('common.create')} />}
     >
-      <div className="grid grid-cols-2 gap-3">
-        <Labelled label="Code">
+      <div className="grid grid-cols-1 tablet:grid-cols-2 gap-3">
+        <Labelled label={t('admin.catalog.courses.fields.code')}>
           <input value={code} onChange={(e) => setCode(e.target.value)} className={inputCls} />
         </Labelled>
-        <Labelled label="Credit points">
+        <Labelled label={t('admin.catalog.courses.fields.credits')}>
           <input
             type="number"
             step="0.1"
@@ -157,18 +177,13 @@ function CreateCourseModal({
           />
         </Labelled>
       </div>
-      <Labelled label="Name">
+      <Labelled label={t('admin.catalog.courses.fields.name')}>
         <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} />
       </Labelled>
-      <Labelled label="Description">
-        <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          rows={3}
-          className={inputCls}
-        />
+      <Labelled label={t('admin.catalog.courses.fields.description')}>
+        <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className={inputCls} />
       </Labelled>
-      {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
+      {err && <p className="mt-2 text-sm text-danger">{err}</p>}
     </AdminModal>
   )
 }
@@ -184,6 +199,7 @@ function CourseDetailModal({
   onClose: () => void
   onChanged: () => void
 }) {
+  const { t } = useTranslation()
   const [detail, setDetail] = useState<CourseDetail | null>(null)
   const [departments, setDepartments] = useState<Department[]>([])
   const [terms, setTerms] = useState<Term[]>([])
@@ -193,18 +209,20 @@ function CourseDetailModal({
 
   async function load() {
     try {
-      const [d, depts, ts] = await Promise.all([
+      const [courseDetail, depts, termList] = await Promise.all([
         getCourseDetail(courseId),
         listDepartments(uni.id),
         listTerms(uni.id),
       ])
-      setDetail(d)
+      setDetail(courseDetail)
       setDepartments(depts)
-      setTerms(ts)
+      setTerms(termList)
+      setErr(null)
     } catch (e) {
-      setErr(String(e))
+      setErr(errorBody(e)?.message ?? t('admin.catalog.courses.errorDetail'))
     }
   }
+
   useEffect(() => {
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -212,58 +230,59 @@ function CourseDetailModal({
 
   if (!detail) {
     return (
-      <AdminModal title="Course" onClose={onClose}>
-        {err ? <p className="text-red-600">{err}</p> : <p>Loading…</p>}
+      <AdminModal title={t('admin.catalog.courses.course')} onClose={onClose}>
+        {err ? <p className="text-danger">{err}</p> : <p className="text-sm text-muted">{t('common.loading')}</p>}
       </AdminModal>
     )
   }
-  const c = detail.course
+
+  const course = detail.course
   return (
     <AdminModal
-      title={`${c.code} — ${c.name}`}
+      title={`${course.code} - ${course.name}`}
       onClose={onClose}
       size="lg"
       footer={
-        <div className="flex justify-end gap-2">
-          <button
-            onClick={() => setDeleting(true)}
-            className="px-4 py-2 rounded-full border border-red-300 text-red-600"
-          >
-            Delete course
-          </button>
-          <button
-            onClick={() => setEditing(true)}
-            className="px-4 py-2 rounded-full border border-line"
-          >
-            Edit
-          </button>
-          <button onClick={onClose} className="px-4 py-2 rounded-full bg-indigo-600 text-on-brand">
-            Close
-          </button>
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button type="button" variant="danger" size="sm" onClick={() => setDeleting(true)}>
+            {t('admin.catalog.courses.deleteCourse')}
+          </Button>
+          <Button type="button" variant="secondary" size="sm" onClick={() => setEditing(true)}>
+            {t('common.edit')}
+          </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={onClose} className="admin-action-button">
+            {t('common.close')}
+          </Button>
         </div>
       }
     >
-      <p className="text-sm text-secondary mb-4">{c.description || 'No description.'}</p>
+      <p className="text-sm text-muted mb-4 whitespace-pre-wrap">
+        {course.description || t('admin.catalog.courses.noDescription')}
+      </p>
 
-      <h3 className="text-sm font-semibold mb-2">Linked departments</h3>
-      <DepartmentLinks
-        courseId={c.id}
-        links={detail.departmentLinks}
-        departments={departments}
-        onChanged={() => load()}
-      />
+      <Card size="md" className="p-4 mb-4">
+        <h3 className="text-sm font-semibold text-base mb-3">{t('admin.catalog.courses.linkedDepartments')}</h3>
+        <DepartmentLinks
+          courseId={course.id}
+          links={detail.departmentLinks}
+          departments={departments}
+          onChanged={() => load()}
+        />
+      </Card>
 
-      <h3 className="text-sm font-semibold mt-5 mb-2">Offerings</h3>
-      <OfferingsPanel
-        courseId={c.id}
-        offerings={detail.offerings}
-        terms={terms}
-        onChanged={() => load()}
-      />
+      <Card size="md" className="p-4">
+        <h3 className="text-sm font-semibold text-base mb-3">{t('admin.catalog.courses.offerings')}</h3>
+        <OfferingsPanel
+          courseId={course.id}
+          offerings={detail.offerings}
+          terms={terms}
+          onChanged={() => load()}
+        />
+      </Card>
 
       {editing && (
         <EditCourseModal
-          course={c}
+          course={course}
           onClose={() => setEditing(false)}
           onSaved={() => {
             setEditing(false)
@@ -274,13 +293,13 @@ function CourseDetailModal({
       )}
       {deleting && (
         <ReasonPromptModal
-          title={`Delete ${c.code}`}
-          description="Rejected if any offering still has active groups."
+          title={t('admin.catalog.courses.deleteTitle', { code: course.code })}
+          description={t('admin.catalog.courses.deleteDescription')}
           destructive
-          confirmLabel="Delete course"
+          confirmLabel={t('admin.catalog.courses.deleteCourse')}
           onCancel={() => setDeleting(false)}
           onConfirm={async (reason) => {
-            await deleteCourse(c.id, reason)
+            await deleteCourse(course.id, reason)
             setDeleting(false)
             onClose()
             onChanged()
@@ -300,10 +319,12 @@ function EditCourseModal({
   onClose: () => void
   onSaved: () => void
 }) {
+  const { t } = useTranslation()
   const [name, setName] = useState(course.name)
   const [description, setDescription] = useState(course.description ?? '')
   const [credits, setCredits] = useState(course.creditPoints?.toString() ?? '')
   const [err, setErr] = useState<string | null>(null)
+
   async function submit() {
     setErr(null)
     try {
@@ -314,29 +335,21 @@ function EditCourseModal({
       })
       onSaved()
     } catch (e) {
-      setErr(extractError(e))
+      setErr(errorBody(e)?.message ?? t('admin.catalog.courses.errorUpdate'))
     }
   }
+
   return (
     <AdminModal
-      title="Edit course"
+      title={t('admin.catalog.courses.edit')}
       onClose={onClose}
       size="md"
-      footer={
-        <div className="flex justify-end gap-2">
-          <button onClick={onClose} className="px-4 py-2 rounded-full border border-line">
-            Cancel
-          </button>
-          <button onClick={submit} className="px-4 py-2 rounded-full bg-indigo-600 text-on-brand">
-            Save
-          </button>
-        </div>
-      }
+      footer={<ModalActions onCancel={onClose} onSubmit={submit} submitLabel={t('common.save')} />}
     >
-      <Labelled label="Name">
+      <Labelled label={t('admin.catalog.courses.fields.name')}>
         <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} />
       </Labelled>
-      <Labelled label="Credit points">
+      <Labelled label={t('admin.catalog.courses.fields.credits')}>
         <input
           type="number"
           step="0.1"
@@ -345,15 +358,10 @@ function EditCourseModal({
           className={inputCls}
         />
       </Labelled>
-      <Labelled label="Description">
-        <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          rows={3}
-          className={inputCls}
-        />
+      <Labelled label={t('admin.catalog.courses.fields.description')}>
+        <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className={inputCls} />
       </Labelled>
-      {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
+      {err && <p className="mt-2 text-sm text-danger">{err}</p>}
     </AdminModal>
   )
 }
@@ -369,9 +377,11 @@ function DepartmentLinks({
   departments: Department[]
   onChanged: () => void
 }) {
+  const { t } = useTranslation()
   const [pickDept, setPickDept] = useState<string>('')
   const [pickPrimary, setPickPrimary] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+
   async function add() {
     setErr(null)
     if (!pickDept) return
@@ -381,54 +391,57 @@ function DepartmentLinks({
       setPickPrimary(false)
       onChanged()
     } catch (e) {
-      setErr(extractError(e))
+      setErr(errorBody(e)?.message ?? t('admin.catalog.courses.errorLinkDepartment'))
     }
   }
+
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-3">
       <ul className="flex flex-wrap gap-2">
-        {links.map((l) => {
-          const d = departments.find((x) => x.id === l.departmentId)
+        {links.map((link) => {
+          const department = departments.find((item) => item.id === link.departmentId)
           return (
             <li
-              key={l.departmentId}
+              key={link.departmentId}
               className="flex items-center gap-2 rounded-full border border-line bg-base px-3 py-1 text-xs"
             >
-              <span>{d ? `${d.shortCode} — ${d.name}` : l.departmentId}</span>
-              {l.primary && <span className="text-indigo-600 font-medium">★ primary</span>}
+              <span>{department ? `${department.shortCode} - ${department.name}` : link.departmentId}</span>
+              {link.primary && <span className="font-semibold text-bubble-green">{t('admin.catalog.courses.primary')}</span>}
               <button
+                type="button"
                 onClick={async () => {
-                  await unlinkCourseDepartment(courseId, l.departmentId)
+                  await unlinkCourseDepartment(courseId, link.departmentId)
                   onChanged()
                 }}
-                className="text-red-600 hover:underline"
-                aria-label="Unlink"
+                className="text-danger hover:underline"
+                aria-label={t('admin.catalog.courses.unlink')}
               >
-                ✕
+                x
               </button>
             </li>
           )
         })}
-        {links.length === 0 && <li className="text-xs text-secondary">No departments linked.</li>}
+        {links.length === 0 && <li className="text-xs text-muted">{t('admin.catalog.courses.noDepartmentsLinked')}</li>}
       </ul>
+
       <div className="flex flex-wrap gap-2 items-center">
-        <select value={pickDept} onChange={(e) => setPickDept(e.target.value)} className={inputCls + ' w-auto'}>
-          <option value="">Pick department…</option>
+        <select value={pickDept} onChange={(e) => setPickDept(e.target.value)} className={`${inputCls} w-auto min-w-48`}>
+          <option value="">{t('admin.catalog.courses.pickDepartment')}</option>
           {departments
-            .filter((d) => !links.some((l) => l.departmentId === d.id))
-            .map((d) => (
-              <option key={d.id} value={d.id}>{d.shortCode} — {d.name}</option>
+            .filter((department) => !links.some((link) => link.departmentId === department.id))
+            .map((department) => (
+              <option key={department.id} value={department.id}>{department.shortCode} - {department.name}</option>
             ))}
         </select>
-        <label className="flex items-center gap-1 text-xs">
+        <label className="flex items-center gap-2 text-xs text-muted">
           <input type="checkbox" checked={pickPrimary} onChange={(e) => setPickPrimary(e.target.checked)} />
-          Primary
+          {t('admin.catalog.courses.primary')}
         </label>
-        <button onClick={add} className="px-3 py-1.5 rounded-full bg-indigo-600 text-on-brand text-xs">
-          Add
-        </button>
+        <Button type="button" variant="ghost" size="xs" className="admin-action-button" onClick={add}>
+          {t('common.add')}
+        </Button>
       </div>
-      {err && <p className="text-xs text-red-600">{err}</p>}
+      {err && <p className="text-xs text-danger">{err}</p>}
     </div>
   )
 }
@@ -444,9 +457,11 @@ function OfferingsPanel({
   terms: Term[]
   onChanged: () => void
 }) {
+  const { t } = useTranslation()
   const [pickTerm, setPickTerm] = useState<string>('')
   const [deleting, setDeleting] = useState<string | null>(null)
   const [err, setErr] = useState<string | null>(null)
+
   async function add() {
     if (!pickTerm) return
     setErr(null)
@@ -455,53 +470,50 @@ function OfferingsPanel({
       setPickTerm('')
       onChanged()
     } catch (e) {
-      setErr(extractError(e))
+      setErr(errorBody(e)?.message ?? t('admin.catalog.courses.errorCreateOffering'))
     }
   }
+
   return (
-    <div className="flex flex-col gap-2">
-      <ul className="flex flex-col gap-1">
-        {offerings.map((o) => {
-          const t = terms.find((x) => x.id === o.termId)
+    <div className="flex flex-col gap-3">
+      <ul className="flex flex-col gap-2">
+        {offerings.map((offering) => {
+          const term = terms.find((item) => item.id === offering.termId)
           return (
             <li
-              key={o.id}
-              className="flex items-center justify-between rounded-xl border border-line bg-base px-3 py-1.5 text-sm"
+              key={offering.id}
+              className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-base px-3 py-2 text-sm"
             >
-              <span>{t ? `${t.code} — ${t.name}` : o.termId}</span>
-              <button
-                onClick={() => setDeleting(o.id)}
-                className="text-xs text-red-600 hover:underline"
-              >
-                Delete
-              </button>
+              <span>{term ? `${term.code} - ${term.name}` : offering.termId}</span>
+              <Button type="button" variant="danger" size="xs" onClick={() => setDeleting(offering.id)}>
+                {t('common.delete')}
+              </Button>
             </li>
           )
         })}
-        {offerings.length === 0 && (
-          <li className="text-xs text-secondary">No offerings yet.</li>
-        )}
+        {offerings.length === 0 && <li className="text-xs text-muted">{t('admin.catalog.courses.noOfferings')}</li>}
       </ul>
+
       <div className="flex flex-wrap gap-2 items-center">
-        <select value={pickTerm} onChange={(e) => setPickTerm(e.target.value)} className={inputCls + ' w-auto'}>
-          <option value="">Pick term…</option>
+        <select value={pickTerm} onChange={(e) => setPickTerm(e.target.value)} className={`${inputCls} w-auto min-w-48`}>
+          <option value="">{t('admin.catalog.courses.pickTerm')}</option>
           {terms
-            .filter((t) => !offerings.some((o) => o.termId === t.id))
-            .map((t) => (
-              <option key={t.id} value={t.id}>{t.code} — {t.name}</option>
+            .filter((term) => !offerings.some((offering) => offering.termId === term.id))
+            .map((term) => (
+              <option key={term.id} value={term.id}>{term.code} - {term.name}</option>
             ))}
         </select>
-        <button onClick={add} className="px-3 py-1.5 rounded-full bg-indigo-600 text-on-brand text-xs">
-          Add offering
-        </button>
+        <Button type="button" variant="ghost" size="xs" className="admin-action-button" onClick={add}>
+          {t('admin.catalog.courses.addOffering')}
+        </Button>
       </div>
-      {err && <p className="text-xs text-red-600">{err}</p>}
+      {err && <p className="text-xs text-danger">{err}</p>}
       {deleting && (
         <ReasonPromptModal
-          title="Delete offering"
-          description="Rejected if any groups reference this offering."
+          title={t('admin.catalog.courses.deleteOfferingTitle')}
+          description={t('admin.catalog.courses.deleteOfferingDescription')}
           destructive
-          confirmLabel="Delete"
+          confirmLabel={t('common.delete')}
           onCancel={() => setDeleting(null)}
           onConfirm={async (reason) => {
             await deleteOffering(deleting, reason)
@@ -514,21 +526,35 @@ function OfferingsPanel({
   )
 }
 
+function ModalActions({
+  onCancel,
+  onSubmit,
+  submitLabel,
+}: {
+  onCancel: () => void
+  onSubmit: () => void
+  submitLabel: string
+}) {
+  const { t } = useTranslation()
+  return (
+    <div className="flex justify-end gap-2">
+      <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
+        {t('common.cancel')}
+      </Button>
+      <Button type="button" variant="ghost" size="sm" className="admin-action-button" onClick={onSubmit}>
+        {submitLabel}
+      </Button>
+    </div>
+  )
+}
+
 function Labelled({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block mb-3">
-      <span className="text-xs text-secondary">{label}</span>
+      <span className="text-xs font-semibold text-muted">{label}</span>
       <div className="mt-1">{children}</div>
     </label>
   )
 }
 
-const inputCls = 'w-full rounded-xl border border-line bg-base px-3 py-2 text-sm'
-
-function extractError(e: unknown): string {
-  if (typeof e === 'object' && e !== null) {
-    const anyE = e as { response?: { data?: { error?: { code?: string; message?: string } } } }
-    return anyE.response?.data?.error?.message ?? anyE.response?.data?.error?.code ?? 'Request failed.'
-  }
-  return 'Request failed.'
-}
+const inputCls = 'w-full rounded-2xl border border-line bg-base px-3 py-2 text-sm focus-bubble'

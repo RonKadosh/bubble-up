@@ -12,6 +12,7 @@ import com.ronkadosh.bubbleup.matching.model.QuizQuestion;
 import com.ronkadosh.bubbleup.matching.persistence.QuizAnswerOptionRepository;
 import com.ronkadosh.bubbleup.matching.persistence.QuizQuestionRepository;
 import com.ronkadosh.bubbleup.matching.persistence.QuizResponseRepository;
+import com.ronkadosh.bubbleup.matching.persistence.UserMatchCacheRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +28,7 @@ public class MatchingAdminInternalServiceImpl implements MatchingAdminInternalSe
     private final QuizQuestionRepository questionRepo;
     private final QuizAnswerOptionRepository optionRepo;
     private final QuizResponseRepository responseRepo;
+    private final UserMatchCacheRepository matchCacheRepo;
 
     @Override
     @Transactional(readOnly = true)
@@ -135,6 +137,19 @@ public class MatchingAdminInternalServiceImpl implements MatchingAdminInternalSe
         }
         responseRepo.deleteAllByAnswerId(optionId);
         optionRepo.deleteById(optionId);
+    }
+
+    @Override
+    @Transactional
+    public void purgeGroupRecommendations(UUID groupId) {
+        matchCacheRepo.deleteByGroupId(groupId);
+    }
+
+    @Override
+    @Transactional
+    public void purgeGroupRecommendations(List<UUID> groupIds) {
+        if (groupIds == null || groupIds.isEmpty()) return;
+        matchCacheRepo.deleteByGroupIdIn(groupIds);
     }
 
     private static double orZero(Double v) {

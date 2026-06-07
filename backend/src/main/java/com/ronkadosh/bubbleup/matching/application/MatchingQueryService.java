@@ -117,10 +117,13 @@ public class MatchingQueryService {
 
         if (!cached.isEmpty()) {
             List<GroupRecommendationDto> groups = cached.stream()
+                    .filter(c -> groupInternalService.isActive(c.getGroupId()))
                     .map(c -> toDto(c.getGroupId(), c.getMatchPercent(), c.getResultType(),
                             c.getMatchingConfidence(), userId))
                     .toList();
-            return new RecommendationsResponse(summaryType(groups), reliability, groups);
+            if (!groups.isEmpty()) {
+                return new RecommendationsResponse(summaryType(groups), reliability, groups);
+            }
         }
 
         return computeLive(userId, courseId, profile, reliability);

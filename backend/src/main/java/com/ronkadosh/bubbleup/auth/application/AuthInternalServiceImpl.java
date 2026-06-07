@@ -6,6 +6,7 @@ import com.ronkadosh.bubbleup.auth.internal.dto.UserAdminSummary;
 import com.ronkadosh.bubbleup.auth.internal.dto.UserIdentity;
 import com.ronkadosh.bubbleup.auth.internal.dto.UserProfile;
 import com.ronkadosh.bubbleup.auth.model.User;
+import com.ronkadosh.bubbleup.auth.model.UserStatus;
 import com.ronkadosh.bubbleup.auth.persistence.UserRepository;
 import com.ronkadosh.bubbleup.common.context.UserRole;
 import com.ronkadosh.bubbleup.common.error.AppException;
@@ -104,7 +105,7 @@ public class AuthInternalServiceImpl implements AuthInternalService {
         Instant createdAfter = filter.createdAfter() == null
                 ? Instant.EPOCH
                 : filter.createdAfter();
-        return userRepository.searchForAdmin(filter.role(), q, createdAfter, pageable)
+        return userRepository.searchForAdmin(filter.role(), filter.status(), q, createdAfter, pageable)
                 .map(AuthInternalServiceImpl::toAdminSummary);
     }
 
@@ -114,6 +115,17 @@ public class AuthInternalServiceImpl implements AuthInternalService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
         user.setRole(newRole);
+        userRepository.save(user);
+    }
+
+    @Override
+    @Transactional
+    public void setUserStatus(UUID userId, UserStatus status, Instant suspendedUntil, String reason) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        user.setStatus(status);
+        user.setSuspendedUntil(status == UserStatus.SUSPENDED ? suspendedUntil : null);
+        user.setStatusReason(status == UserStatus.ACTIVE ? null : reason);
         userRepository.save(user);
     }
 
@@ -178,6 +190,9 @@ public class AuthInternalServiceImpl implements AuthInternalService {
                 u.getUniversityId(),
                 u.getDepartmentId(),
                 u.getEnrollmentYear(),
+                u.getStatus(),
+                u.getSuspendedUntil(),
+                u.getStatusReason(),
                 u.getCreatedAt()
         );
     }

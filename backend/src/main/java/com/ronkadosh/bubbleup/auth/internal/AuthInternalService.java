@@ -4,6 +4,7 @@ import com.ronkadosh.bubbleup.auth.internal.dto.UserAdminFilter;
 import com.ronkadosh.bubbleup.auth.internal.dto.UserAdminSummary;
 import com.ronkadosh.bubbleup.auth.internal.dto.UserIdentity;
 import com.ronkadosh.bubbleup.auth.internal.dto.UserProfile;
+import com.ronkadosh.bubbleup.auth.model.UserStatus;
 import com.ronkadosh.bubbleup.common.context.UserRole;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -54,6 +55,8 @@ public interface AuthInternalService {
 
     /** Sets a user's role. Throws {@code USER_NOT_FOUND} if the user does not exist. */
     void changeRole(UUID userId, UserRole newRole);
+
+    void setUserStatus(UUID userId, UserStatus status, Instant suspendedUntil, String reason);
 
     /**
      * Sets the user's role to {@code STUDENT}. Idempotent: no-op if already STUDENT.

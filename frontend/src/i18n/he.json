@@ -797,6 +797,362 @@
       "errorRevoke": "לא ניתן לבטל גישה."
     }
   },
+  "admin": {
+    "title": "ניהול",
+    "subtitle": "שמירה על Bubble.up בריא בלי לצאת מזרימת המוצר.",
+    "expertReview": "בדיקת מומחים",
+    "tabs": {
+      "overview": "סקירה",
+      "users": "אנשים",
+      "catalog": "קטלוג",
+      "bubbles": "בועות",
+      "quiz": "שאלון",
+      "audit": "ביקורת"
+    },
+    "roles": {
+      "STUDENT": "סטודנטים",
+      "EXPERT": "מומחים",
+      "ADMIN": "מנהלים"
+    },
+    "activity": {
+      "USER_REGISTERED": "משתמש",
+      "GROUP_CREATED": "בועה",
+      "COURSE_CREATED": "קורס"
+    },
+    "reason": {
+      "label": "סיבה",
+      "placeholder": "למה הפעולה מתבצעת?",
+      "required": "חובה להזין סיבה.",
+      "requestFailed": "הבקשה נכשלה.",
+      "confirm": "אישור",
+      "submitting": "מבצע..."
+    },
+    "overview": {
+      "error": "לא ניתן לטעון את סקירת הניהול.",
+      "kpi": {
+        "users": "משתמשים",
+        "bubbles": "בועות",
+        "courses": "קורסים",
+        "experts": "מומחים מאומתים",
+        "newThisWeek": "חדשים השבוע",
+        "newLastWeek": "חדשים בשבוע שעבר",
+        "weekDelta": "שינוי שבועי"
+      },
+      "growthTitle": "דופק צמיחה",
+      "growthSubtitle": "מבט מהיר על תנועת המשתמשים השבוע.",
+      "rolesTitle": "חלוקת תפקידים",
+      "rolesSubtitle": "מי נמצא כרגע במוצר.",
+      "attentionTitle": "מוקדי תפעול",
+      "attentionSubtitle": "בדיקות קטנות לפני שהן הופכות לעבודת ניקוי אמיתית.",
+      "activityTitle": "פעילות אחרונה",
+      "activitySubtitle": "התנועה האחרונה שרלוונטית לניהול ב-Bubble.up.",
+      "noActivity": "אין עדיין פעילות אחרונה.",
+      "attention": {
+        "oneAdminTitle": "יש רק חשבון מנהל אחד",
+        "oneAdminBody": "שינויי תפקידים מוגנים, אבל מנהל נוסף יקטין סיכון להינעלות מחוץ למערכת.",
+        "adminCoverageTitle": "כיסוי המנהלים תקין",
+        "adminCoverageBody": "יש יותר ממנהל אחד זמין לעבודה תפעולית.",
+        "noExpertsTitle": "אין עדיין מומחים מאומתים",
+        "noExpertsBody": "תור בדיקת המומחים מוכן כשבקשות יתחילו להגיע.",
+        "expertsTitle": "מומחים פעילים",
+        "expertsBody": "פרופילים מאומתים של מומחים זמינים לסטודנטים.",
+        "catalogTitle": "בקטלוג יש קורסים",
+        "catalogBody": "מפת האקדמיה כוללת נתוני קורסים לבועות ולהרשמה.",
+        "catalogEmptyTitle": "הקטלוג צריך הגדרה",
+        "catalogEmptyBody": "צריך להוסיף אוניברסיטאות, סמסטרים וקורסים לפני שסטודנטים יוכלו להתארגן סביבם."
+      }
+    },
+    "users": {
+      "searchLabel": "חיפוש",
+      "searchPlaceholder": "אימייל או שם תצוגה",
+      "roleLabel": "תפקיד",
+      "anyRole": "כל תפקיד",
+      "statusLabel": "סטטוס",
+      "anyStatus": "כל סטטוס",
+      "apply": "החל",
+      "empty": "אין אנשים שתואמים למסננים האלה.",
+      "errorLoad": "לא ניתן לטעון אנשים.",
+      "errorRoleChange": "לא ניתן לשנות את תפקיד המשתמש.",
+      "errorModerate": "לא ניתן לעדכן את סטטוס המשתמש.",
+      "paginationSummary": "{{total}} סך הכל · עמוד {{page}}/{{pages}}",
+      "prev": "הקודם",
+      "next": "הבא",
+      "noAffiliation": "לא הוגדר",
+      "detailTitle": "משתמש · {{email}}",
+      "roleChangeTitle": "שינוי תפקיד",
+      "reasonPlaceholder": "חובה בעת שינוי תפקיד",
+      "actions": {
+        "suspend": "השהיה",
+        "ban": "חסימה",
+        "reactivate": "הפעלה מחדש"
+      },
+      "status": {
+        "ACTIVE": "פעיל",
+        "SUSPENDED": "מושהה",
+        "BANNED": "חסום"
+      },
+      "prompts": {
+        "suspendTitle": "השהיית {{name}}",
+        "banTitle": "חסימת {{name}}",
+        "reactivateTitle": "הפעלה מחדש של {{name}}",
+        "banDescription": "משתמשים חסומים לא יכולים להתחבר שוב עד שמנהל מפעיל אותם מחדש.",
+        "reactivateDescription": "הפעולה מחזירה גישה ומנקה את סטטוס הניהול הקודם."
+      },
+      "columns": {
+        "person": "אדם",
+        "role": "תפקיד",
+        "status": "סטטוס",
+        "affiliation": "שנה",
+        "joined": "הצטרפות"
+      },
+      "fields": {
+        "role": "תפקיד נוכחי",
+        "status": "סטטוס",
+        "created": "נוצר",
+        "enrollmentYear": "שנת לימוד",
+        "suspendedUntil": "מושהה עד",
+        "statusReason": "סיבת ניהול",
+        "id": "מזהה משתמש"
+      }
+    },
+    "groups": {
+      "searchLabel": "חיפוש",
+      "searchPlaceholder": "שם בועה",
+      "search": "חיפוש",
+      "empty": "אין בועות שתואמות למסננים האלה.",
+      "errorLoad": "לא ניתן לטעון בועות.",
+      "errorDetail": "לא ניתן לטעון את הבועה.",
+      "deleteGroup": "מחיקת בועה",
+      "detailTitle": "בועה · {{name}}",
+      "deleteTitle": "מחיקת {{name}}",
+      "deleteDescription": "מוחק גם חברים, קבצים, לוח שנה וצ׳אט. אי אפשר לבטל את הפעולה.",
+      "membersTitle": "חברים ({{count}})",
+      "noMembers": "אין עדיין חברים.",
+      "columns": {
+        "name": "שם",
+        "visibility": "נראות",
+        "members": "חברים",
+        "created": "נוצר",
+        "status": "סטטוס"
+      },
+      "visibility": {
+        "PUBLIC": "ציבורי",
+        "PRIVATE": "פרטי"
+      },
+      "memberRoles": {
+        "OWNER": "בעלים",
+        "MEMBER": "חבר"
+      },
+      "fields": {
+        "visibility": "נראות",
+        "members": "חברים",
+        "offering": "מופע קורס",
+        "course": "קורס",
+        "created": "נוצר",
+        "createdBy": "נוצר על ידי",
+        "status": "סטטוס"
+      },
+      "archiveGroup": "ארכוב בועה",
+      "activateGroup": "הפעלה מחדש",
+      "archiveTitle": "ארכוב {{name}}",
+      "archiveDescription": "שומר חברים, קבצים, לוח שנה וצ'אט להיסטוריה, אבל מסיר את הבועה מגילוי והמלצות פעילות.",
+      "activateTitle": "הפעלה מחדש של {{name}}",
+      "activateDescription": "מחזיר את הבועה לגילוי והמלצות פעילות עבור מופע הקורס שלה.",
+      "status": {
+        "ACTIVE": "פעילה",
+        "ARCHIVED": "בארכיון",
+        "SUSPENDED": "מושהית"
+      }
+    },
+    "catalog": {
+      "universities": "אוניברסיטאות",
+      "universityCount": "{{count}} סך הכל",
+      "addUniversity": "הוספה",
+      "emptyUniversities": "אין עדיין אוניברסיטאות.",
+      "deleteSelectedUniversity": "מחיקת האוניברסיטה שנבחרה",
+      "selectUniversity": "בחר או הוסף אוניברסיטה כדי להתחיל.",
+      "deleteUniversityTitle": "מחיקת {{name}}",
+      "deleteUniversityDescription": "הפעולה תידחה אם עדיין קיימים מחלקות, סמסטרים או קורסים תחתיה.",
+      "addDepartment": "הוספת מחלקה",
+      "addTerm": "הוספת סמסטר",
+      "startNextTerm": "פתיחת סמסטר חדש",
+      "rolloverTitle": "פתיחת סמסטר חדש מתוך {{name}}",
+      "rolloverDescription": "יוצר רשומת סמסטר מינימלית, מעתיק את מופעי הקורסים מהסמסטר הקודם ומעביר לארכיון את הבועות הישנות, כך שפרופילי משתמשים והנתונים שנאספו נשמרים.",
+      "rolloverResult": "נוצר סמסטר חדש, הועתקו {{offerings}} מופעים והועברו לארכיון {{groups}} בועות ישנות.",
+      "emptyDepartments": "אין עדיין מחלקות.",
+      "emptyTerms": "אין עדיין סמסטרים.",
+      "deleteDepartmentTitle": "מחיקת {{name}}",
+      "deleteDepartmentDescription": "הפעולה תידחה אם קורסים מקושרים למחלקה הזו.",
+      "deleteTermTitle": "מחיקת {{name}}",
+      "deleteTermDescription": "הפעולה תידחה אם מופעי קורסים משתמשים בסמסטר הזה.",
+      "errorUniversities": "לא ניתן לטעון אוניברסיטאות.",
+      "errorCreateUniversity": "לא ניתן ליצור אוניברסיטה.",
+      "errorDepartments": "לא ניתן לטעון מחלקות.",
+      "errorCreateDepartment": "לא ניתן ליצור מחלקה.",
+      "errorTerms": "לא ניתן לטעון סמסטרים.",
+      "errorCreateTerm": "לא ניתן ליצור סמסטר.",
+      "errorRollover": "לא ניתן לפתוח את הסמסטר הבא.",
+      "tabs": {
+        "departments": "מחלקות",
+        "terms": "סמסטרים",
+        "courses": "קורסים"
+      },
+      "fields": {
+        "name": "שם",
+        "shortCode": "קוד קצר",
+        "country": "מדינה (ISO-2)",
+        "termCode": "קוד",
+        "kind": "סוג",
+        "academicYear": "שנה אקדמית",
+        "startsOn": "מתחיל בתאריך",
+        "endsOn": "מסתיים בתאריך"
+      },
+      "termKinds": {
+        "FALL": "סתיו",
+        "SPRING": "אביב",
+        "SUMMER": "קיץ",
+        "WINTER": "חורף",
+        "OTHER": "אחר"
+      },
+      "courses": {
+        "course": "קורס",
+        "searchLabel": "חיפוש",
+        "searchPlaceholder": "קוד או שם",
+        "search": "חיפוש",
+        "add": "הוספת קורס",
+        "edit": "עריכת קורס",
+        "empty": "אין קורסים לאוניברסיטה הזו.",
+        "errorLoad": "לא ניתן לטעון קורסים.",
+        "errorCreate": "לא ניתן ליצור קורס.",
+        "errorDetail": "לא ניתן לטעון את הקורס.",
+        "errorUpdate": "לא ניתן לעדכן קורס.",
+        "errorLinkDepartment": "לא ניתן לקשר מחלקה.",
+        "errorCreateOffering": "לא ניתן ליצור מופע קורס.",
+        "deleteCourse": "מחיקת קורס",
+        "deleteTitle": "מחיקת {{code}}",
+        "deleteDescription": "הפעולה תידחה אם למופע כלשהו יש בועות פעילות.",
+        "deleteOfferingTitle": "מחיקת מופע קורס",
+        "deleteOfferingDescription": "הפעולה תידחה אם בועות משתמשות במופע הזה.",
+        "noDescription": "אין תיאור.",
+        "linkedDepartments": "מחלקות מקושרות",
+        "offerings": "מופעי קורס",
+        "primary": "ראשי",
+        "unlink": "ניתוק",
+        "noDepartmentsLinked": "אין מחלקות מקושרות.",
+        "pickDepartment": "בחר מחלקה...",
+        "noOfferings": "אין עדיין מופעי קורס.",
+        "pickTerm": "בחר סמסטר...",
+        "addOffering": "הוספת מופע",
+        "columns": {
+          "code": "קוד",
+          "name": "שם",
+          "credits": "נקודות זכות"
+        },
+        "fields": {
+          "code": "קוד",
+          "name": "שם",
+          "credits": "נקודות זכות",
+          "description": "תיאור"
+        }
+      },
+      "archiveTermGroups": "ארכוב בועות",
+      "archiveTermGroupsTitle": "ארכוב בועות עבור {{name}}",
+      "archiveTermGroupsDescription": "מעביר לארכיון את כל הבועות שמקושרות למופעי הקורסים של הסמסטר. פרופילי משתמשים, תשובות קוויז, קבצים, צ'אט והיסטוריית חברים נשמרים.",
+      "archiveTermGroupsResult": "הועברו לארכיון {{count}} בועות עבור הסמסטר."
+    },
+    "audit": {
+      "actionLabel": "פעולה",
+      "targetTypeLabel": "יעד",
+      "apply": "החל",
+      "empty": "אין אירועי ביקורת שתואמים למסננים האלה.",
+      "errorLoad": "לא ניתן לטעון את יומן הביקורת.",
+      "columns": {
+        "action": "פעולה",
+        "actor": "מבצע",
+        "target": "יעד",
+        "reason": "סיבה",
+        "created": "מועד"
+      }
+    },
+    "quiz": {
+      "title": "שאלון התאמה",
+      "subtitle": "ניהול השאלות והמשקלים שמשפיעים על התאמת סטודנטים.",
+      "addQuestion": "הוספת שאלה",
+      "editQuestion": "עריכת שאלה",
+      "addOption": "הוספת אפשרות",
+      "editOption": "עריכת אפשרות",
+      "empty": "אין עדיין שאלות.",
+      "active": "פעיל",
+      "inactive": "לא פעיל",
+      "activate": "הפעלה",
+      "deactivate": "כיבוי",
+      "orderSummary": "סדר #{{order}} · {{count}} אפשרויות",
+      "confirmDeleteQuestion": "למחוק את השאלה ואת כל התשובות שלה?",
+      "confirmDeleteOption": "למחוק את האפשרות הזו?",
+      "errorLoad": "לא ניתן לטעון שאלות.",
+      "errorSaveQuestion": "לא ניתן לשמור שאלה.",
+      "errorSaveOption": "לא ניתן לשמור אפשרות.",
+      "fields": {
+        "questionEn": "טקסט שאלה (אנגלית)",
+        "questionHe": "טקסט שאלה (עברית)",
+        "optionEn": "טקסט אפשרות (אנגלית)",
+        "optionHe": "טקסט אפשרות (עברית)",
+        "order": "סדר",
+        "active": "פעיל בשאלון החי"
+      },
+      "weights": {
+        "weightLeader": "מנהיגות",
+        "weightPlanner": "תכנון",
+        "weightExpert": "מומחיות",
+        "weightCreative": "יצירתיות",
+        "weightCommunicator": "תקשורת",
+        "weightTeamPlayer": "עבודת צוות",
+        "weightChallenger": "אתגור"
+      }
+    },
+    "experts": {
+      "title": "בדיקת מומחים",
+      "subtitle": "סקירה ואישור של בקשות מומחים.",
+      "backToAdmin": "חזרה לניהול",
+      "empty": "אין מומחים במצב הזה.",
+      "errorLoad": "לא ניתן לטעון מומחים.",
+      "userId": "משתמש",
+      "applied": "הוגש",
+      "verifiedAt": "אומת",
+      "noBio": "אין ביוגרפיה.",
+      "noTags": "אין תגיות.",
+      "status": {
+        "PENDING": "ממתין",
+        "VERIFIED": "מאומת",
+        "REJECTED": "נדחה"
+      },
+      "fields": {
+        "status": "סטטוס",
+        "applied": "הוגש",
+        "verifiedAt": "אומת בתאריך",
+        "bio": "ביוגרפיה"
+      },
+      "actions": {
+        "verify": "אישור",
+        "reject": "דחייה",
+        "revoke": "ביטול אימות"
+      },
+      "prompts": {
+        "verify": {
+          "title": "אישור מומחה",
+          "description": "סיבה היא אופציונלית, אבל עוזרת ליומן הבקרה."
+        },
+        "reject": {
+          "title": "דחיית מומחה",
+          "description": "מוחק את הפרופיל ומחזיר את המשתמש לתפקיד STUDENT."
+        },
+        "revoke": {
+          "title": "ביטול אימות",
+          "description": "מסיר את האימות אבל משאיר את הפרופיל ואת תפקיד EXPERT."
+        }
+      }
+    }
+  },
   "matching": {
     "title": "צ׳ק-אין קצר",
     "submitting": "שומר…",

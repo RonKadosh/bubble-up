@@ -2,6 +2,7 @@ package com.ronkadosh.bubbleup.admin.api.dto;
 
 import com.ronkadosh.bubbleup.groups.internal.dto.admin.GroupAdminDetail;
 import com.ronkadosh.bubbleup.groups.internal.dto.admin.GroupAdminDto;
+import com.ronkadosh.bubbleup.groups.model.GroupStatus;
 import com.ronkadosh.bubbleup.groups.model.GroupVisibility;
 import com.ronkadosh.bubbleup.groups.model.MembershipRole;
 import jakarta.validation.constraints.NotBlank;
@@ -18,6 +19,7 @@ public final class AdminGroupDtos {
             String name,
             String description,
             GroupVisibility visibility,
+            GroupStatus status,
             UUID offeringId,
             UUID courseId,
             UUID createdBy,
@@ -26,7 +28,7 @@ public final class AdminGroupDtos {
     ) {
         public static GroupResponse from(GroupAdminDto d) {
             return new GroupResponse(
-                    d.id(), d.name(), d.description(), d.visibility(),
+                    d.id(), d.name(), d.description(), d.visibility(), d.status(),
                     d.offeringId(), d.courseId(), d.createdBy(), d.createdAt(), d.memberCount()
             );
         }
@@ -57,4 +59,6 @@ public final class AdminGroupDtos {
     }
 
     public record DeleteGroupRequest(@NotBlank String reason) {}
+    public record ModerateGroupRequest(@NotBlank String reason) {}
+    public record BulkModerationResponse(int affectedGroups) {}
 }

@@ -797,6 +797,362 @@
       "errorRevoke": "Could not revoke access."
     }
   },
+  "admin": {
+    "title": "Admin",
+    "subtitle": "Keep Bubble.up healthy without leaving the product flow.",
+    "expertReview": "Expert review",
+    "tabs": {
+      "overview": "Overview",
+      "users": "People",
+      "catalog": "Catalog",
+      "bubbles": "Bubbles",
+      "quiz": "Quiz",
+      "audit": "Audit"
+    },
+    "roles": {
+      "STUDENT": "Students",
+      "EXPERT": "Experts",
+      "ADMIN": "Admins"
+    },
+    "activity": {
+      "USER_REGISTERED": "User",
+      "GROUP_CREATED": "Bubble",
+      "COURSE_CREATED": "Course"
+    },
+    "reason": {
+      "label": "Reason",
+      "placeholder": "Why are you doing this?",
+      "required": "A reason is required.",
+      "requestFailed": "Request failed.",
+      "confirm": "Confirm",
+      "submitting": "Working..."
+    },
+    "overview": {
+      "error": "Could not load the admin overview.",
+      "kpi": {
+        "users": "Users",
+        "bubbles": "Bubbles",
+        "courses": "Courses",
+        "experts": "Verified experts",
+        "newThisWeek": "New this week",
+        "newLastWeek": "New last week",
+        "weekDelta": "Week delta"
+      },
+      "growthTitle": "Growth pulse",
+      "growthSubtitle": "A quick read on this week's user movement.",
+      "rolesTitle": "Role mix",
+      "rolesSubtitle": "Who is currently floating around the product.",
+      "attentionTitle": "Operational focus",
+      "attentionSubtitle": "Small checks before they become real cleanup work.",
+      "activityTitle": "Recent activity",
+      "activitySubtitle": "The latest admin-relevant motion across Bubble.up.",
+      "noActivity": "No recent activity yet.",
+      "attention": {
+        "oneAdminTitle": "Only one admin account",
+        "oneAdminBody": "Role changes are protected, but a second trusted admin would reduce lockout risk.",
+        "adminCoverageTitle": "Admin coverage is healthy",
+        "adminCoverageBody": "There is more than one admin available for operational work.",
+        "noExpertsTitle": "No verified experts yet",
+        "noExpertsBody": "The expert review queue is ready when applications start arriving.",
+        "expertsTitle": "Experts are live",
+        "expertsBody": "Verified expert profiles are available to students.",
+        "catalogTitle": "Catalog has courses",
+        "catalogBody": "The academy map has course data for Bubbles and enrollment.",
+        "catalogEmptyTitle": "Catalog needs setup",
+        "catalogEmptyBody": "Add universities, terms, and courses before students can organize around them."
+      }
+    },
+    "users": {
+      "searchLabel": "Search",
+      "searchPlaceholder": "Email or display name",
+      "roleLabel": "Role",
+      "anyRole": "Any role",
+      "statusLabel": "Status",
+      "anyStatus": "Any status",
+      "apply": "Apply",
+      "empty": "No people match these filters.",
+      "errorLoad": "Could not load people.",
+      "errorRoleChange": "Could not change this user's role.",
+      "errorModerate": "Could not update this user's status.",
+      "paginationSummary": "{{total}} total · page {{page}}/{{pages}}",
+      "prev": "Prev",
+      "next": "Next",
+      "noAffiliation": "Not set",
+      "detailTitle": "User · {{email}}",
+      "roleChangeTitle": "Role change",
+      "reasonPlaceholder": "Required when changing role",
+      "actions": {
+        "suspend": "Suspend",
+        "ban": "Ban",
+        "reactivate": "Reactivate"
+      },
+      "status": {
+        "ACTIVE": "Active",
+        "SUSPENDED": "Suspended",
+        "BANNED": "Banned"
+      },
+      "prompts": {
+        "suspendTitle": "Suspend {{name}}",
+        "banTitle": "Ban {{name}}",
+        "reactivateTitle": "Reactivate {{name}}",
+        "banDescription": "Banned users cannot sign in again until an admin reactivates them.",
+        "reactivateDescription": "This restores access and clears the previous moderation status."
+      },
+      "columns": {
+        "person": "Person",
+        "role": "Role",
+        "status": "Status",
+        "affiliation": "Year",
+        "joined": "Joined"
+      },
+      "fields": {
+        "role": "Current role",
+        "status": "Status",
+        "created": "Created",
+        "enrollmentYear": "Enrollment year",
+        "suspendedUntil": "Suspended until",
+        "statusReason": "Moderation reason",
+        "id": "User ID"
+      }
+    },
+    "groups": {
+      "searchLabel": "Search",
+      "searchPlaceholder": "Bubble name",
+      "search": "Search",
+      "empty": "No bubbles match these filters.",
+      "errorLoad": "Could not load bubbles.",
+      "errorDetail": "Could not load this bubble.",
+      "archiveGroup": "Archive bubble",
+      "activateGroup": "Reactivate bubble",
+      "deleteGroup": "Delete bubble",
+      "detailTitle": "Bubble · {{name}}",
+      "archiveTitle": "Archive {{name}}",
+      "archiveDescription": "Keeps members, files, calendar, and chat for history, but removes this bubble from active discovery and recommendations.",
+      "activateTitle": "Reactivate {{name}}",
+      "activateDescription": "Returns this bubble to active discovery and recommendations for its course offering.",
+      "deleteTitle": "Delete {{name}}",
+      "deleteDescription": "Cascades through members, files, calendar, and chat. This cannot be undone.",
+      "membersTitle": "Members ({{count}})",
+      "noMembers": "No members yet.",
+      "columns": {
+        "name": "Name",
+        "visibility": "Visibility",
+        "status": "Status",
+        "members": "Members",
+        "created": "Created"
+      },
+      "visibility": {
+        "PUBLIC": "Public",
+        "PRIVATE": "Private"
+      },
+      "status": {
+        "ACTIVE": "Active",
+        "ARCHIVED": "Archived",
+        "SUSPENDED": "Suspended"
+      },
+      "memberRoles": {
+        "OWNER": "Owner",
+        "MEMBER": "Member"
+      },
+      "fields": {
+        "visibility": "Visibility",
+        "status": "Status",
+        "members": "Members",
+        "offering": "Offering",
+        "course": "Course",
+        "created": "Created",
+        "createdBy": "Created by"
+      }
+    },
+    "catalog": {
+      "universities": "Universities",
+      "universityCount": "{{count}} total",
+      "addUniversity": "Add",
+      "emptyUniversities": "No universities yet.",
+      "deleteSelectedUniversity": "Delete selected university",
+      "selectUniversity": "Select or add a university to begin.",
+      "deleteUniversityTitle": "Delete {{name}}",
+      "deleteUniversityDescription": "Rejected if any departments, terms, or courses still exist under it.",
+      "addDepartment": "Add department",
+      "addTerm": "Add term",
+      "startNextTerm": "Start next semester",
+      "rolloverTitle": "Start a new semester from {{name}}",
+      "rolloverDescription": "Creates the minimal semester record, copies the course offerings from the previous semester, and archives the old semester's bubbles so user profiles and collected data stay intact.",
+      "rolloverResult": "Created the new semester, copied {{offerings}} offerings, and archived {{groups}} old bubbles.",
+      "archiveTermGroups": "Archive bubbles",
+      "archiveTermGroupsTitle": "Archive bubbles for {{name}}",
+      "archiveTermGroupsDescription": "Moves all bubbles attached to this semester's offerings into archive. User profiles, quiz answers, files, chat, and member history are preserved.",
+      "archiveTermGroupsResult": "Archived {{count}} bubbles for this semester.",
+      "emptyDepartments": "No departments yet.",
+      "emptyTerms": "No terms yet.",
+      "deleteDepartmentTitle": "Delete {{name}}",
+      "deleteDepartmentDescription": "Rejected if courses are linked to this department.",
+      "deleteTermTitle": "Delete {{name}}",
+      "deleteTermDescription": "Rejected if any offerings reference this term.",
+      "errorUniversities": "Could not load universities.",
+      "errorCreateUniversity": "Could not create university.",
+      "errorDepartments": "Could not load departments.",
+      "errorCreateDepartment": "Could not create department.",
+      "errorTerms": "Could not load terms.",
+      "errorCreateTerm": "Could not create term.",
+      "errorRollover": "Could not start the next semester.",
+      "tabs": {
+        "departments": "Departments",
+        "terms": "Terms",
+        "courses": "Courses"
+      },
+      "fields": {
+        "name": "Name",
+        "shortCode": "Short code",
+        "country": "Country (ISO-2)",
+        "termCode": "Code",
+        "kind": "Kind",
+        "academicYear": "Academic year",
+        "startsOn": "Starts on",
+        "endsOn": "Ends on"
+      },
+      "termKinds": {
+        "FALL": "Fall",
+        "SPRING": "Spring",
+        "SUMMER": "Summer",
+        "WINTER": "Winter",
+        "OTHER": "Other"
+      },
+      "courses": {
+        "course": "Course",
+        "searchLabel": "Search",
+        "searchPlaceholder": "Code or name",
+        "search": "Search",
+        "add": "Add course",
+        "edit": "Edit course",
+        "empty": "No courses for this university.",
+        "errorLoad": "Could not load courses.",
+        "errorCreate": "Could not create course.",
+        "errorDetail": "Could not load this course.",
+        "errorUpdate": "Could not update course.",
+        "errorLinkDepartment": "Could not link department.",
+        "errorCreateOffering": "Could not create offering.",
+        "deleteCourse": "Delete course",
+        "deleteTitle": "Delete {{code}}",
+        "deleteDescription": "Rejected if any offering still has active bubbles.",
+        "deleteOfferingTitle": "Delete offering",
+        "deleteOfferingDescription": "Rejected if any bubbles reference this offering.",
+        "noDescription": "No description.",
+        "linkedDepartments": "Linked departments",
+        "offerings": "Offerings",
+        "primary": "Primary",
+        "unlink": "Unlink",
+        "noDepartmentsLinked": "No departments linked.",
+        "pickDepartment": "Pick department...",
+        "noOfferings": "No offerings yet.",
+        "pickTerm": "Pick term...",
+        "addOffering": "Add offering",
+        "columns": {
+          "code": "Code",
+          "name": "Name",
+          "credits": "Credits"
+        },
+        "fields": {
+          "code": "Code",
+          "name": "Name",
+          "credits": "Credit points",
+          "description": "Description"
+        }
+      }
+    },
+    "audit": {
+      "actionLabel": "Action",
+      "targetTypeLabel": "Target",
+      "apply": "Apply",
+      "empty": "No audit events match these filters.",
+      "errorLoad": "Could not load audit log.",
+      "columns": {
+        "action": "Action",
+        "actor": "Actor",
+        "target": "Target",
+        "reason": "Reason",
+        "created": "When"
+      }
+    },
+    "quiz": {
+      "title": "Matching quiz",
+      "subtitle": "Maintain the questions and weights that shape student matching.",
+      "addQuestion": "Add question",
+      "editQuestion": "Edit question",
+      "addOption": "Add option",
+      "editOption": "Edit option",
+      "empty": "No questions yet.",
+      "active": "Active",
+      "inactive": "Inactive",
+      "activate": "Activate",
+      "deactivate": "Deactivate",
+      "orderSummary": "Order #{{order}} · {{count}} options",
+      "confirmDeleteQuestion": "Delete this question and all its responses?",
+      "confirmDeleteOption": "Delete this option?",
+      "errorLoad": "Could not load quiz questions.",
+      "errorSaveQuestion": "Could not save question.",
+      "errorSaveOption": "Could not save option.",
+      "fields": {
+        "questionEn": "Question text (English)",
+        "questionHe": "Question text (Hebrew)",
+        "optionEn": "Option text (English)",
+        "optionHe": "Option text (Hebrew)",
+        "order": "Order index",
+        "active": "Active in live quiz"
+      },
+      "weights": {
+        "weightLeader": "Leader",
+        "weightPlanner": "Planner",
+        "weightExpert": "Expert",
+        "weightCreative": "Creative",
+        "weightCommunicator": "Communicator",
+        "weightTeamPlayer": "Team player",
+        "weightChallenger": "Challenger"
+      }
+    },
+    "experts": {
+      "title": "Expert verification",
+      "subtitle": "Review and approve expert applications.",
+      "backToAdmin": "Admin home",
+      "empty": "No experts in this state.",
+      "errorLoad": "Could not load experts.",
+      "userId": "User",
+      "applied": "Applied",
+      "verifiedAt": "Verified",
+      "noBio": "No bio.",
+      "noTags": "No tags.",
+      "status": {
+        "PENDING": "Pending",
+        "VERIFIED": "Verified",
+        "REJECTED": "Rejected"
+      },
+      "fields": {
+        "status": "Status",
+        "applied": "Applied",
+        "verifiedAt": "Verified at",
+        "bio": "Bio"
+      },
+      "actions": {
+        "verify": "Verify",
+        "reject": "Reject",
+        "revoke": "Revoke"
+      },
+      "prompts": {
+        "verify": {
+          "title": "Verify expert",
+          "description": "Reason is optional but helpful for the audit trail."
+        },
+        "reject": {
+          "title": "Reject expert",
+          "description": "Deletes the profile entirely and demotes the user to STUDENT."
+        },
+        "revoke": {
+          "title": "Revoke verification",
+          "description": "Clears the verified flag but keeps the profile and EXPERT role."
+        }
+      }
+    }
+  },
   "matching": {
     "title": "Quick check-in",
     "submitting": "Saving…",

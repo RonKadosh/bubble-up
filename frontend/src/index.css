@@ -161,10 +161,47 @@
   /* Bubble iridescence — magenta + moss-green for borders and accents. */
   .border-bubble-magenta { border-color: var(--bubble-magenta); }
   .border-bubble-green   { border-color: var(--bubble-green); }
+  .border-bubble-magenta\/30 { border-color: color-mix(in srgb, var(--bubble-magenta) 30%, transparent); }
+  .border-bubble-green\/30   { border-color: color-mix(in srgb, var(--bubble-green) 30%, transparent); }
   .text-bubble-magenta   { color: var(--bubble-magenta); }
   .text-bubble-green     { color: var(--bubble-green); }
+  .bg-surface\/80 { background-color: color-mix(in srgb, var(--surface) 80%, transparent); }
   .bg-bubble-magenta-soft { background-color: color-mix(in srgb, var(--bubble-magenta) 12%, transparent); }
   .bg-bubble-green-soft   { background-color: color-mix(in srgb, var(--bubble-green)   12%, transparent); }
+
+  .admin-bubble-kpi {
+    background:
+      radial-gradient(circle at 82% 26%, color-mix(in srgb, var(--bubble-magenta) 18%, transparent), transparent 28%),
+      radial-gradient(circle at 92% 76%, color-mix(in srgb, var(--bubble-green) 14%, transparent), transparent 24%),
+      linear-gradient(135deg, var(--surface), color-mix(in srgb, var(--bubble-blue) 7%, var(--surface)));
+  }
+  .admin-bubble-kpi::before,
+  .admin-bubble-kpi::after {
+    content: "";
+    position: absolute;
+    border-radius: 9999px;
+    pointer-events: none;
+    border: 1px solid color-mix(in srgb, var(--bubble-magenta) 34%, transparent);
+    box-shadow: inset 8px 8px 16px color-mix(in srgb, white 45%, transparent);
+  }
+  .admin-bubble-kpi::before {
+    width: 4.75rem;
+    height: 4.75rem;
+    right: -1.4rem;
+    bottom: -2.1rem;
+    opacity: 0.55;
+  }
+  .admin-bubble-kpi::after {
+    width: 2.25rem;
+    height: 2.25rem;
+    right: 5.25rem;
+    top: -0.85rem;
+    opacity: 0.38;
+  }
+  .admin-bubble-kpi > * {
+    position: relative;
+    z-index: 1;
+  }
   /* Organic asymmetric corners for bento cells — slightly uneven so they read as fluid, not rigid. */
   .bento-cell-radius       { border-radius: 2.5rem 2rem 2.5rem 2rem; }
   .bento-cell-inner-radius { border-radius: calc(2.5rem - 2px) calc(2rem - 2px) calc(2.5rem - 2px) calc(2rem - 2px); }
@@ -286,6 +323,24 @@
       linear-gradient(135deg, var(--color-primary-300) 0%, var(--color-primary-200) 50%, var(--silver) 100%);
   }
   .text-on-brand { color: #0d2334; }
+
+  /* Admin inline actions: softer on light surfaces, unchanged from the old
+     indigo treatment in dark mode for contrast. */
+  .admin-action-button {
+    background-color: var(--color-primary-300);
+    color: #0d2334;
+    box-shadow: var(--shadow);
+  }
+  .admin-action-button:hover {
+    background-color: var(--color-primary-400);
+  }
+  .dark .admin-action-button {
+    background-color: #4f46e5;
+    color: #0d2334;
+  }
+  .dark .admin-action-button:hover {
+    background-color: #4338ca;
+  }
 
   /* Used by elements layered on the brand gradient. */
   .ring-on-brand {

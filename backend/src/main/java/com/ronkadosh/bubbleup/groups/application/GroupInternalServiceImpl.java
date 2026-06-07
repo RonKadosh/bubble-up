@@ -6,6 +6,7 @@ import com.ronkadosh.bubbleup.groups.internal.GroupInternalService;
 import com.ronkadosh.bubbleup.groups.internal.dto.GroupFileActivityItem;
 import com.ronkadosh.bubbleup.groups.internal.dto.GroupSummary;
 import com.ronkadosh.bubbleup.groups.model.GroupMember;
+import com.ronkadosh.bubbleup.groups.model.GroupStatus;
 import com.ronkadosh.bubbleup.groups.model.GroupVisibility;
 import com.ronkadosh.bubbleup.groups.model.MembershipRole;
 import com.ronkadosh.bubbleup.groups.model.StudyGroup;
@@ -56,6 +57,14 @@ public class GroupInternalServiceImpl implements GroupInternalService {
 
     @Override
     @Transactional(readOnly = true)
+    public boolean isActive(UUID groupId) {
+        return groupRepository.findById(groupId)
+                .map(g -> g.getStatus() == GroupStatus.ACTIVE)
+                .orElse(false);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Optional<MembershipRole> roleOf(UUID groupId, UUID userId) {
         return memberRepository.findByGroupIdAndUserId(groupId, userId)
                 .map(GroupMember::getRole);
@@ -69,6 +78,7 @@ public class GroupInternalServiceImpl implements GroupInternalService {
                 .toList();
         if (groupIds.isEmpty()) return List.of();
         return groupRepository.findAllById(groupIds).stream()
+                .filter(g -> g.getStatus() == GroupStatus.ACTIVE)
                 .map(g -> new GroupSummary(
                         g.getId(),
                         g.getName(),
@@ -131,9 +141,10 @@ public class GroupInternalServiceImpl implements GroupInternalService {
             // fairness now that callers pass one current-term offering per course.
             List<UUID> singleton = List.of(offeringId);
             List<StudyGroup> groups = userGroupIds.isEmpty()
-                    ? groupRepository.findByOfferingIdInAndVisibility(singleton, GroupVisibility.PUBLIC, pageable)
-                    : groupRepository.findByOfferingIdInAndVisibilityAndIdNotIn(
-                            singleton, GroupVisibility.PUBLIC, userGroupIds, pageable);
+                    ? groupRepository.findByOfferingIdInAndVisibilityAndStatus(
+                            singleton, GroupVisibility.PUBLIC, GroupStatus.ACTIVE, pageable)
+                    : groupRepository.findByOfferingIdInAndVisibilityAndStatusAndIdNotIn(
+                            singleton, GroupVisibility.PUBLIC, GroupStatus.ACTIVE, userGroupIds, pageable);
             groups.stream().map(StudyGroup::getId).forEach(result::add);
         }
         return result;
@@ -159,8 +170,6 @@ public class GroupInternalServiceImpl implements GroupInternalService {
         return groupRepository.findById(groupId).map(StudyGroup::getName);
     }
 
-    @Override
-    @Transactional(readOnly = true)
     public boolean usersShareAnyGroup(UUID viewer, UUID target) {
         if (viewer == null || target == null) return false;
         if (viewer.equals(target)) return true;

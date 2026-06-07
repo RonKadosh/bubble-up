@@ -22,6 +22,7 @@ import com.ronkadosh.bubbleup.groups.api.dto.GroupResponse;
 import com.ronkadosh.bubbleup.groups.api.dto.TransferOwnershipRequest;
 import com.ronkadosh.bubbleup.groups.api.dto.UpdateGroupRequest;
 import com.ronkadosh.bubbleup.groups.model.GroupMember;
+import com.ronkadosh.bubbleup.groups.model.GroupStatus;
 import com.ronkadosh.bubbleup.groups.model.GroupVisibility;
 import com.ronkadosh.bubbleup.groups.model.MembershipRole;
 import com.ronkadosh.bubbleup.groups.model.StudyGroup;
@@ -83,6 +84,7 @@ public class GroupCommandService {
     @Transactional
     public GroupResponse updateGroup(UUID groupId, UpdateGroupRequest request, UUID requesterId) {
         StudyGroup group = findGroup(groupId);
+        requireActive(group);
         requireOwner(groupId, requesterId);
         if (request.name() != null) group.setName(request.name());
         if (request.description() != null) group.setDescription(request.description());
@@ -98,6 +100,7 @@ public class GroupCommandService {
         if (group.getVisibility() != GroupVisibility.PUBLIC) {
             throw new AppException(ErrorCode.GROUP_NOT_PUBLIC);
         }
+        requireActive(group);
         if (!enrollmentInternalService.isEnrolledInOffering(requesterId, group.getOfferingId())) {
             throw new AppException(ErrorCode.NOT_ENROLLED_IN_COURSE);
         }
@@ -120,6 +123,7 @@ public class GroupCommandService {
     public GroupMemberResponse addMember(UUID groupId, UUID requesterId, AddMemberRequest request) {
         StudyGroup group = findGroup(groupId);
         requireOwner(groupId, requesterId);
+        requireActive(group);
         UUID targetUserId = request.userId();
         if (!authInternalService.userExists(targetUserId)) {
             throw new AppException(ErrorCode.USER_NOT_FOUND);
@@ -144,7 +148,8 @@ public class GroupCommandService {
 
     @Transactional
     public void leaveGroup(UUID groupId, UUID requesterId) {
-        findGroup(groupId);
+        StudyGroup group = findGroup(groupId);
+        requireActive(group);
         GroupMember member = memberRepository.findByGroupIdAndUserId(groupId, requesterId)
                 .orElseThrow(() -> new AppException(ErrorCode.NOT_GROUP_MEMBER));
         if (member.getRole() == MembershipRole.OWNER) {
@@ -168,7 +173,8 @@ public class GroupCommandService {
 
     @Transactional
     public void removeMember(UUID groupId, UUID requesterId, UUID targetUserId) {
-        findGroup(groupId);
+        StudyGroup group = findGroup(groupId);
+        requireActive(group);
         requireOwner(groupId, requesterId);
         if (targetUserId.equals(requesterId)) {
             throw new AppException(ErrorCode.CANNOT_REMOVE_SELF_USE_LEAVE);
@@ -182,7 +188,8 @@ public class GroupCommandService {
 
     @Transactional
     public void transferOwnership(UUID groupId, UUID currentOwnerId, TransferOwnershipRequest request) {
-        findGroup(groupId);
+        StudyGroup group = findGroup(groupId);
+        requireActive(group);
         requireOwner(groupId, currentOwnerId);
         UUID newOwnerId = request.newOwnerId();
         GroupMember currentOwner = memberRepository.findByGroupIdAndUserId(groupId, currentOwnerId)
@@ -198,7 +205,8 @@ public class GroupCommandService {
 
     @Transactional
     public void deleteGroup(UUID groupId, UUID requesterId) {
-        findGroup(groupId);
+        StudyGroup group = findGroup(groupId);
+        requireActive(group);
         requireOwner(groupId, requesterId);
         long count = memberRepository.countByGroupId(groupId);
         if (count > 1) {
@@ -244,6 +252,12 @@ public class GroupCommandService {
         if (memberRepository.countByGroupId(group.getId()) >= group.getMaxMembers()) {
             throw new AppException(ErrorCode.GROUP_IS_FULL,
                     "This Bubble is full (max " + group.getMaxMembers() + ")");
+        }
+    }
+
+    private void requireActive(StudyGroup group) {
+        if (group.getStatus() != GroupStatus.ACTIVE) {
+            throw new AppException(ErrorCode.GROUP_NOT_ACTIVE);
         }
     }
 

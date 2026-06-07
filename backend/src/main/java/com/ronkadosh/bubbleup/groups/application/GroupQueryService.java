@@ -15,6 +15,7 @@ import com.ronkadosh.bubbleup.enrollment.internal.EnrollmentInternalService;
 import com.ronkadosh.bubbleup.groups.api.dto.GroupMemberResponse;
 import com.ronkadosh.bubbleup.groups.api.dto.GroupResponse;
 import com.ronkadosh.bubbleup.groups.model.GroupMember;
+import com.ronkadosh.bubbleup.groups.model.GroupStatus;
 import com.ronkadosh.bubbleup.groups.model.GroupVisibility;
 import com.ronkadosh.bubbleup.groups.model.MembershipRole;
 import com.ronkadosh.bubbleup.groups.model.StudyGroup;
@@ -53,6 +54,7 @@ public class GroupQueryService {
     @Transactional(readOnly = true)
     public List<GroupResponse> getAllGroups() {
         return groupRepository.findAll().stream()
+                .filter(g -> g.getStatus() == GroupStatus.ACTIVE)
                 .map(this::toResponse)
                 .toList();
     }
@@ -71,7 +73,7 @@ public class GroupQueryService {
     public List<GroupResponse> getGroupsFiltered(UUID offeringId, UUID courseId, UUID departmentId,
                                                  UUID universityId, UUID termId) {
         if (offeringId != null) {
-            return mapToResponses(groupRepository.findAllByOfferingId(offeringId));
+            return mapToResponses(groupRepository.findAllByOfferingIdAndStatus(offeringId, GroupStatus.ACTIVE));
         }
         if (courseId != null) {
             List<UUID> offeringIds = resolveOfferingIdsForCourse(courseId, termId);
@@ -147,7 +149,9 @@ public class GroupQueryService {
                 .map(GroupMember::getGroupId)
                 .toList();
         if (groupIds.isEmpty()) return List.of();
-        return mapToResponses(groupRepository.findAllById(groupIds));
+        return mapToResponses(groupRepository.findAllById(groupIds).stream()
+                .filter(g -> g.getStatus() == GroupStatus.ACTIVE)
+                .toList());
     }
 
     /**
@@ -176,7 +180,7 @@ public class GroupQueryService {
                 .orElseThrow(() -> new AppException(ErrorCode.CURRENT_TERM_NOT_FOUND));
         UUID offeringId = catalogInternalService.offeringIdForCourseAndTerm(courseId, termId)
                 .orElseThrow(() -> new AppException(ErrorCode.OFFERING_NOT_FOUND));
-        List<StudyGroup> groups = groupRepository.findAllByOfferingId(offeringId);
+        List<StudyGroup> groups = groupRepository.findAllByOfferingIdAndStatus(offeringId, GroupStatus.ACTIVE);
         Set<UUID> joinedGroupIds = joinedOnly
                 ? memberRepository.findAllByUserId(userId).stream()
                         .map(GroupMember::getGroupId)
@@ -224,9 +228,10 @@ public class GroupQueryService {
         // Newest bubbles first — fresh ones surface ahead of the 50-item cap.
         Pageable cap = PageRequest.of(0, 50, Sort.by(Sort.Direction.DESC, "createdAt"));
         List<StudyGroup> groups = joinedGroupIds.isEmpty()
-                ? groupRepository.findByOfferingIdInAndVisibility(offeringIds, GroupVisibility.PUBLIC, cap)
-                : groupRepository.findByOfferingIdInAndVisibilityAndIdNotIn(
-                        offeringIds, GroupVisibility.PUBLIC, joinedGroupIds, cap);
+                ? groupRepository.findByOfferingIdInAndVisibilityAndStatus(
+                        offeringIds, GroupVisibility.PUBLIC, GroupStatus.ACTIVE, cap)
+                : groupRepository.findByOfferingIdInAndVisibilityAndStatusAndIdNotIn(
+                        offeringIds, GroupVisibility.PUBLIC, GroupStatus.ACTIVE, joinedGroupIds, cap);
         return mapToResponses(groups);
     }
 
@@ -308,7 +313,7 @@ public class GroupQueryService {
 
     private List<StudyGroup> byOfferingIds(Collection<UUID> offeringIds) {
         if (offeringIds.isEmpty()) return List.of();
-        return groupRepository.findAllByOfferingIdIn(offeringIds);
+        return groupRepository.findAllByOfferingIdInAndStatus(offeringIds, GroupStatus.ACTIVE);
     }
 
     private List<StudyGroup> byOfferingIdsForCourses(List<UUID> courseIds) {

@@ -1,4 +1,5 @@
 import { ReactNode } from 'react'
+import { Card } from '../../../components/Card'
 
 export interface Column<T> {
   header: string
@@ -17,20 +18,20 @@ interface Props<T> {
 export default function AdminTable<T>({ columns, rows, keyOf, onRowClick, empty }: Props<T>) {
   if (rows.length === 0) {
     return (
-      <div className="rounded-2xl border border-line bg-surface p-8 text-center text-secondary">
+      <Card size="lg" className="p-8 text-center text-muted">
         {empty ?? 'No results.'}
-      </div>
+      </Card>
     )
   }
   return (
-    <div className="rounded-2xl border border-line bg-surface overflow-hidden">
-      <table className="w-full text-sm">
-        <thead className="bg-base/40">
+    <Card size="lg" className="overflow-x-auto">
+      <table className="w-full min-w-[42rem] text-sm">
+        <thead className="bg-surface-muted">
           <tr>
             {columns.map((c, i) => (
               <th
                 key={i}
-                className="text-start px-4 py-2 font-medium text-secondary text-xs uppercase tracking-wide"
+                className="text-start px-4 py-2 font-semibold text-muted text-xs uppercase tracking-wide"
                 style={c.width ? { width: c.width } : undefined}
               >
                 {c.header}
@@ -54,6 +55,6 @@ export default function AdminTable<T>({ columns, rows, keyOf, onRowClick, empty 
           ))}
         </tbody>
       </table>
-    </div>
+    </Card>
   )
 }
