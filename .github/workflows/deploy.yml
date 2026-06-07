@@ -97,6 +97,14 @@ jobs:
           APP_JITSI_APP_ID=$(get_param APP_JITSI_APP_ID)
           APP_JITSI_KID=$(get_param APP_JITSI_KID)
           APP_JITSI_PRIVATE_KEY_PEM=$(get_param APP_JITSI_PRIVATE_KEY_PEM)
+          # OAuth2 + email verification (added in v0.2 — Google sign-in only).
+          # `|| echo ""` so a deploy still works while these are being seeded
+          # (the backend will refuse OAuth flows without them but other features
+          # keep working).
+          GOOGLE_OAUTH_CLIENT_ID=$(get_param GOOGLE_OAUTH_CLIENT_ID 2>/dev/null || echo "")
+          GOOGLE_OAUTH_CLIENT_SECRET=$(get_param GOOGLE_OAUTH_CLIENT_SECRET 2>/dev/null || echo "")
+          MAIL_FROM_ADDRESS=$(get_param MAIL_FROM_ADDRESS 2>/dev/null || echo "")
+          AWS_SES_REGION=$(aws ssm get-parameter --region "__REGION__" --name /bubbleup/prod/AWS_SES_REGION --query Parameter.Value --output text 2>/dev/null || echo "__REGION__")
           umask 077
           cat > /opt/bubbleup/.env <<ENV
           IMAGE_TAG=__IMAGE_TAG__
@@ -113,6 +121,10 @@ jobs:
           APP_JITSI_PRIVATE_KEY_PEM=${APP_JITSI_PRIVATE_KEY_PEM}
           APP_JITSI_SERVER_URL=https://8x8.vc
           APP_JITSI_TOKEN_TTL=PT2H
+          GOOGLE_OAUTH_CLIENT_ID=${GOOGLE_OAUTH_CLIENT_ID}
+          GOOGLE_OAUTH_CLIENT_SECRET=${GOOGLE_OAUTH_CLIENT_SECRET}
+          MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS}
+          AWS_SES_REGION=${AWS_SES_REGION}
           ENV
           docker compose -f docker-compose.prod.yml --env-file .env pull
           docker compose -f docker-compose.prod.yml --env-file .env up -d

@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -23,12 +22,14 @@ import java.util.stream.Collectors;
  *       belong to an Israeli academic institution.</li>
  *   <li>We can auto-assign the {@code universityId} field on a new user.</li>
  *   <li>We can hint whether a sign-up looks like a student or a staff member
- *       (from the domain prefix), purely for UX defaults.</li>
+ *       (from the matched sub-domain), purely for UX defaults.</li>
  * </ul>
  *
  * <p>Lookup walks the email domain from most-specific to least-specific so
  * that arbitrary department sub-domains (e.g. {@code joe@cs.bgu.ac.il})
- * still resolve to BGU even though {@code cs.bgu.ac.il} isn't listed.
+ * still resolve to BGU even though {@code cs.bgu.ac.il} isn't listed. The
+ * fallthrough result is STAFF — when we matched only the bare uni domain we
+ * don't know whether the sub-prefix is a student or a faculty.
  */
 @Component
 public class UniversityEmailRegistry {
@@ -39,7 +40,7 @@ public class UniversityEmailRegistry {
      * Public, immutable description of a matched institution.
      *
      * @param key          stable lowercase identifier (used by the catalog seed)
-     * @param displayName  human-readable name (English + Hebrew where convenient)
+     * @param displayName  human-readable name (English; localised in the UI layer)
      * @param kind         student / staff inferred from the matched sub-domain
      * @param matchedDomain the longest registry suffix that matched
      */
@@ -50,106 +51,118 @@ public class UniversityEmailRegistry {
             String matchedDomain
     ) {}
 
-    /** Sub-domain prefixes that consistently indicate a student account. */
-    private static final Set<String> STUDENT_PREFIXES = Set.of(
-            "post.", "mail.", "live.", "campus.", "oumail.", "s.", "g."
-    );
+    /**
+     * Registry entry. {@code kind} is set per-domain so we don't have to infer
+     * STUDENT vs STAFF from string prefixes (which over-matches: "s." was
+     * accidentally matching "cs.", and "g." accidentally matching arbitrary
+     * department sub-domains).
+     */
+    private record Record(String key, String displayName, MemberKind kind) {}
 
     /**
      * Map of registered domain suffix → institution record. Insertion order is
      * preserved so the longest matches stay near the top, but lookup explicitly
-     * sorts by length to be safe against future edits.
+     * walks shortest-to-longest by stripping leading sub-domains.
      *
-     * <p>Sources cross-checked against the institutions' admissions / IT
-     * documentation pages (Jan 2026). Add new institutions here as the user
-     * base expands — the change is one line and no migration is needed.
+     * <p>Sources cross-checked against institutions' admissions / IT
+     * documentation (Jan 2026). Add new institutions here as the user base
+     * expands — one line and no migration needed (ddl-auto: create-drop).
      */
     private static final Map<String, Record> REGISTRY = build();
-
-    private record Record(String key, String displayName) {}
 
     private static Map<String, Record> build() {
         Map<String, Record> r = new LinkedHashMap<>();
 
-        // ─── Research universities ────────────────────────────────────────
-        r.put("post.bgu.ac.il",        new Record("bgu",        "Ben-Gurion University of the Negev"));
-        r.put("bgu.ac.il",             new Record("bgu",        "Ben-Gurion University of the Negev"));
+        // Helper: STD = student domain, STF = staff/faculty domain.
+        // Used for compactness in the table below.
 
-        r.put("mail.tau.ac.il",        new Record("tau",        "Tel Aviv University"));
-        r.put("post.tau.ac.il",        new Record("tau",        "Tel Aviv University"));
-        r.put("tauex.tau.ac.il",       new Record("tau",        "Tel Aviv University"));
-        r.put("tau.ac.il",             new Record("tau",        "Tel Aviv University"));
+        // ─── Research universities (the "big 10") ─────────────────────────
+        r.put("post.bgu.ac.il",        std("bgu",      "Ben-Gurion University of the Negev"));
+        r.put("bgu.ac.il",             stf("bgu",      "Ben-Gurion University of the Negev"));
 
-        r.put("mail.huji.ac.il",       new Record("huji",       "Hebrew University of Jerusalem"));
-        r.put("mscc.huji.ac.il",       new Record("huji",       "Hebrew University of Jerusalem"));
-        r.put("huji.ac.il",            new Record("huji",       "Hebrew University of Jerusalem"));
+        r.put("mail.tau.ac.il",        std("tau",      "Tel Aviv University"));
+        r.put("post.tau.ac.il",        std("tau",      "Tel Aviv University"));
+        r.put("tauex.tau.ac.il",       stf("tau",      "Tel Aviv University"));
+        r.put("tau.ac.il",             stf("tau",      "Tel Aviv University"));
 
-        r.put("campus.technion.ac.il", new Record("technion",   "Technion — Israel Institute of Technology"));
-        r.put("technion.ac.il",        new Record("technion",   "Technion — Israel Institute of Technology"));
+        r.put("mail.huji.ac.il",       std("huji",     "Hebrew University of Jerusalem"));
+        r.put("mscc.huji.ac.il",       stf("huji",     "Hebrew University of Jerusalem"));
+        r.put("huji.ac.il",            stf("huji",     "Hebrew University of Jerusalem"));
 
-        r.put("weizmann.ac.il",        new Record("weizmann",   "Weizmann Institute of Science"));
+        r.put("campus.technion.ac.il", std("technion", "Technion — Israel Institute of Technology"));
+        r.put("technion.ac.il",        stf("technion", "Technion — Israel Institute of Technology"));
 
-        r.put("live.biu.ac.il",        new Record("biu",        "Bar-Ilan University"));
-        r.put("biu.ac.il",             new Record("biu",        "Bar-Ilan University"));
+        r.put("weizmann.ac.il",        stf("weizmann", "Weizmann Institute of Science"));
 
-        r.put("campus.haifa.ac.il",    new Record("haifa",      "University of Haifa"));
-        r.put("univ.haifa.ac.il",      new Record("haifa",      "University of Haifa"));
-        r.put("staff.haifa.ac.il",     new Record("haifa",      "University of Haifa"));
-        r.put("haifa.ac.il",           new Record("haifa",      "University of Haifa"));
+        r.put("live.biu.ac.il",        std("biu",      "Bar-Ilan University"));
+        r.put("biu.ac.il",             stf("biu",      "Bar-Ilan University"));
 
-        r.put("post.runi.ac.il",       new Record("runi",       "Reichman University (Herzliya)"));
-        r.put("runi.ac.il",            new Record("runi",       "Reichman University (Herzliya)"));
+        r.put("campus.haifa.ac.il",    std("haifa",    "University of Haifa"));
+        r.put("univ.haifa.ac.il",      stf("haifa",    "University of Haifa"));
+        r.put("staff.haifa.ac.il",     stf("haifa",    "University of Haifa"));
+        r.put("haifa.ac.il",           stf("haifa",    "University of Haifa"));
 
-        r.put("oumail.openu.ac.il",    new Record("openu",      "The Open University of Israel"));
-        r.put("openu.ac.il",           new Record("openu",      "The Open University of Israel"));
+        r.put("post.runi.ac.il",       std("runi",     "Reichman University (Herzliya)"));
+        r.put("runi.ac.il",            stf("runi",     "Reichman University (Herzliya)"));
 
-        r.put("live.ariel.ac.il",      new Record("ariel",      "Ariel University"));
-        r.put("ariel.ac.il",           new Record("ariel",      "Ariel University"));
+        r.put("oumail.openu.ac.il",    std("openu",    "The Open University of Israel"));
+        r.put("openu.ac.il",           stf("openu",    "The Open University of Israel"));
 
-        // ─── Academic colleges (selected; add more as needed) ─────────────
-        r.put("s.afeka.ac.il",         new Record("afeka",      "Afeka College of Engineering"));
-        r.put("afeka.ac.il",           new Record("afeka",      "Afeka College of Engineering"));
+        r.put("live.ariel.ac.il",      std("ariel",    "Ariel University"));
+        r.put("ariel.ac.il",           stf("ariel",    "Ariel University"));
 
-        r.put("post.bezalel.ac.il",    new Record("bezalel",    "Bezalel Academy of Arts and Design"));
-        r.put("bezalel.ac.il",         new Record("bezalel",    "Bezalel Academy of Arts and Design"));
+        // ─── Academic colleges (add more as needed) ───────────────────────
+        r.put("s.afeka.ac.il",         std("afeka",    "Afeka College of Engineering"));
+        r.put("afeka.ac.il",           stf("afeka",    "Afeka College of Engineering"));
 
-        r.put("colman.ac.il",          new Record("colman",     "The College of Management Academic Studies"));
+        r.put("post.bezalel.ac.il",    std("bezalel",  "Bezalel Academy of Arts and Design"));
+        r.put("bezalel.ac.il",         stf("bezalel",  "Bezalel Academy of Arts and Design"));
 
-        r.put("hit.ac.il",             new Record("hit",        "Holon Institute of Technology"));
+        r.put("colman.ac.il",          stf("colman",   "The College of Management Academic Studies"));
 
-        r.put("hac.ac.il",             new Record("hadassah",   "Hadassah Academic College"));
+        r.put("hit.ac.il",             stf("hit",      "Holon Institute of Technology"));
 
-        r.put("g.jct.ac.il",           new Record("jct",        "Jerusalem College of Technology — Machon Lev"));
-        r.put("jct.ac.il",             new Record("jct",        "Jerusalem College of Technology — Machon Lev"));
+        r.put("hac.ac.il",             stf("hadassah", "Hadassah Academic College"));
 
-        r.put("kinneret.ac.il",        new Record("kinneret",   "Kinneret Academic College"));
+        r.put("g.jct.ac.il",           std("jct",      "Jerusalem College of Technology — Machon Lev"));
+        r.put("jct.ac.il",             stf("jct",      "Jerusalem College of Technology — Machon Lev"));
 
-        r.put("yvc.ac.il",             new Record("yvc",        "Max Stern Yezreel Valley College"));
+        r.put("kinneret.ac.il",        stf("kinneret", "Kinneret Academic College"));
 
-        r.put("mta.ac.il",             new Record("mta",        "Academic College of Tel Aviv-Yaffo"));
+        r.put("yvc.ac.il",             stf("yvc",      "Max Stern Yezreel Valley College"));
 
-        r.put("netanya.ac.il",         new Record("netanya",    "Netanya Academic College"));
+        r.put("mta.ac.il",             stf("mta",      "Academic College of Tel Aviv-Yaffo"));
 
-        r.put("ono.ac.il",             new Record("ono",        "Ono Academic College"));
+        r.put("netanya.ac.il",         stf("netanya",  "Netanya Academic College"));
 
-        r.put("pac.ac.il",             new Record("peres",      "Peres Academic Center"));
+        r.put("ono.ac.il",             stf("ono",      "Ono Academic College"));
 
-        r.put("ruppin.ac.il",          new Record("ruppin",     "Ruppin Academic Center"));
+        r.put("pac.ac.il",             stf("peres",    "Peres Academic Center"));
 
-        r.put("ac.sce.ac.il",          new Record("sce",        "Sami Shamoon College of Engineering"));
-        r.put("sce.ac.il",             new Record("sce",        "Sami Shamoon College of Engineering"));
+        r.put("ruppin.ac.il",          stf("ruppin",   "Ruppin Academic Center"));
 
-        r.put("sapir.ac.il",           new Record("sapir",      "Sapir Academic College"));
+        r.put("ac.sce.ac.il",          std("sce",      "Sami Shamoon College of Engineering"));
+        r.put("sce.ac.il",             stf("sce",      "Sami Shamoon College of Engineering"));
 
-        r.put("shenkar.ac.il",         new Record("shenkar",    "Shenkar College of Engineering, Design and Art"));
+        r.put("sapir.ac.il",           stf("sapir",    "Sapir Academic College"));
 
-        r.put("telhai.ac.il",          new Record("telhai",     "Tel-Hai Academic College"));
+        r.put("shenkar.ac.il",         stf("shenkar",  "Shenkar College of Engineering, Design and Art"));
 
-        r.put("wgalil.ac.il",          new Record("wgalil",     "Western Galilee College"));
+        r.put("telhai.ac.il",          stf("telhai",   "Tel-Hai Academic College"));
 
-        r.put("zefat.ac.il",           new Record("zefat",      "Zefat Academic College"));
+        r.put("wgalil.ac.il",          stf("wgalil",   "Western Galilee College"));
+
+        r.put("zefat.ac.il",           stf("zefat",    "Zefat Academic College"));
 
         return r;
+    }
+
+    private static Record std(String key, String displayName) {
+        return new Record(key, displayName, MemberKind.STUDENT);
+    }
+
+    private static Record stf(String key, String displayName) {
+        return new Record(key, displayName, MemberKind.STAFF);
     }
 
     /**
@@ -169,13 +182,13 @@ public class UniversityEmailRegistry {
         String domain = email.substring(at + 1).toLowerCase(Locale.ROOT).trim();
         if (domain.isBlank() || !domain.endsWith(".ac.il")) return Optional.empty();
 
-        // Try most-specific suffix first.
+        // Walk from most-specific (full domain) to least-specific by stripping
+        // one leading sub-domain at a time.
         String d = domain;
         while (d.contains(".")) {
             Record hit = REGISTRY.get(d);
             if (hit != null) {
-                MemberKind kind = inferKind(domain, d);
-                return Optional.of(new Match(hit.key, hit.displayName, kind, d));
+                return Optional.of(new Match(hit.key, hit.displayName, hit.kind, d));
             }
             int dot = d.indexOf('.');
             d = d.substring(dot + 1);
@@ -201,21 +214,5 @@ public class UniversityEmailRegistry {
                 .map(Record::key)
                 .distinct()
                 .collect(Collectors.toUnmodifiableList());
-    }
-
-    /** Student vs staff guess based on the matched sub-domain prefix. */
-    private static MemberKind inferKind(String fullDomain, String matchedSuffix) {
-        // What's "extra" before the matched suffix?
-        if (fullDomain.equals(matchedSuffix)) {
-            // No prefix at all — bare uni domain → typically staff.
-            return MemberKind.STAFF;
-        }
-        String prefix = fullDomain.substring(0, fullDomain.length() - matchedSuffix.length());
-        // prefix here ends with "." (e.g. "post.")
-        for (String studentPrefix : STUDENT_PREFIXES) {
-            if (prefix.endsWith(studentPrefix)) return MemberKind.STUDENT;
-        }
-        // Bare suffix matched + something else as prefix → probably department/faculty.
-        return MemberKind.STAFF;
     }
 }
