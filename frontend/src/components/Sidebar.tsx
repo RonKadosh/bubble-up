@@ -2,7 +2,6 @@ import { type ComponentType, useEffect } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../store/authStore'
-import { useThemeStore } from '../store/themeStore'
 import {
   useOnboardingStore,
   isNavUnlocked,
@@ -21,12 +20,9 @@ import {
   HelpIcon,
   LockIcon,
   LogoutIcon,
-  MoonIcon,
-  PeopleIcon,
   ReportIcon,
   SettingsIcon,
   ShieldIcon,
-  SunIcon,
 } from './Icons'
 
 type IconComp = ComponentType<{ className?: string }>
@@ -117,8 +113,6 @@ export default function Layout() {
   const navigate = useNavigate()
   const clearAuth = useAuthStore((s) => s.clearAuth)
   const me = useAuthStore((s) => s.user)
-  const theme = useThemeStore((s) => s.theme)
-  const toggleTheme = useThemeStore((s) => s.toggle)
 
   // Progressive feature unlocking: lockable nav greys out until the onboarding
   // wizard reaches the level that unlocks it. Onboarded/loading → nothing locked.
@@ -147,10 +141,6 @@ export default function Layout() {
     alert(`${t('nav.help')}: ${t('common.comingSoon')}`)
   }
 
-  function handleReport() {
-    alert(`${t('nav.report')}: ${t('common.comingSoon')}`)
-  }
-
   return (
     <div className="container-app flex h-screen bg-base p-2 tablet:p-3 gap-2 tablet:gap-3">
       <aside className="relative z-10 flex flex-col w-[4.5rem] bg-brand-gradient-vertical text-on-brand shadow-bubble rounded-[2rem] overflow-visible shrink-0">
@@ -168,7 +158,8 @@ export default function Layout() {
         </div>
 
         <nav className="flex-1 flex flex-col gap-2 px-2 py-4">
-          <NavRow to="/groups" Icon={PeopleIcon} label={t('nav.myBubbles')} {...lockProps('bubbles')} />
+          {/* Home (the logo above) IS the Bubbles hub now — Home and My Bubbles
+              were merged, so there's no separate "My Bubbles" row. */}
           <NavRow to="/academy" Icon={CapIcon} label={t('nav.academy')} {...lockProps('academy')} />
           <NavRow to="/experts" Icon={BulbIcon} label={t('nav.experts')} {...lockProps('experts')} />
           {(me?.role === 'EXPERT' || me?.role === 'ADMIN') && (
@@ -180,14 +171,9 @@ export default function Layout() {
         </nav>
 
         <div className="px-2 pb-3 pt-2 border-t border-white/20 flex flex-col gap-2">
-          <NavRow
-            onClick={toggleTheme}
-            Icon={theme === 'dark' ? SunIcon : MoonIcon}
-            label={theme === 'dark' ? t('nav.lightMode') : t('nav.darkMode')}
-          />
           <NavRow to="/settings" Icon={SettingsIcon} label={t('nav.settings')} {...lockProps('settings')} />
           <NavRow onClick={handleHelp} Icon={HelpIcon} label={t('nav.help')} />
-          <NavRow onClick={handleReport} Icon={ReportIcon} label={t('nav.report')} />
+          <NavRow to="/report" Icon={ReportIcon} label={t('nav.report')} />
           <NavRow onClick={handleLogout} Icon={LogoutIcon} label={t('nav.logout')} variant="danger" />
         </div>
       </aside>

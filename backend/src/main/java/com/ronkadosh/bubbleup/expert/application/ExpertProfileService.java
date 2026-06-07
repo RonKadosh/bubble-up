@@ -53,7 +53,12 @@ public class ExpertProfileService {
                     .verifiedBy(null);
         }
         ExpertProfile saved = repo.save(builder.build());
-        authInternalService.promoteToExpert(userId);
+        // Role is granted on verification, not on apply: an auto-verified
+        // applicant becomes EXPERT immediately; a PENDING applicant stays a
+        // STUDENT until an admin approves (AdminExpertVerificationService.verify).
+        if (saved.getVerificationStatus() == VerificationStatus.VERIFIED) {
+            authInternalService.promoteToExpert(userId);
+        }
         return ExpertProfileResponse.from(saved);
     }
 

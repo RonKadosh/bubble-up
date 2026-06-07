@@ -470,3 +470,54 @@ export async function searchAudit(params: AuditSearchParams = {}): Promise<PageR
   const res = await client.get<ApiSuccess<PageResponse<AuditLogEntry>>>('/admin/audit', { params })
   return res.data.data
 }
+
+// ─── Reports inbox ───────────────────────────────────────────────────────────
+
+export type ReportCategory = 'ABUSE' | 'HARASSMENT' | 'SPAM' | 'SAFETY' | 'TECHNICAL_ISSUE' | 'OTHER'
+export type ReportStatus = 'PENDING' | 'RESOLVED' | 'DISMISSED'
+
+export interface AdminReport {
+  id: string
+  reporterUserId: string
+  category: ReportCategory
+  subject: string
+  description: string
+  hasAttachment: boolean
+  status: ReportStatus
+  createdAt: string
+  reviewedAt: string | null
+  reviewedByUserId: string | null
+  resolutionNote: string | null
+}
+
+export async function listReports(status: ReportStatus, page = 0, size = 20): Promise<PageResponse<AdminReport>> {
+  const res = await client.get<ApiSuccess<PageResponse<AdminReport>>>('/admin/reports', {
+    params: { status, page, size },
+  })
+  return res.data.data
+}
+export async function resolveReport(id: string, note?: string): Promise<AdminReport> {
+  const res = await client.post<ApiSuccess<AdminReport>>(`/admin/reports/${id}/resolve`, { note })
+  return res.data.data
+}
+export async function dismissReport(id: string, note?: string): Promise<AdminReport> {
+  const res = await client.post<ApiSuccess<AdminReport>>(`/admin/reports/${id}/dismiss`, { note })
+  return res.data.data
+}
+/** Fetches the protected attachment as a blob object URL (admin endpoint needs the bearer header). */
+export async function fetchReportImageUrl(id: string): Promise<string> {
+  const res = await client.get(`/admin/reports/${id}/image`, { responseType: 'blob' })
+  return URL.createObjectURL(res.data as Blob)
+}
+
+// ─── Inbox counts (tab badges) ───────────────────────────────────────────────
+
+export interface InboxCounts {
+  pendingExpertRequests: number
+  pendingReports: number
+}
+
+export async function getInboxCounts(): Promise<InboxCounts> {
+  const res = await client.get<ApiSuccess<InboxCounts>>('/admin/inbox/counts')
+  return res.data.data
+}

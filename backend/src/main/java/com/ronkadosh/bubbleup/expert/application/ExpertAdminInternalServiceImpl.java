@@ -78,6 +78,12 @@ public class ExpertAdminInternalServiceImpl implements ExpertAdminInternalServic
         return repo.countByVerificationStatus(VerificationStatus.VERIFIED);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public long countByStatus(VerificationStatus status) {
+        return repo.countByVerificationStatus(status);
+    }
+
     private static ExpertAdminProfileDto toDto(ExpertProfile p) {
         return new ExpertAdminProfileDto(
                 p.getId(),

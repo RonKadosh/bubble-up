@@ -19,6 +19,7 @@ import { onWsConnect, subscribeToPresence } from '../api/ws'
 import { describeError } from '../api/errors'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../store/authStore'
+import { useOnboardingStore, isOnboarded } from '../store/onboardingStore'
 import { useBentoLayoutStore, type BentoKey } from '../store/bentoLayoutStore'
 import { useViewportStore } from '../store/viewportStore'
 import { useActiveRoomStore } from '../store/activeRoomStore'
@@ -31,6 +32,7 @@ import { BubbleInfoDrawer } from './groups/BubbleInfoDrawer'
 import { FilesPanel } from './groups/FilesPanel'
 import { CalendarPanel } from './groups/CalendarPanel'
 import { ChatPanel } from './groups/ChatPanel'
+import { HubFeed } from './groups/HubFeed'
 import { ScheduleRoomModal } from './groups/ScheduleRoomModal'
 import { CalendarEvent, listEvents } from '../api/calendar'
 import { getLiveGroupIds, getRoomForEvent } from '../api/room'
@@ -127,6 +129,13 @@ export default function GroupsPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const me = useAuthStore((s) => s.user)
+  // The hub doubles as Home: when no Bubble is selected, an onboarded user sees
+  // the cross-Bubble activity feed. A not-yet-onboarded user (here only via the
+  // wizard's L4 "create a Bubble" link-out) sees the lightweight placeholder.
+  const onbStatus = useOnboardingStore((s) => s.status)
+  const ensureOnboarding = useOnboardingStore((s) => s.ensureHydrated)
+  useEffect(() => { ensureOnboarding() }, [ensureOnboarding])
+  const onboarded = !!onbStatus && isOnboarded(onbStatus)
   const focused = useBentoLayoutStore((s) => s.focused)
   const setFocused = useBentoLayoutStore((s) => s.setFocused)
   const isPhone = useViewportStore((s) => s.tier === 'phone')
@@ -215,6 +224,16 @@ export default function GroupsPage() {
       setSelectedId(activeRoomGroupId)
     }
   }, [activeRoomGroupId, selectedId, groups])
+
+  // Home: clicking the sidebar logo navigates here with `state.home`, which clears
+  // the selection so the activity feed (the no-Bubble-selected state) shows even
+  // when a Bubble was open. Clear the nav state so back/refresh doesn't re-trigger.
+  const homeRequested = (location.state as { home?: boolean } | null)?.home ?? false
+  useEffect(() => {
+    if (!homeRequested) return
+    setSelectedId(null)
+    navigate('/groups', { replace: true, state: null })
+  }, [homeRequested, navigate])
 
   // Deep-link from the dashboard: arriving with `state.selectGroupId` opens that
   // Bubble directly (e.g. clicking a Bubble-activity card, or joining a Bubble
@@ -578,16 +597,44 @@ export default function GroupsPage() {
         )}
 
         {!selected ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-muted text-sm gap-3 px-6 text-center">
-            <span>{t('groups.pickFromSidebar')}</span>
-            <button
-              type="button"
-              onClick={() => setMobileSidebarOpen(true)}
-              className="desktop:hidden bubble-pop rounded-full bg-brand-gradient-strong text-on-brand text-sm font-semibold px-5 py-2 shadow-themed"
-            >
-              {t('groups.openBubbleList')}
-            </button>
-          </div>
+          !onbStatus ? (
+            // Onboarding status still loading — avoid flashing the placeholder
+            // before we know whether to show the feed (onboarded) or not.
+            <div className="flex-1 flex items-center justify-center">
+              <BubbleLoader size={56} />
+            </div>
+          ) : onboarded ? (
+            // Home: the cross-Bubble activity feed. Its "open this Bubble" CTAs
+            // select in place (no navigation, since we're already in the hub).
+            <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+              <div className="desktop:hidden p-2 border-b border-line shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setMobileSidebarOpen(true)}
+                  className="bubble-pop rounded-full bg-brand-gradient-strong text-on-brand text-sm font-semibold px-5 py-2 shadow-themed"
+                >
+                  {t('groups.openBubbleList')}
+                </button>
+              </div>
+              <div className="flex-1 min-h-0">
+                <HubFeed
+                  onSelectGroup={setSelectedId}
+                  onOpenCreate={() => navigate('/groups', { state: { openCreate: true } })}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center text-muted text-sm gap-3 px-6 text-center">
+              <span>{t('groups.pickFromSidebar')}</span>
+              <button
+                type="button"
+                onClick={() => setMobileSidebarOpen(true)}
+                className="desktop:hidden bubble-pop rounded-full bg-brand-gradient-strong text-on-brand text-sm font-semibold px-5 py-2 shadow-themed"
+              >
+                {t('groups.openBubbleList')}
+              </button>
+            </div>
+          )
         ) : (
           <>
             <GroupHeader

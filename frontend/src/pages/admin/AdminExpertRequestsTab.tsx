@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
 import {
   AdminExpert,
   listExperts,
@@ -17,9 +16,13 @@ import ReasonPromptModal from './components/ReasonPromptModal'
 
 const STATUSES: VerificationStatus[] = ['PENDING', 'VERIFIED', 'REJECTED']
 
-export default function AdminExpertVerificationPage() {
+/**
+ * Admin "Expert Requests" inbox tab. Absorbs the former standalone
+ * /admin/experts page into the admin shell so verification lives alongside the
+ * other admin tabs. `onChanged` lets the shell refresh the pending-count badge.
+ */
+export default function AdminExpertRequestsTab({ onChanged }: { onChanged?: () => void }) {
   const { t, i18n } = useTranslation()
-  const navigate = useNavigate()
   const [status, setStatus] = useState<VerificationStatus>('PENDING')
   const [items, setItems] = useState<AdminExpert[]>([])
   const [opening, setOpening] = useState<AdminExpert | null>(null)
@@ -46,86 +49,69 @@ export default function AdminExpertVerificationPage() {
   )
 
   return (
-    <div className="min-h-full bg-base">
-      <div className="max-w-7xl mx-auto px-4 tablet:px-6 py-6 flex flex-col gap-5">
-        <header className="flex flex-col tablet:flex-row tablet:items-center tablet:justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold text-base">{t('admin.experts.title')}</h1>
-            <p className="text-sm text-muted">{t('admin.experts.subtitle')}</p>
-          </div>
-          <Button type="button" variant="secondary" size="sm" onClick={() => navigate('/admin')}>
-            {t('admin.experts.backToAdmin')}
-          </Button>
-        </header>
-
-        <Card size="lg" className="p-2">
-          <nav className="flex flex-wrap gap-1">
-            {STATUSES.map((item) => (
-              <button
-                key={item}
-                type="button"
-                onClick={() => setStatus(item)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition ${
-                  status === item
-                    ? 'bg-bubble-magenta-soft text-bubble-magenta'
-                    : 'text-muted hover:bg-surface-hover'
-                }`}
-              >
-                {t(`admin.experts.status.${item}`)}
-              </button>
-            ))}
-          </nav>
-        </Card>
-
-        {err && <p className="text-danger text-sm">{err}</p>}
-
-        <ul className="grid grid-cols-1 tablet:grid-cols-2 gap-3">
-          {items.map((expert) => (
-            <li key={expert.id}>
-              <Card
-                size="md"
-                interactive
-                className="p-4 cursor-pointer h-full"
-                onClick={() => setOpening(expert)}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <h2 className="text-base font-semibold text-base truncate">{expert.headline}</h2>
-                    <p className="text-xs text-muted mt-1">
-                      {t('admin.experts.userId')}: <span className="font-mono" dir="ltr">{expert.userId}</span>
-                    </p>
-                  </div>
-                  <StatusBadge status={expert.verificationStatus} />
-                </div>
-                {expert.expertiseTags.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-1">
-                    {expert.expertiseTags.map((tag) => (
-                      <span key={tag} className="text-xs rounded-full bg-surface-muted text-secondary px-2 py-0.5">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <p className="text-xs text-muted mt-3">
-                  {t('admin.experts.applied')}: {dateFmt.format(new Date(expert.appliedAt))}
-                </p>
-                {expert.verifiedAt && (
-                  <p className="text-xs text-bubble-green mt-1">
-                    {t('admin.experts.verifiedAt')}: {dateFmt.format(new Date(expert.verifiedAt))}
-                  </p>
-                )}
-              </Card>
-            </li>
+    <div className="flex flex-col gap-4">
+      <Card size="lg" className="p-2">
+        <nav className="flex flex-wrap gap-1">
+          {STATUSES.map((item) => (
+            <button
+              key={item}
+              type="button"
+              onClick={() => setStatus(item)}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition ${
+                status === item
+                  ? 'bg-bubble-magenta-soft text-bubble-magenta'
+                  : 'text-muted hover:bg-surface-hover'
+              }`}
+            >
+              {t(`admin.experts.status.${item}`)}
+            </button>
           ))}
-          {items.length === 0 && (
-            <li className="col-span-full">
-              <Card size="lg" className="p-8 text-center text-muted">
-                {t('admin.experts.empty')}
-              </Card>
-            </li>
-          )}
-        </ul>
-      </div>
+        </nav>
+      </Card>
+
+      {err && <p className="text-danger text-sm">{err}</p>}
+
+      <ul className="grid grid-cols-1 tablet:grid-cols-2 gap-3">
+        {items.map((expert) => (
+          <li key={expert.id}>
+            <Card size="md" interactive className="p-4 cursor-pointer h-full" onClick={() => setOpening(expert)}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h2 className="text-base font-semibold text-base truncate">{expert.headline}</h2>
+                  <p className="text-xs text-muted mt-1">
+                    {t('admin.experts.userId')}: <span className="font-mono" dir="ltr">{expert.userId}</span>
+                  </p>
+                </div>
+                <StatusBadge status={expert.verificationStatus} />
+              </div>
+              {expert.expertiseTags.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-1">
+                  {expert.expertiseTags.map((tag) => (
+                    <span key={tag} className="text-xs rounded-full bg-surface-muted text-secondary px-2 py-0.5">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <p className="text-xs text-muted mt-3">
+                {t('admin.experts.applied')}: {dateFmt.format(new Date(expert.appliedAt))}
+              </p>
+              {expert.verifiedAt && (
+                <p className="text-xs text-bubble-green mt-1">
+                  {t('admin.experts.verifiedAt')}: {dateFmt.format(new Date(expert.verifiedAt))}
+                </p>
+              )}
+            </Card>
+          </li>
+        ))}
+        {items.length === 0 && (
+          <li className="col-span-full">
+            <Card size="lg" className="p-8 text-center text-muted">
+              {t('admin.experts.empty')}
+            </Card>
+          </li>
+        )}
+      </ul>
 
       {opening && (
         <ExpertDetailModal
@@ -134,6 +120,7 @@ export default function AdminExpertVerificationPage() {
           onChanged={() => {
             setOpening(null)
             load()
+            onChanged?.()
           }}
         />
       )}

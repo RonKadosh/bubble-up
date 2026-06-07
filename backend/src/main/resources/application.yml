@@ -54,9 +54,10 @@ app:
   agents:
     enabled: false
   expert:
-    # When true (v1 default), expert applicants are auto-verified on apply.
-    # Flip to false to require admin approval via /admin/experts.
-    auto-verify: ${APP_EXPERT_AUTO_VERIFY:true}
+    # When true, expert applicants are auto-verified on apply. Default is now
+    # false: applying creates a PENDING request, promoted to EXPERT only on
+    # admin approval via the admin Expert Requests inbox.
+    auto-verify: ${APP_EXPERT_AUTO_VERIFY:false}
   matching:
     quiz-question-cap: 12
     recommendation-limit: 5

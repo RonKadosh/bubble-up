@@ -42,7 +42,13 @@
     "tabs": {
       "profile": "Profile",
       "matching": "Matching",
-      "language": "Language"
+      "preferences": "Preferences"
+    },
+    "theme": {
+      "title": "Appearance",
+      "description": "Choose how Bubble.up looks.",
+      "light": "Light",
+      "dark": "Dark"
     },
     "language": {
       "title": "Language",
@@ -661,10 +667,14 @@
       "tagsHint": "Up to 20 tags.",
       "submit": "Apply",
       "submitting": "Submitting…",
-      "errorGeneric": "Could not submit the application. Please try again."
+      "errorGeneric": "Could not submit the application. Please try again.",
+      "pendingTitle": "Application submitted",
+      "pendingBody": "Thanks! An admin will review your application. You'll get the Expert hub once you're approved.",
+      "pendingBackToDashboard": "Back to dashboard"
     },
     "dashboard": {
       "title": "Expert hub",
+      "subtitle": "Host live sessions and manage your booking requests.",
       "editProfile": "Edit profile",
       "bookingsHeading": "Booking requests",
       "noPendingRequests": "No pending requests.",
@@ -803,11 +813,52 @@
     "expertReview": "Expert review",
     "tabs": {
       "overview": "Overview",
+      "expertRequests": "Expert requests",
+      "reports": "Reports",
       "users": "People",
       "catalog": "Catalog",
       "bubbles": "Bubbles",
       "quiz": "Quiz",
       "audit": "Audit"
+    },
+    "reports": {
+      "errorLoad": "Could not load reports.",
+      "empty": "No reports here.",
+      "hasAttachment": "Has an attachment",
+      "status": {
+        "PENDING": "Pending",
+        "RESOLVED": "Resolved",
+        "DISMISSED": "Dismissed"
+      },
+      "columns": {
+        "category": "Category",
+        "subject": "Subject",
+        "reporter": "Reporter",
+        "created": "Created"
+      },
+      "fields": {
+        "category": "Category",
+        "status": "Status",
+        "reporter": "Reporter",
+        "created": "Created",
+        "description": "Description",
+        "attachment": "Attachment",
+        "resolutionNote": "Resolution note"
+      },
+      "actions": {
+        "resolve": "Resolve",
+        "dismiss": "Dismiss"
+      },
+      "prompts": {
+        "resolve": {
+          "title": "Resolve report",
+          "description": "Add a short note describing how this was handled."
+        },
+        "dismiss": {
+          "title": "Dismiss report",
+          "description": "Add a short note explaining why no action is needed."
+        }
+      }
     },
     "roles": {
       "STUDENT": "Students",
@@ -1163,6 +1214,37 @@
       "hint": "Answer Daily Drops to raise it.",
       "hintMatched": "Strong enough for Matched recommendations.",
       "matchedBadge": "Matched unlocked"
+    }
+  },
+  "report": {
+    "title": "Report a problem",
+    "subtitle": "Tell us what's wrong — abuse, spam, a safety concern, or a bug. An admin will review it.",
+    "categoryLabel": "What's this about?",
+    "category": {
+      "ABUSE": "Abuse",
+      "HARASSMENT": "Harassment",
+      "SPAM": "Spam",
+      "SAFETY": "Safety concern",
+      "TECHNICAL_ISSUE": "Technical issue",
+      "OTHER": "Something else"
+    },
+    "subjectLabel": "Subject",
+    "subjectPlaceholder": "A short summary",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "What happened? Include any details that would help an admin understand.",
+    "imageLabel": "Screenshot (optional)",
+    "imageHint": "PNG, JPEG, WebP or GIF, up to 5 MB.",
+    "submit": "Submit report",
+    "submitting": "Submitting…",
+    "success": {
+      "title": "Report submitted",
+      "body": "Thanks for flagging this. An admin will take a look.",
+      "backToDashboard": "Back to dashboard"
+    },
+    "error": {
+      "imageType": "That image type isn't supported. Use PNG, JPEG, WebP or GIF.",
+      "imageTooLarge": "That image is too large. Keep it under 5 MB.",
+      "generic": "Could not submit the report. Please try again."
     }
   },
   "onboarding": {
