@@ -6,6 +6,7 @@ import AdminUsersTab from './AdminUsersTab'
 import AdminCatalogTab from './AdminCatalogTab'
 import AdminGroupsTab from './AdminGroupsTab'
 import AdminQuizTab from './AdminQuizTab'
+import AdminMatchingTab from './AdminMatchingTab'
 import AdminAuditTab from './AdminAuditTab'
 import AdminExpertRequestsTab from './AdminExpertRequestsTab'
 import AdminReportsTab from './AdminReportsTab'
@@ -21,6 +22,7 @@ const TABS = [
   { key: 'catalog', labelKey: 'admin.tabs.catalog' },
   { key: 'groups', labelKey: 'admin.tabs.bubbles' },
   { key: 'quiz', labelKey: 'admin.tabs.quiz' },
+  { key: 'matching', labelKey: 'admin.tabs.matching' },
   { key: 'audit', labelKey: 'admin.tabs.audit' },
 ] as const
 
@@ -67,6 +69,7 @@ export default function AdminLayoutPage() {
       {active === 'catalog' && <AdminCatalogTab />}
       {active === 'groups' && <AdminGroupsTab />}
       {active === 'quiz' && <AdminQuizTab />}
+      {active === 'matching' && <AdminMatchingTab />}
       {active === 'audit' && <AdminAuditTab />}
     </PageShell>
   )

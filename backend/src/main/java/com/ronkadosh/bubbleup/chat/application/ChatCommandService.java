@@ -111,6 +111,7 @@ public class ChatCommandService {
             msg.setPinnedAt(timeProvider.now());
             msg.setPinnedByUserId(userId);
             chatMessageRepository.save(msg);
+            eventPublisher.publishEvent(new UserBehaviorEvent(userId, BehaviorEventType.PINNED_MESSAGE));
         }
         com.ronkadosh.bubbleup.chat.api.dto.PinUpdateEvent event =
                 new com.ronkadosh.bubbleup.chat.api.dto.PinUpdateEvent(

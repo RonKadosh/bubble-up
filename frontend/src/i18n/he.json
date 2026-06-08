@@ -57,7 +57,9 @@
     "matching": {
       "title": "התאמה",
       "description": "כמה Bubble.up מבין אותך. ענו על שאלות יומיות כדי לחזק את פרופיל ההתאמה שלכם ולפתוח המלצות מותאמות.",
-      "answered": "עניתם על {{answered}} מתוך {{cap}} שאלות יומיות"
+      "answered": "עניתם על {{answered}} מתוך {{cap}} שאלות יומיות",
+      "answerCta": "ענו על שאלה",
+      "complete": "עניתם על כל השאלות — פרופיל ההתאמה שלכם נבנה במלואו."
     }
   },
   "profile": {
@@ -339,6 +341,12 @@
     "ownerBadge": "בעלים",
     "publicBadge": "ציבורי",
     "privateBadge": "פרטי",
+    "feedback": {
+      "prompt": "האם הקבוצה הזו מתאימה לך?",
+      "good": "מתאים",
+      "bad": "פחות בשבילי",
+      "thanks": "תודה על המשוב."
+    },
     "liveNow": "משודר עכשיו",
     "tabs": {
       "chat": "צ׳אט",
@@ -819,7 +827,66 @@
       "catalog": "קטלוג",
       "bubbles": "בועות",
       "quiz": "שאלון",
+      "matching": "התאמה",
       "audit": "ביקורת"
+    },
+    "matching": {
+      "error": "לא ניתן לטעון את משוב ההתאמה.",
+      "empty": "אין עדיין משוב התאמה. הוא מצטבר ככל שמשתמשים רואים המלצות, מצטרפים לבועות ומדרגים התאמה.",
+      "profilesHeading": "פרופילי אופי",
+      "feedbackHeading": "משוב על המלצות",
+      "kpi": {
+        "profiledUsers": "משתמשים עם פרופיל",
+        "matchedReady": "מוכנים להתאמה",
+        "avgConfidence": "ביטחון ממוצע",
+        "profiledGroups": "בועות עם פרופיל",
+        "quizAnswers": "תשובות שאלון"
+      },
+      "rolesTitle": "התפלגות תפקידים",
+      "rolesSubtitle": "כמה משתמשים מובילים בכל תפקיד אופי.",
+      "profileTitle": "פרופיל האוכלוסייה",
+      "profileSubtitle": "וקטור התפקידים הממוצע של בסיס המשתמשים — הצורה הכוללת.",
+      "groupConfTitle": "ביטחון בועות",
+      "groupConfSubtitle": "עד כמה ניתן לסמוך על פרופילי הבועות כרגע.",
+      "conf": {
+        "HIGH": "גבוה (≥60%)",
+        "MEDIUM": "בינוני (30–60%)",
+        "LOW": "נמוך (<30%)"
+      },
+      "topGroupsTitle": "הבועות הפעילות ביותר",
+      "topGroupsSubtitle": "הבועות המובילות לפי פעילות, עם תפקיד האופי שלהן.",
+      "topGroups": {
+        "members_one": "חבר אחד",
+        "members_other": "{{count}} חברים"
+      },
+      "role": {
+        "LEADER": "מוביל",
+        "PLANNER": "מתכנן",
+        "EXPERT": "מומחה",
+        "CREATIVE": "יצירתי",
+        "COMMUNICATOR": "מתקשר",
+        "TEAM_PLAYER": "שחקן צוות",
+        "CHALLENGER": "מאתגר"
+      },
+      "funnelTitle": "משפך המרה",
+      "funnelSubtitle": "מתוך הבועות שהוצגו בכל סוג, כמה הצטרפו אליהן.",
+      "modeMatched": "מותאם",
+      "modeTrending": "מגמתי",
+      "shownJoined": "{{shown}} הוצגו · {{joined}} הצטרפו",
+      "bucketsTitle": "לפי אחוז התאמה",
+      "bucketsSubtitle": "שיעור הצטרפות ודירוגי התאמה לכל טווח התאמה אישית.",
+      "col": {
+        "bucket": "אחוז התאמה",
+        "shown": "הוצגו",
+        "joined": "הצטרפו",
+        "joinRate": "שיעור הצטרפות",
+        "good": "👍",
+        "bad": "👎"
+      },
+      "ratingsTitle": "דירוגי התאמה מפורשים",
+      "ratingsSubtitle": "החלטות שמשתמשים נתנו מתצוגת הבועה.",
+      "goodFit": "מתאים",
+      "badFit": "פחות בשבילי"
     },
     "reports": {
       "errorLoad": "לא ניתן לטעון את הדיווחים.",

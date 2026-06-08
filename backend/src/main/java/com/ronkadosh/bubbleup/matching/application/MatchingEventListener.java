@@ -22,7 +22,7 @@ public class MatchingEventListener {
         if (event.eventType() == BehaviorEventType.USER_ANSWERED_QUIZ_QUESTION) {
             commandService.recomputeUserQuizProfile(event.userId());
         } else {
-            commandService.applyBehaviorDelta(event.userId(), event.eventType());
+            commandService.recordBehaviorEvent(event.userId(), event.eventType());
         }
         commandService.recomputeGroupProfilesForUser(event.userId());
         commandService.refreshUserMatchCache(event.userId());

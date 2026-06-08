@@ -52,6 +52,40 @@ export async function getOverview(): Promise<Overview> {
   return res.data.data
 }
 
+// ─── Matching feedback (validation harness) ──────────────────────────────────
+
+export interface MatchFeedbackAnalytics {
+  funnelByMode: { mode: string; shown: number; joined: number; joinRate: number }[]
+  matchPercentBuckets: {
+    label: string; shown: number; joined: number; joinRate: number; goodFit: number; badFit: number
+  }[]
+  ratings: { goodFit: number; badFit: number }
+}
+
+export async function getMatchingFeedback(): Promise<MatchFeedbackAnalytics> {
+  const res = await client.get<ApiSuccess<MatchFeedbackAnalytics>>('/admin/matching-feedback')
+  return res.data.data
+}
+
+export interface MatchingStats {
+  coverage: {
+    profiledUsers: number
+    matchedReadyUsers: number
+    avgConfidence: number
+    quizAnswers: number
+    profiledGroups: number
+  }
+  dominantRoles: { role: string; count: number }[]
+  populationProfile: { role: string; avg: number }[]
+  groupConfidence: { label: string; count: number }[]
+  topGroups: { name: string; memberCount: number; confidence: number; dominantRole: string }[]
+}
+
+export async function getMatchingStats(): Promise<MatchingStats> {
+  const res = await client.get<ApiSuccess<MatchingStats>>('/admin/matching-stats')
+  return res.data.data
+}
+
 // ─── Users ───────────────────────────────────────────────────────────────────
 
 export interface AdminUser {

@@ -7,6 +7,7 @@ import com.ronkadosh.bubbleup.catalog.model.CourseOffering;
 import com.ronkadosh.bubbleup.catalog.persistence.CourseOfferingRepository;
 import com.ronkadosh.bubbleup.catalog.persistence.CourseRepository;
 import com.ronkadosh.bubbleup.catalog.persistence.TermRepository;
+import com.ronkadosh.bubbleup.common.events.BehaviorEventType;
 import com.ronkadosh.bubbleup.groups.model.GroupMember;
 import com.ronkadosh.bubbleup.groups.model.GroupVisibility;
 import com.ronkadosh.bubbleup.groups.model.MembershipRole;
@@ -24,7 +25,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -228,10 +231,24 @@ class MatchingRecommendationsIT extends IntegrationTest {
                 .userId(userId)
                 .answeredQuestions(answered)
                 .meaningfulBehaviorEvents(behaviorEvents)
+                // behaviorEvents>0 means "behaviorally active" — populate a diverse, saturating
+                // count set so behaviorEvidence reaches the cap (full behavior-confidence),
+                // matching the inert-fixture intent. The exact int is just a flag now.
+                .behaviorCounts(behaviorEvents > 0 ? saturatingCounts() : new EnumMap<>(BehaviorEventType.class))
                 .updatedAt(Instant.now())
                 .build();
         for (int r = 0; r < 7; r++) p.setQuizScore(r, vector[r]);
         userProfileRepository.save(p);
+    }
+
+    /** A diverse, well-above-k count set whose saturated evidence exceeds behaviorEvidenceCap. */
+    private static Map<BehaviorEventType, Integer> saturatingCounts() {
+        Map<BehaviorEventType, Integer> m = new EnumMap<>(BehaviorEventType.class);
+        m.put(BehaviorEventType.CREATED_GROUP, 20);
+        m.put(BehaviorEventType.UPLOADED_FILE, 20);
+        m.put(BehaviorEventType.CREATED_POLL, 20);
+        m.put(BehaviorEventType.SENT_MESSAGE, 50);
+        return m;
     }
 
     private UUID seedMember(double[] vector, int answered, int behaviorEvents) {

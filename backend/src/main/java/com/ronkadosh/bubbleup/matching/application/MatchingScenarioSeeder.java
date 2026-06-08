@@ -28,7 +28,11 @@ import org.springframework.context.event.EventListener;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import com.ronkadosh.bubbleup.common.events.BehaviorEventType;
+
 import java.time.Instant;
+import java.util.EnumMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -156,6 +160,9 @@ public class MatchingScenarioSeeder {
                 .userId(userId)
                 .answeredQuestions(answered)
                 .meaningfulBehaviorEvents(behaviorEvents)
+                // behaviorEvents>0 → seed a diverse, saturating count set so behaviorEvidence
+                // reaches the cap (full behavior-confidence), matching the scenario's intent.
+                .behaviorCounts(behaviorEvents > 0 ? saturatingCounts() : new EnumMap<>(BehaviorEventType.class))
                 .updatedAt(now)
                 .build();
         for (int r = 0; r < 7; r++) profile.setQuizScore(r, quizVector[r]);
@@ -225,6 +232,16 @@ public class MatchingScenarioSeeder {
                 .map(TermRef::id)
                 .flatMap(termId -> catalogInternalService.offeringIdForCourseAndTerm(course.getId(), termId))
                 .orElse(null);
+    }
+
+    /** A diverse, well-above-k count set whose saturated evidence exceeds behaviorEvidenceCap. */
+    private static Map<BehaviorEventType, Integer> saturatingCounts() {
+        Map<BehaviorEventType, Integer> m = new EnumMap<>(BehaviorEventType.class);
+        m.put(BehaviorEventType.CREATED_GROUP, 20);
+        m.put(BehaviorEventType.UPLOADED_FILE, 20);
+        m.put(BehaviorEventType.CREATED_POLL, 20);
+        m.put(BehaviorEventType.SENT_MESSAGE, 50);
+        return m;
     }
 
     private static double[] zeros() {

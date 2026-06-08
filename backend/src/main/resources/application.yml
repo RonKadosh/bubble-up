@@ -73,8 +73,9 @@ app:
     # renders a bubble as MATCHED (shows %); below it renders as TRENDING (reason labels).
     matched-display-threshold: ${APP_MATCHING_MATCHED_THRESHOLD:0.30}
     confidence:
-      question-cap: 7        # answered questions for full question-confidence
-      behavior-cap: 30       # meaningful behavior events for full behavior-confidence
+      question-cap: 7              # answered questions for full question-confidence
+      behavior-evidence-cap: 3.0   # saturated behavior-evidence units (Σ count/(count+k)) for full
+                                   # behavior-confidence — needs a SPREAD of distinct actions, not volume
       question-weight: 0.70
       behavior-weight: 0.30
       user-cap: 1.0
@@ -91,12 +92,28 @@ app:
       recent-join-cap: 5
       member-count-cap: 10
       upcoming-cap: 5
-    deltas:
-      created-group-leader: 0.10
-      added-member-leader: 0.06
-      created-calendar-event-planner: 0.08
-      uploaded-file-expert: 0.07
-      sent-message-communicator: 0.04
+    # Per-action behavior signals. Each action contributes weight*(count/(count+k)) to its
+    # role(s); the per-role sums are then max-normalized to a shape (MatchingScorer.behaviorVector).
+    # k = half-saturation count: large for frequent actions (chat) so volume can't dominate the
+    # shape; small (=1) for rare high-intent acts so one occurrence already signals. Adding an
+    # action = new BehaviorEventType + a publish site + one entry here. role weights need not sum to 1.
+    signals:
+      CREATED_GROUP:          { k: 1, roles: { leader: 1.0 } }
+      ADDED_MEMBER:           { k: 3, roles: { leader: 0.5 } }
+      JOINED_GROUP:           { k: 4, roles: { teamPlayer: 0.2 } }
+      CREATED_CALENDAR_EVENT: { k: 2, roles: { planner: 1.0 } }
+      UPLOADED_FILE:          { k: 3, roles: { expert: 0.8 } }
+      SENT_MESSAGE:           { k: 8, roles: { communicator: 0.4 } }
+      PINNED_MESSAGE:         { k: 3, roles: { planner: 0.3, leader: 0.2 } }
+      CREATED_POLL:           { k: 2, roles: { leader: 0.5, planner: 0.5 } }
+      VOTED_IN_POLL:          { k: 6, roles: { teamPlayer: 0.4 } }
+      CLOSED_POLL:            { k: 2, roles: { leader: 0.4 } }
+      CREATED_FOLDER:         { k: 2, roles: { planner: 0.5 } }
+      SUBMITTED_REPORT:       { k: 2, roles: { challenger: 0.5 } }
+      PUBLISHED_WHITEBOARD:   { k: 8, roles: { creative: 0.6 } }
+      APPLIED_AS_EXPERT:      { k: 1, roles: { expert: 0.8 } }
+      BOOKED_EXPERT:          { k: 2, roles: { leader: 0.4 } }
+      CREATED_EXPERT_SESSION: { k: 1, roles: { expert: 0.7, leader: 0.3 } }
     scenario:
       seed:
         # Seeds end-to-end matching scenarios (cold/cold, complementary, duplicate,

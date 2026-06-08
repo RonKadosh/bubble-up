@@ -1,6 +1,8 @@
 package com.ronkadosh.bubbleup.matching;
 
 import com.ronkadosh.bubbleup.common.config.MatchingProperties;
+import com.ronkadosh.bubbleup.common.config.MatchingProperties.BehaviorSignal;
+import com.ronkadosh.bubbleup.common.events.BehaviorEventType;
 import com.ronkadosh.bubbleup.matching.application.MatchingScorer;
 import com.ronkadosh.bubbleup.matching.application.MatchingWeights;
 import com.ronkadosh.bubbleup.matching.model.GroupProfile;
@@ -10,6 +12,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -31,9 +34,15 @@ class MatchingScorerTest {
                 0.20,   // quizWeightMin
                 Duration.ofMinutes(10),                       // quizCooldown
                 0.30,                                          // matchedDisplayThreshold
-                new MatchingProperties.Confidence(7, 30, 0.70, 0.30, 1.0, 5),
+                new MatchingProperties.Confidence(7, 3, 0.70, 0.30, 1.0, 5),
                 new MatchingProperties.Trending(0.35, 0.30, 0.20, 0.15, 14, 14, 30, 50, 5, 10, 5),
-                new MatchingProperties.BehaviorDeltas(0.10, 0.06, 0.08, 0.07, 0.04)
+                Map.of(
+                        BehaviorEventType.CREATED_GROUP,          new BehaviorSignal(1, Map.of("leader", 1.0)),
+                        BehaviorEventType.CREATED_CALENDAR_EVENT, new BehaviorSignal(2, Map.of("planner", 1.0)),
+                        BehaviorEventType.UPLOADED_FILE,          new BehaviorSignal(3, Map.of("expert", 0.8)),
+                        BehaviorEventType.SENT_MESSAGE,           new BehaviorSignal(8, Map.of("communicator", 0.4)),
+                        BehaviorEventType.CREATED_POLL,           new BehaviorSignal(2, Map.of("leader", 0.5, "planner", 0.5))
+                )
         );
     }
 
@@ -83,6 +92,55 @@ class MatchingScorerTest {
     @Test
     void buildQuizVector_empty_isAllZero() {
         assertThat(MatchingScorer.buildQuizVector(List.of())).containsExactly(new double[7]);
+    }
+
+    // ── behavior vector (per-action saturation → normalized shape) ────────────
+
+    @Test
+    void behaviorVector_frequentActionDoesNotDominateRareHighIntentOne() {
+        // 200 messages + 1 group created: chat must NOT collapse the shape to Communicator.
+        double[] v = MatchingScorer.behaviorVector(Map.of(
+                BehaviorEventType.SENT_MESSAGE, 200,
+                BehaviorEventType.CREATED_GROUP, 1), props);
+        assertThat(v[0]).isEqualTo(1.0);                 // Leader is the dominant shape
+        assertThat(v[4]).isLessThan(1.0).isGreaterThan(0.0);  // Communicator present but secondary
+        assertThat(v[0]).isGreaterThan(v[4]);
+    }
+
+    @Test
+    void behaviorVector_saturatesWithDiminishingReturns() {
+        // Communicator contribution (relative to a fixed Leader anchor) grows sub-linearly
+        // with message count — the 10× from 80→800 adds far less than the 10× from 8→80.
+        double comm8   = MatchingScorer.behaviorVector(Map.of(
+                BehaviorEventType.CREATED_GROUP, 1, BehaviorEventType.SENT_MESSAGE, 8), props)[4];
+        double comm80  = MatchingScorer.behaviorVector(Map.of(
+                BehaviorEventType.CREATED_GROUP, 1, BehaviorEventType.SENT_MESSAGE, 80), props)[4];
+        double comm800 = MatchingScorer.behaviorVector(Map.of(
+                BehaviorEventType.CREATED_GROUP, 1, BehaviorEventType.SENT_MESSAGE, 800), props)[4];
+        assertThat(comm80 - comm8).isGreaterThan(comm800 - comm80);   // diminishing
+        assertThat(comm800).isLessThan(1.0);                          // never overtakes Leader
+    }
+
+    @Test
+    void behaviorVector_empty_isAllZero() {
+        assertThat(MatchingScorer.behaviorVector(Map.of(), props)).containsExactly(new double[7]);
+    }
+
+    @Test
+    void behaviorVector_unmappedEventType_isIgnored() {
+        // COMPLETED_SHARED_TASK has no signal entry → contributes nothing.
+        assertThat(MatchingScorer.behaviorVector(
+                Map.of(BehaviorEventType.COMPLETED_SHARED_TASK, 5), props))
+                .containsExactly(new double[7]);
+    }
+
+    @Test
+    void behaviorVector_multiRoleAction_splitsAcrossRoles() {
+        // CREATED_POLL feeds Leader and Planner equally; nothing else.
+        double[] v = MatchingScorer.behaviorVector(Map.of(BehaviorEventType.CREATED_POLL, 3), props);
+        assertThat(v[0]).isEqualTo(1.0);   // leader
+        assertThat(v[1]).isEqualTo(1.0);   // planner (equal split → both top out)
+        assertThat(v[2]).isEqualTo(0.0);   // expert untouched
     }
 
     // ── quiz weight (unchanged) ───────────────────────────────────────────────
@@ -147,18 +205,46 @@ class MatchingScorerTest {
 
     @Test
     void userConfidence_behaviorOnly_isPointThree() {
-        assertThat(MatchingScorer.userConfidence(0, 30, props)).isCloseTo(0.30, within(1e-9));
+        // behavior arg is now saturated EVIDENCE, not raw count; cap is 3.0.
+        assertThat(MatchingScorer.userConfidence(0, 3.0, props)).isCloseTo(0.30, within(1e-9));
     }
 
     @Test
     void userConfidence_bothSaturated_isOne() {
-        assertThat(MatchingScorer.userConfidence(7, 30, props)).isCloseTo(1.0, within(1e-9));
-        assertThat(MatchingScorer.userConfidence(14, 60, props)).isCloseTo(1.0, within(1e-9));
+        assertThat(MatchingScorer.userConfidence(7, 3.0, props)).isCloseTo(1.0, within(1e-9));
+        assertThat(MatchingScorer.userConfidence(14, 6.0, props)).isCloseTo(1.0, within(1e-9));
     }
 
     @Test
     void userConfidence_partialQuestions_isProportional() {
         assertThat(MatchingScorer.userConfidence(3, 0, props)).isCloseTo(0.70 * 3 / 7, within(1e-9));
+    }
+
+    // ── behavior evidence (anti-spam: diversity, not volume) ──────────────────
+
+    @Test
+    void behaviorEvidence_singleSpammedAction_staysBelowOne() {
+        double ev = MatchingScorer.behaviorEvidence(Map.of(BehaviorEventType.SENT_MESSAGE, 500), props);
+        assertThat(ev).isLessThan(1.0);   // one action type can't exceed its saturation ceiling
+    }
+
+    @Test
+    void behaviorEvidence_rewardsDiversityOverVolume() {
+        double spam = MatchingScorer.behaviorEvidence(Map.of(BehaviorEventType.SENT_MESSAGE, 100), props);
+        double diverse = MatchingScorer.behaviorEvidence(Map.of(
+                BehaviorEventType.SENT_MESSAGE, 5,
+                BehaviorEventType.CREATED_GROUP, 1,
+                BehaviorEventType.CREATED_POLL, 2,
+                BehaviorEventType.UPLOADED_FILE, 3), props);
+        assertThat(diverse).isGreaterThan(spam);
+    }
+
+    @Test
+    void userConfidence_messageSpamAlone_cannotUnlockMatched() {
+        // 1 quiz answer + heavy chat spam must stay below the matched-display threshold.
+        double ev = MatchingScorer.behaviorEvidence(Map.of(BehaviorEventType.SENT_MESSAGE, 200), props);
+        double conf = MatchingScorer.userConfidence(1, ev, props);
+        assertThat(conf).isLessThan(props.matchedDisplayThreshold());
     }
 
     // ── group confidence ──────────────────────────────────────────────────────

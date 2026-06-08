@@ -3,6 +3,7 @@ import { Group } from '../../api/groups'
 import { CalendarEvent } from '../../api/calendar'
 import { Button } from '../../components/Button'
 import { MenuIcon } from '../../components/Icons'
+import { MatchFeedbackControl } from './MatchFeedbackControl'
 
 interface GroupHeaderProps {
   group: Group
@@ -67,6 +68,11 @@ export function GroupHeader({ group, isOwner, isMember, onJoin, liveSession, onS
           </div>
           {group.description && (
             <p className="text-sm text-secondary mt-0.5 truncate">{group.description}</p>
+          )}
+          {!isOwner && (
+            <div className="mt-1.5">
+              <MatchFeedbackControl key={group.id} groupId={group.id} />
+            </div>
           )}
         </div>
       </div>

@@ -2,6 +2,8 @@ package com.ronkadosh.bubbleup.report.application;
 
 import com.ronkadosh.bubbleup.common.error.AppException;
 import com.ronkadosh.bubbleup.common.error.ErrorCode;
+import com.ronkadosh.bubbleup.common.events.BehaviorEventType;
+import com.ronkadosh.bubbleup.common.events.UserBehaviorEvent;
 import com.ronkadosh.bubbleup.common.file.FileAccessPolicy;
 import com.ronkadosh.bubbleup.common.file.FileStorageService;
 import com.ronkadosh.bubbleup.common.file.FileUploadRequest;
@@ -12,6 +14,7 @@ import com.ronkadosh.bubbleup.report.model.Report;
 import com.ronkadosh.bubbleup.report.model.ReportStatus;
 import com.ronkadosh.bubbleup.report.persistence.ReportRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,13 +35,16 @@ public class ReportCommandService {
 
     private final ReportRepository repo;
     private final FileStorageService fileStorageService;
+    private final ApplicationEventPublisher eventPublisher;
     private final TransactionTemplate transactionTemplate;
 
     public ReportCommandService(ReportRepository repo,
                                 FileStorageService fileStorageService,
+                                ApplicationEventPublisher eventPublisher,
                                 PlatformTransactionManager transactionManager) {
         this.repo = repo;
         this.fileStorageService = fileStorageService;
+        this.eventPublisher = eventPublisher;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
@@ -56,6 +62,7 @@ public class ReportCommandService {
                 .description(request.description().trim())
                 .status(ReportStatus.PENDING)
                 .build());
+        eventPublisher.publishEvent(new UserBehaviorEvent(reporterUserId, BehaviorEventType.SUBMITTED_REPORT));
         return ReportResponse.from(saved);
     }
 

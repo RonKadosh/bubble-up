@@ -57,7 +57,9 @@
     "matching": {
       "title": "Matching",
       "description": "How well Bubble.up understands you. Answer Daily Drops to raise your profile strength and unlock Matched recommendations.",
-      "answered": "{{answered}} of {{cap}} Daily Drops answered"
+      "answered": "{{answered}} of {{cap}} Daily Drops answered",
+      "answerCta": "Answer a question",
+      "complete": "You've answered every question — your matching profile is fully built."
     }
   },
   "profile": {
@@ -339,6 +341,12 @@
     "ownerBadge": "Owner",
     "publicBadge": "Public",
     "privateBadge": "Private",
+    "feedback": {
+      "prompt": "Is this bubble a good fit for you?",
+      "good": "Good fit",
+      "bad": "Not for me",
+      "thanks": "Thanks for the feedback."
+    },
     "liveNow": "Live now",
     "tabs": {
       "chat": "Chat",
@@ -819,7 +827,66 @@
       "catalog": "Catalog",
       "bubbles": "Bubbles",
       "quiz": "Quiz",
+      "matching": "Matching",
       "audit": "Audit"
+    },
+    "matching": {
+      "error": "Could not load matching feedback.",
+      "empty": "No matching feedback yet. It accumulates as users see recommendations, join bubbles, and rate fit.",
+      "profilesHeading": "Character profiles",
+      "feedbackHeading": "Recommendation feedback",
+      "kpi": {
+        "profiledUsers": "Profiled users",
+        "matchedReady": "Matched-ready",
+        "avgConfidence": "Avg confidence",
+        "profiledGroups": "Profiled bubbles",
+        "quizAnswers": "Quiz answers"
+      },
+      "rolesTitle": "Role distribution",
+      "rolesSubtitle": "How many users lead with each character role.",
+      "profileTitle": "Population profile",
+      "profileSubtitle": "The user base's average role vector — the overall shape.",
+      "groupConfTitle": "Bubble confidence",
+      "groupConfSubtitle": "How trustworthy bubble profiles are right now.",
+      "conf": {
+        "HIGH": "High (≥60%)",
+        "MEDIUM": "Medium (30–60%)",
+        "LOW": "Low (<30%)"
+      },
+      "topGroupsTitle": "Most active bubbles",
+      "topGroupsSubtitle": "Top bubbles by activity, with their characteristic role.",
+      "topGroups": {
+        "members_one": "{{count}} member",
+        "members_other": "{{count}} members"
+      },
+      "role": {
+        "LEADER": "Leader",
+        "PLANNER": "Planner",
+        "EXPERT": "Expert",
+        "CREATIVE": "Creative",
+        "COMMUNICATOR": "Communicator",
+        "TEAM_PLAYER": "Team player",
+        "CHALLENGER": "Challenger"
+      },
+      "funnelTitle": "Conversion funnel",
+      "funnelSubtitle": "Of bubbles shown as each kind, how many were joined.",
+      "modeMatched": "Matched",
+      "modeTrending": "Trending",
+      "shownJoined": "{{shown}} shown · {{joined}} joined",
+      "bucketsTitle": "By match %",
+      "bucketsSubtitle": "Join-rate and fit ratings per personalized-match band.",
+      "col": {
+        "bucket": "Match %",
+        "shown": "Shown",
+        "joined": "Joined",
+        "joinRate": "Join rate",
+        "good": "👍",
+        "bad": "👎"
+      },
+      "ratingsTitle": "Explicit fit ratings",
+      "ratingsSubtitle": "Verdicts users gave from the bubble view.",
+      "goodFit": "Good fit",
+      "badFit": "Not for me"
     },
     "reports": {
       "errorLoad": "Could not load reports.",

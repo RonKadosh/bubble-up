@@ -19,6 +19,7 @@ import com.ronkadosh.bubbleup.expert.internal.ExpertAdminInternalService;
 import com.ronkadosh.bubbleup.groups.api.dto.CreateGroupRequest;
 import com.ronkadosh.bubbleup.groups.application.GroupCommandService;
 import com.ronkadosh.bubbleup.groups.model.GroupVisibility;
+import com.ronkadosh.bubbleup.matching.application.MatchingCommandService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -66,6 +67,7 @@ public class DemoSeeder {
     private final ExpertProfileService expertProfileService;
     private final ExpertSessionCommandService expertSessionCommandService;
     private final ExpertAdminInternalService expertAdminInternalService;
+    private final MatchingCommandService matchingCommandService;
     private final TimeProvider timeProvider;
 
     @EventListener(ApplicationReadyEvent.class)
@@ -170,6 +172,33 @@ public class DemoSeeder {
                 "From DDPM to stable diffusion — one denoising step at a time.",
                 4, grace);
         addMembers(diffusionGroup, henry, isla);                  // 3 members
+
+        // ── Give members real, built character profiles ─────────────────────
+        // Without this every bubble's members are cold (0 quiz answers), so their
+        // group_profile_confidence ≈ 0 and EVERY discovery pick renders TRENDING —
+        // even for a viewer who built their own profile (matching_confidence =
+        // user_conf × group_conf). We profile every member EXCEPT bob (he is the
+        // discovery viewer) so his candidate bubbles become MATCHED.
+        //
+        // Each member leans toward a DIFFERENT role (0=Leader … 6=Challenger), giving
+        // each bubble a distinct characteristic vector — and therefore a distinct
+        // complementarity %, since match = cosine(viewer, 1 − group_avg). Crucially the
+        // bubbles differ on WHERE they're strong/weak, so a viewer is complementary to
+        // some and redundant to others:
+        //   OS Crammers (carol,dave,eve,frank,grace) → Expert/Communicator/Creative → needs Leader/Planner
+        //   Kernel Panic (henry,isla,jack)           → Leader/Planner/Challenger     → already has Leader/Planner
+        //   Diffusion (grace,henry,isla)             → Creative/Leader/Planner
+        //   Transformers (jack,alice,+OS Crammers 5) → broad mix
+        // Real answers (the option that most expresses the role) → survives recomputes.
+        matchingCommandService.seedCharacterAnswers(carol, 2, 7);   // Expert
+        matchingCommandService.seedCharacterAnswers(dave,  2, 7);   // Expert
+        matchingCommandService.seedCharacterAnswers(eve,   4, 7);   // Communicator
+        matchingCommandService.seedCharacterAnswers(frank, 4, 7);   // Communicator
+        matchingCommandService.seedCharacterAnswers(grace, 3, 7);   // Creative
+        matchingCommandService.seedCharacterAnswers(henry, 0, 7);   // Leader
+        matchingCommandService.seedCharacterAnswers(isla,  1, 7);   // Planner
+        matchingCommandService.seedCharacterAnswers(jack,  6, 7);   // Challenger
+        matchingCommandService.seedCharacterAnswers(alice, 5, 7);   // TeamPlayer
 
         // ── Admin user — for the /admin panel ──────────────────────────────
         UUID admin = createUserWithRole(

@@ -2,12 +2,15 @@ package com.ronkadosh.bubbleup.groups.application;
 
 import com.ronkadosh.bubbleup.common.error.AppException;
 import com.ronkadosh.bubbleup.common.error.ErrorCode;
+import com.ronkadosh.bubbleup.common.events.BehaviorEventType;
+import com.ronkadosh.bubbleup.common.events.UserBehaviorEvent;
 import com.ronkadosh.bubbleup.groups.api.dto.GroupFolderResponse;
 import com.ronkadosh.bubbleup.groups.internal.GroupInternalService;
 import com.ronkadosh.bubbleup.groups.model.GroupFolder;
 import com.ronkadosh.bubbleup.groups.persistence.GroupFileRepository;
 import com.ronkadosh.bubbleup.groups.persistence.GroupFolderRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +27,7 @@ public class GroupFolderCommandService {
     private final GroupFolderRepository folderRepo;
     private final GroupFileRepository fileRepo;
     private final GroupInternalService groupInternalService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public GroupFolderResponse create(UUID groupId, UUID requesterId, String rawName, UUID parentId) {
@@ -48,6 +52,7 @@ public class GroupFolderCommandService {
                 .name(name)
                 .createdById(requesterId)
                 .build());
+        eventPublisher.publishEvent(new UserBehaviorEvent(requesterId, BehaviorEventType.CREATED_FOLDER));
         return GroupFolderResponse.from(saved);
     }
 
