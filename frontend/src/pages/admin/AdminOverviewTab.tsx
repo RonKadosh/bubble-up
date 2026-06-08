@@ -122,7 +122,7 @@ export default function AdminOverviewTab() {
 
 function Kpi({ label, value, variant }: { label: string; value: number; variant?: 'bubbles' }) {
   return (
-    <Card size="lg" className={`p-5 relative overflow-hidden ${variant === 'bubbles' ? 'admin-bubble-kpi' : ''}`}>
+    <Card size="lg" className={`p-5 relative overflow-hidden ${variant === 'bubbles' ? 'bubble-surface' : ''}`}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-muted">{label}</p>

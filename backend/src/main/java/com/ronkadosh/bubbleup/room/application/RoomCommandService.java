@@ -9,6 +9,8 @@ import com.ronkadosh.bubbleup.chat.model.ChatLinkTargetType;
 import com.ronkadosh.bubbleup.chat.model.ChatMessageType;
 import com.ronkadosh.bubbleup.common.error.AppException;
 import com.ronkadosh.bubbleup.common.error.ErrorCode;
+import com.ronkadosh.bubbleup.common.events.BehaviorEventType;
+import com.ronkadosh.bubbleup.common.events.UserBehaviorEvent;
 import com.ronkadosh.bubbleup.common.websocket.WebSocketDestination;
 import com.ronkadosh.bubbleup.common.websocket.WebSocketPublisher;
 import com.ronkadosh.bubbleup.expert.application.WhiteboardWriterRegistry;
@@ -18,6 +20,7 @@ import com.ronkadosh.bubbleup.room.model.Room;
 import com.ronkadosh.bubbleup.room.model.RoomScope;
 import com.ronkadosh.bubbleup.room.persistence.RoomRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,6 +43,7 @@ public class RoomCommandService {
     private final WebSocketPublisher webSocketPublisher;
     private final WhiteboardRelay whiteboardRelay;
     private final WhiteboardWriterRegistry whiteboardWriterRegistry;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public void publishWhiteboardSnapshot(UUID roomId, ExcalidrawSnapshot snapshot, UUID requesterId) {
@@ -52,6 +56,8 @@ public class RoomCommandService {
                 WebSocketDestination.roomWhiteboard(roomId),
                 snapshot
         );
+        // Frequent action — kept fair by a high saturation k on PUBLISHED_WHITEBOARD.
+        eventPublisher.publishEvent(new UserBehaviorEvent(requesterId, BehaviorEventType.PUBLISHED_WHITEBOARD));
     }
 
     /**

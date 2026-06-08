@@ -21,9 +21,12 @@ import com.ronkadosh.bubbleup.chat.persistence.ChatRoomRepository;
 import com.ronkadosh.bubbleup.common.datetime.TimeProvider;
 import com.ronkadosh.bubbleup.common.error.AppException;
 import com.ronkadosh.bubbleup.common.error.ErrorCode;
+import com.ronkadosh.bubbleup.common.events.BehaviorEventType;
+import com.ronkadosh.bubbleup.common.events.UserBehaviorEvent;
 import com.ronkadosh.bubbleup.common.websocket.WebSocketDestination;
 import com.ronkadosh.bubbleup.common.websocket.WebSocketPublisher;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -55,6 +58,7 @@ public class PollCommandService {
     private final WebSocketPublisher webSocketPublisher;
     private final TimeProvider timeProvider;
     private final AuthInternalService authInternalService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public PollResponse createPoll(UUID roomId, UUID userId, CreatePollRequest request) {
@@ -122,6 +126,7 @@ public class PollCommandService {
                 WebSocketDestination.chatRoom(roomId),
                 ChatMessageResponse.from(linkMessage, senderIdentity)
         );
+        eventPublisher.publishEvent(new UserBehaviorEvent(userId, BehaviorEventType.CREATED_POLL));
 
         return PollAssembler.assemble(poll, savedOptions, List.of(), userId);
     }
@@ -179,6 +184,7 @@ public class PollCommandService {
 
         List<ChatPollVote> refreshed = chatPollVoteRepository.findAllByPollId(pollId);
         broadcastPollUpdate(poll, options, refreshed);
+        eventPublisher.publishEvent(new UserBehaviorEvent(userId, BehaviorEventType.VOTED_IN_POLL));
         return PollAssembler.assemble(poll, options, refreshed, userId);
     }
 
@@ -193,6 +199,7 @@ public class PollCommandService {
         if (poll.getClosedAt() == null) {
             poll.setClosedAt(timeProvider.now());
             chatPollRepository.save(poll);
+            eventPublisher.publishEvent(new UserBehaviorEvent(userId, BehaviorEventType.CLOSED_POLL));
         }
         List<ChatPollOption> options = chatPollOptionRepository.findAllByPollIdOrderByPositionAsc(pollId);
         List<ChatPollVote> votes = chatPollVoteRepository.findAllByPollId(pollId);

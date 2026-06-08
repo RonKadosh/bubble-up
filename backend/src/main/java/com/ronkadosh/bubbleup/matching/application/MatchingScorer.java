@@ -1,11 +1,15 @@
 package com.ronkadosh.bubbleup.matching.application;
 
 import com.ronkadosh.bubbleup.common.config.MatchingProperties;
+import com.ronkadosh.bubbleup.common.config.MatchingProperties.BehaviorSignal;
+import com.ronkadosh.bubbleup.common.events.BehaviorEventType;
 import com.ronkadosh.bubbleup.matching.model.GroupProfile;
 import com.ronkadosh.bubbleup.matching.model.MatchResultType;
 import com.ronkadosh.bubbleup.matching.model.UserProfile;
 
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 /**
  * Pure scoring primitives for the v1 matching engine. No I/O, no Spring — every
@@ -61,17 +65,63 @@ public final class MatchingScorer {
         return out;
     }
 
-    // ── Member / group vector construction ───────────────────────────────────
+    // ── Behavior vector (per-action saturation → normalized shape) ────────────
 
-    public static double finalScore(int r, UserProfile profile, int daysActive, MatchingProperties props) {
-        double qw = MatchingWeights.quizWeight(daysActive, props);
-        return qw * profile.getQuizScore(r) + (1 - qw) * profile.getBehaviorScore(r);
+    /** Role index for a config role-name key, or -1 if unknown. */
+    public static int roleIndex(String role) {
+        if (role == null) return -1;
+        return switch (role.trim().toLowerCase(Locale.ROOT)) {
+            case "leader"       -> 0;
+            case "planner"      -> 1;
+            case "expert"       -> 2;
+            case "creative"     -> 3;
+            case "communicator" -> 4;
+            case "teamplayer"   -> 5;
+            case "challenger"   -> 6;
+            default             -> -1;
+        };
     }
 
+    /**
+     * Derives the behavior role vector from raw per-action counts. Each action's count
+     * runs through the saturating curve {@code count/(count+k)} (diminishing returns,
+     * with a per-action {@code k} that caps frequent actions low) and is split across
+     * roles per {@code app.matching.signals}; the resulting raw role sums are then
+     * <b>max-normalized</b> to a shape — so heavy usage sharpens the profile instead of
+     * squashing every role to 1.0, and no single high-frequency action can dominate.
+     * Empty/unmapped counts → all-zeros. Volume is intentionally NOT carried here (it
+     * feeds {@code user_confidence} via meaningful_behavior_events instead).
+     */
+    public static double[] behaviorVector(Map<BehaviorEventType, Integer> counts, MatchingProperties props) {
+        double[] raw = new double[ROLES];
+        if (counts == null || props.signals() == null) return raw;
+        for (Map.Entry<BehaviorEventType, Integer> entry : counts.entrySet()) {
+            BehaviorSignal sig = props.signals().get(entry.getKey());
+            if (sig == null || sig.roles() == null) continue;       // unmapped / future event type
+            int c = entry.getValue() == null ? 0 : entry.getValue();
+            if (c <= 0 || sig.k() <= 0) continue;
+            double sat = c / (c + sig.k());                          // in (0,1)
+            for (Map.Entry<String, Double> rw : sig.roles().entrySet()) {
+                int idx = roleIndex(rw.getKey());
+                if (idx >= 0 && rw.getValue() != null) raw[idx] += rw.getValue() * sat;
+            }
+        }
+        return maxNormalize(raw);
+    }
+
+    // ── Member / group vector construction ───────────────────────────────────
+
+    /**
+     * The member's blended role vector: quiz shape and behavior shape mixed by the
+     * day-driven quiz weight. Behavior is normalized as a whole vector (not per role),
+     * so this is the single entry point — callers must not blend role-by-role.
+     */
     public static double[] userFinalScores(UserProfile profile, int daysActive, MatchingProperties props) {
+        double qw = MatchingWeights.quizWeight(daysActive, props);
+        double[] behavior = behaviorVector(profile.getBehaviorCounts(), props);
         double[] scores = new double[ROLES];
         for (int r = 0; r < ROLES; r++) {
-            scores[r] = finalScore(r, profile, daysActive, props);
+            scores[r] = qw * profile.getQuizScore(r) + (1 - qw) * behavior[r];
         }
         return scores;
     }
@@ -106,10 +156,36 @@ public final class MatchingScorer {
 
     // ── Confidence ───────────────────────────────────────────────────────────
 
-    public static double userConfidence(int answeredQuestions, int behaviorEvents, MatchingProperties props) {
+    /**
+     * Behavior "evidence" = Σ over action types of {@code count/(count+k)}. Each action
+     * type contributes strictly less than 1 and saturates with its own {@code k}, so
+     * spamming a SINGLE action (e.g. chat) can never push evidence past ~1 — reaching
+     * high behavior-confidence requires a <b>diversity</b> of actions, not raw volume.
+     * This is what stops message-spam from inflating profile strength. Empty/unmapped
+     * counts → 0.
+     */
+    public static double behaviorEvidence(Map<BehaviorEventType, Integer> counts, MatchingProperties props) {
+        if (counts == null || props.signals() == null) return 0.0;
+        double evidence = 0.0;
+        for (Map.Entry<BehaviorEventType, Integer> e : counts.entrySet()) {
+            BehaviorSignal sig = props.signals().get(e.getKey());
+            if (sig == null || sig.k() <= 0) continue;
+            int c = e.getValue() == null ? 0 : e.getValue();
+            if (c <= 0) continue;
+            evidence += c / (c + sig.k());
+        }
+        return evidence;
+    }
+
+    /**
+     * @param behaviorEvidence saturated, diversity-aware behavior signal from
+     *                         {@link #behaviorEvidence} — NOT a raw event count, so it
+     *                         can't be gamed by repeating one action.
+     */
+    public static double userConfidence(int answeredQuestions, double behaviorEvidence, MatchingProperties props) {
         MatchingProperties.Confidence c = props.confidence();
         double qc = Math.min(answeredQuestions / c.questionCap(), 1.0);
-        double bc = Math.min(behaviorEvents / c.behaviorCap(), 1.0);
+        double bc = Math.min(behaviorEvidence / c.behaviorEvidenceCap(), 1.0);
         return Math.min(c.questionWeight() * qc + c.behaviorWeight() * bc, c.userCap());
     }
 

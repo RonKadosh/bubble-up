@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <defs>
+    <linearGradient id="bubble" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#9BD6F2"/>
+      <stop offset="1" stop-color="#6FBFE8"/>
+    </linearGradient>
+  </defs>
+  <!-- Bubble tile -->
+  <rect width="32" height="32" rx="10" fill="url(#bubble)"/>
+  <!-- The mark's dot/highlight (mirrors components/Icons BubbleLogo) -->
+  <circle cx="11.5" cy="11.5" r="3.1" fill="none" stroke="#143047" stroke-width="2.2"/>
+</svg>

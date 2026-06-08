@@ -18,8 +18,15 @@ export interface NextQuestion {
   nextAvailableAt: string | null
 }
 
-export async function getNextQuestion(): Promise<NextQuestion> {
-  const res = await client.get<ApiSuccess<NextQuestion>>('/matching/quiz/next')
+/**
+ * Next unanswered quiz question. Pass {@code ignoreCooldown} for the deliberate
+ * "build my profile" flow (Settings → Matching) so the user can answer consecutively;
+ * the passive Daily Drop omits it and keeps the server-paced cadence.
+ */
+export async function getNextQuestion(ignoreCooldown = false): Promise<NextQuestion> {
+  const res = await client.get<ApiSuccess<NextQuestion>>('/matching/quiz/next', {
+    params: ignoreCooldown ? { ignoreCooldown: true } : undefined,
+  })
   return res.data.data
 }
 
@@ -45,5 +52,27 @@ export interface Reliability {
 
 export async function getReliability(): Promise<Reliability> {
   const res = await client.get<ApiSuccess<Reliability>>('/matching/reliability')
+  return res.data.data
+}
+
+export type FeedbackSentiment = 'GOOD_FIT' | 'BAD_FIT'
+
+/**
+ * The caller's explicit verdict on a bubble's fit, from the group view. The backend
+ * resolves the match % at click time (cache or live) and stores it alongside the rating,
+ * feeding the admin matching-feedback funnel.
+ */
+export async function submitMatchFeedback(groupId: string, sentiment: FeedbackSentiment): Promise<void> {
+  await client.post('/matching/feedback', { groupId, sentiment })
+}
+
+export interface MatchFeedbackStatus {
+  rated: boolean
+  sentiment: FeedbackSentiment | null
+}
+
+/** Whether the caller already rated this bubble's fit — used to show the prompt only once. */
+export async function getMatchFeedbackStatus(groupId: string): Promise<MatchFeedbackStatus> {
+  const res = await client.get<ApiSuccess<MatchFeedbackStatus>>(`/matching/feedback/${groupId}`)
   return res.data.data
 }

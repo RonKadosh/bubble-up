@@ -140,9 +140,9 @@ export function QuizPrompt() {
             key={opt.id}
             variant="secondary"
             size="sm"
+            wrap
             disabled={submitting}
             onClick={() => onAnswer(opt.id)}
-            className="justify-start text-start"
           >
             {opt.text}
           </Button>

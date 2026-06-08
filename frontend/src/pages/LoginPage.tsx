@@ -88,7 +88,7 @@ export default function LoginPage() {
 
         <main className="relative z-20 min-h-screen flex items-start justify-center desktop:justify-end px-4 tablet:px-6 desktop:pe-4 pt-[14vh] tablet:pt-[12vh] desktop:pt-[14vh] pb-12 tablet:pb-24">
           <div className="w-full max-w-md ring-iridescent p-[2px] rounded-[2.5rem] shadow-themed">
-          <div className="bg-surface rounded-[2.5rem] p-6 tablet:p-8 desktop:p-10">
+          <div className="bubble-surface relative overflow-hidden bg-surface rounded-[2.5rem] p-6 tablet:p-8 desktop:p-10">
           <h1 className="text-3xl font-bold text-base">
             {isRegister ? t('login.headingRegister') : t('login.headingSignIn')}
           </h1>

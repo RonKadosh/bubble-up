@@ -31,11 +31,19 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
 }
 
 const BASE =
-  'inline-flex items-center justify-center gap-2 rounded-full bubble-pop disabled:opacity-60 disabled:cursor-not-allowed disabled:pointer-events-none whitespace-nowrap'
+  'inline-flex items-center gap-2 bubble-pop disabled:opacity-60 disabled:cursor-not-allowed disabled:pointer-events-none'
+
+// Default: a single-line pill (label buttons). `wrap`: text wraps and left-aligns
+// inside a rounded-rect — for long, multi-line option labels (quiz answers) where a
+// nowrap pill would overflow its curved ends. Set via the `wrap` prop.
+const SHAPE_NOWRAP = 'justify-center whitespace-nowrap rounded-full'
+const SHAPE_WRAP = 'justify-start text-start whitespace-normal rounded-2xl'
 
 interface SharedProps {
   variant?: ButtonVariant
   size?: ButtonSize
+  /** Let the label wrap to multiple lines (left-aligned, rounded-rect) instead of a nowrap pill. */
+  wrap?: boolean
   leftIcon?: ReactNode
   rightIcon?: ReactNode
   className?: string
@@ -46,6 +54,7 @@ type ButtonProps = SharedProps & ButtonHTMLAttributes<HTMLButtonElement>
 export function Button({
   variant = 'primary',
   size = 'md',
+  wrap = false,
   leftIcon,
   rightIcon,
   className = '',
@@ -55,7 +64,7 @@ export function Button({
   return (
     <button
       {...rest}
-      className={`${BASE} ${SIZE_CLASSES[size]} ${VARIANT_CLASSES[variant]} ${className}`}
+      className={`${BASE} ${wrap ? SHAPE_WRAP : SHAPE_NOWRAP} ${SIZE_CLASSES[size]} ${VARIANT_CLASSES[variant]} ${className}`}
     >
       {leftIcon}
       {children}
@@ -70,6 +79,7 @@ type LinkButtonProps = SharedProps & AnchorHTMLAttributes<HTMLAnchorElement>
 export function LinkButton({
   variant = 'primary',
   size = 'md',
+  wrap = false,
   leftIcon,
   rightIcon,
   className = '',
@@ -79,7 +89,7 @@ export function LinkButton({
   return (
     <a
       {...rest}
-      className={`${BASE} ${SIZE_CLASSES[size]} ${VARIANT_CLASSES[variant]} ${className}`}
+      className={`${BASE} ${wrap ? SHAPE_WRAP : SHAPE_NOWRAP} ${SIZE_CLASSES[size]} ${VARIANT_CLASSES[variant]} ${className}`}
     >
       {leftIcon}
       {children}

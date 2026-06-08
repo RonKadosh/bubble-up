@@ -6,12 +6,14 @@ import com.ronkadosh.bubbleup.common.config.MatchingProperties;
 import com.ronkadosh.bubbleup.common.datetime.TimeProvider;
 import com.ronkadosh.bubbleup.common.error.AppException;
 import com.ronkadosh.bubbleup.common.error.ErrorCode;
+import com.ronkadosh.bubbleup.common.events.RecommendationsShownEvent;
 import com.ronkadosh.bubbleup.enrollment.internal.EnrollmentInternalService;
 import com.ronkadosh.bubbleup.groups.internal.GroupInternalService;
 import com.ronkadosh.bubbleup.matching.api.dto.GroupRecommendationDto;
 import com.ronkadosh.bubbleup.matching.api.dto.NextQuestionResponse;
 import com.ronkadosh.bubbleup.matching.api.dto.QuizOptionDto;
 import com.ronkadosh.bubbleup.matching.api.dto.RecommendationsResponse;
+import com.ronkadosh.bubbleup.matching.internal.dto.MatchSnapshot;
 import com.ronkadosh.bubbleup.matching.internal.dto.MatchingReliability;
 import com.ronkadosh.bubbleup.matching.model.*;
 import com.ronkadosh.bubbleup.matching.persistence.*;
@@ -47,7 +49,7 @@ public class MatchingQueryService {
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
-    public NextQuestionResponse getNextQuestion(UUID userId, String lang) {
+    public NextQuestionResponse getNextQuestion(UUID userId, String lang, boolean ignoreCooldown) {
         UserProfile profile = commandService.getOrCreateUserProfile(userId);
 
         if (profile.getAnsweredQuestions() >= props.quizQuestionCap()) {
@@ -55,7 +57,9 @@ public class MatchingQueryService {
         }
 
         Instant now = timeProvider.now();
-        if (profile.getLastQuestionShownAt() != null) {
+        // The cooldown only paces the passive Daily Drop; the deliberate "build my
+        // profile" flow (Settings → Matching) opts out so users can answer consecutively.
+        if (!ignoreCooldown && profile.getLastQuestionShownAt() != null) {
             Instant nextAvailableAt = profile.getLastQuestionShownAt().plus(props.quizCooldown());
             if (nextAvailableAt.isAfter(now)) {
                 return NextQuestionResponse.cooldown(nextAvailableAt);
@@ -91,11 +95,40 @@ public class MatchingQueryService {
     public MatchingReliability getReliability(UUID userId) {
         Optional<UserProfile> profile = userProfileRepository.findByUserId(userId);
         int answered = profile.map(UserProfile::getAnsweredQuestions).orElse(0);
-        int behavior = profile.map(UserProfile::getMeaningfulBehaviorEvents).orElse(0);
-        double confidence = MatchingScorer.userConfidence(answered, behavior, props);
+        double behaviorEvidence = profile
+                .map(p -> MatchingScorer.behaviorEvidence(p.getBehaviorCounts(), props)).orElse(0.0);
+        double confidence = MatchingScorer.userConfidence(answered, behaviorEvidence, props);
         double threshold = props.matchedDisplayThreshold();
         return new MatchingReliability(
                 confidence, threshold, confidence >= threshold, answered, props.quizQuestionCap());
+    }
+
+    /**
+     * The (user, group) match score for one pair — the cached row if present, else scored
+     * live. Used by the matching-feedback module to stamp an explicit rating with the
+     * user's match %; members aren't in their own candidate cache, so the live path covers
+     * them. Returns a TRENDING/no-percent snapshot when either profile is missing.
+     */
+    @Transactional(readOnly = true)
+    public MatchSnapshot matchSnapshotFor(UUID userId, UUID groupId) {
+        Optional<UserMatchCache> cached = matchCacheRepository.findByUserIdAndGroupId(userId, groupId);
+        if (cached.isPresent()) {
+            UserMatchCache c = cached.get();
+            return new MatchSnapshot(c.getMatchPercent(), c.getMatchingConfidence(), c.getResultType().name());
+        }
+        Optional<UserProfile> profileOpt = userProfileRepository.findByUserId(userId);
+        Optional<GroupProfile> gpOpt = groupProfileRepository.findByGroupId(groupId);
+        if (profileOpt.isEmpty() || gpOpt.isEmpty()) {
+            return new MatchSnapshot(null, 0.0, MatchResultType.TRENDING.name());
+        }
+        UserProfile profile = profileOpt.get();
+        int daysActive = (int) ChronoUnit.DAYS.between(profile.getUpdatedAt(), timeProvider.now());
+        double[] userFinal = MatchingScorer.userFinalScores(profile, daysActive, props);
+        double userConfidence = MatchingScorer.userConfidence(
+                profile.getAnsweredQuestions(),
+                MatchingScorer.behaviorEvidence(profile.getBehaviorCounts(), props), props);
+        MatchingScorer.Scored s = MatchingScorer.score(userFinal, userConfidence, gpOpt.get(), props);
+        return new MatchSnapshot(s.matchPercent(), s.matchingConfidence(), s.mode().name());
     }
 
     @Transactional(readOnly = true)
@@ -115,18 +148,28 @@ public class MatchingQueryService {
                 : matchCacheRepository.findByUserIdOrderByMatchScoreDesc(
                         userId, PageRequest.of(0, props.recommendationLimit()));
 
-        if (!cached.isEmpty()) {
-            List<GroupRecommendationDto> groups = cached.stream()
-                    .filter(c -> groupInternalService.isActive(c.getGroupId()))
-                    .map(c -> toDto(c.getGroupId(), c.getMatchPercent(), c.getResultType(),
-                            c.getMatchingConfidence(), userId))
-                    .toList();
-            if (!groups.isEmpty()) {
-                return new RecommendationsResponse(summaryType(groups), reliability, groups);
-            }
-        }
+        List<GroupRecommendationDto> cachedGroups = cached.stream()
+                .filter(c -> groupInternalService.isActive(c.getGroupId()))
+                .map(c -> toDto(c.getGroupId(), c.getMatchPercent(), c.getResultType(),
+                        c.getMatchingConfidence(), userId))
+                .toList();
 
-        return computeLive(userId, courseId, profile, reliability);
+        RecommendationsResponse response = cachedGroups.isEmpty()
+                ? computeLive(userId, courseId, profile, reliability)
+                : new RecommendationsResponse(summaryType(cachedGroups), reliability, cachedGroups);
+
+        publishShown(userId, courseId, response.groups());
+        return response;
+    }
+
+    /** Records that these recommendations were shown — drives the matching-feedback funnel. */
+    private void publishShown(UUID userId, UUID courseId, List<GroupRecommendationDto> groups) {
+        if (groups.isEmpty()) return;
+        List<RecommendationsShownEvent.Shown> items = groups.stream()
+                .map(g -> new RecommendationsShownEvent.Shown(
+                        g.groupId(), g.displayMode(), g.matchPercent(), g.matchingConfidence()))
+                .toList();
+        eventPublisher.publishEvent(new RecommendationsShownEvent(userId, courseId, items));
     }
 
     private RecommendationsResponse computeLive(UUID userId, UUID courseId,
@@ -165,7 +208,8 @@ public class MatchingQueryService {
         int daysActive = (int) ChronoUnit.DAYS.between(profile.getUpdatedAt(), timeProvider.now());
         double[] userFinal = MatchingScorer.userFinalScores(profile, daysActive, props);
         double userConfidence = MatchingScorer.userConfidence(
-                profile.getAnsweredQuestions(), profile.getMeaningfulBehaviorEvents(), props);
+                profile.getAnsweredQuestions(),
+                MatchingScorer.behaviorEvidence(profile.getBehaviorCounts(), props), props);
 
         // One continuous pipeline: every candidate is blended (matching ⇄ trending by
         // confidence) and ranked by final_score; the MATCHED/TRENDING label is per-rec.

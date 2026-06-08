@@ -1,9 +1,12 @@
 package com.ronkadosh.bubbleup.matching.model;
 
+import com.ronkadosh.bubbleup.common.events.BehaviorEventType;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.Instant;
+import java.util.EnumMap;
+import java.util.Map;
 import java.util.UUID;
 
 @Entity
@@ -33,23 +36,38 @@ public class UserProfile {
     @Builder.Default @Column(name = "quiz_team_player_score", nullable = false)  private double quizTeamPlayerScore = 0.0;
     @Builder.Default @Column(name = "quiz_challenger_score", nullable = false)   private double quizChallengerScore = 0.0;
 
-    @Builder.Default @Column(name = "behavior_leader_score", nullable = false)       private double behaviorLeaderScore = 0.0;
-    @Builder.Default @Column(name = "behavior_planner_score", nullable = false)      private double behaviorPlannerScore = 0.0;
-    @Builder.Default @Column(name = "behavior_expert_score", nullable = false)       private double behaviorExpertScore = 0.0;
-    @Builder.Default @Column(name = "behavior_creative_score", nullable = false)     private double behaviorCreativeScore = 0.0;
-    @Builder.Default @Column(name = "behavior_communicator_score", nullable = false) private double behaviorCommunicatorScore = 0.0;
-    @Builder.Default @Column(name = "behavior_team_player_score", nullable = false)  private double behaviorTeamPlayerScore = 0.0;
-    @Builder.Default @Column(name = "behavior_challenger_score", nullable = false)   private double behaviorChallengerScore = 0.0;
+    /**
+     * Raw per-action-type event counts. The behavior role vector is <b>derived</b>
+     * from these at read time by {@code MatchingScorer.behaviorVector}: each action's
+     * count is run through a saturating curve {@code count/(count+k)} and split across
+     * roles per config ({@code app.matching.signals}), then max-normalized to a shape.
+     * Storing counts (not pre-baked scores) is what lets heavy usage <i>sharpen</i> the
+     * profile instead of squashing every role to 1.0, and lets a frequent action (chat)
+     * be capped low via its {@code k} so it can't dominate the shape. These same counts
+     * also drive behavior_confidence via {@code MatchingScorer.behaviorEvidence} (saturated
+     * per action, so diversity — not volume — raises confidence).
+     */
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(
+            name = "user_profile_behavior_counts",
+            joinColumns = @JoinColumn(name = "user_profile_id"),
+            indexes = @Index(name = "idx_behavior_counts_profile", columnList = "user_profile_id"))
+    @MapKeyColumn(name = "event_type", length = 64)
+    @MapKeyEnumerated(EnumType.STRING)
+    @Column(name = "count", nullable = false)
+    @Builder.Default
+    private Map<BehaviorEventType, Integer> behaviorCounts = new EnumMap<>(BehaviorEventType.class);
 
     @Builder.Default
     @Column(name = "answered_questions", nullable = false)
     private int answeredQuestions = 0;
 
     /**
-     * Count of meaningful behavior events (group/calendar/file/message deltas) the
-     * user has produced. Feeds {@code behavior_confidence = min(events / cap, 1)} —
-     * see {@code MatchingScorer.userConfidence}. Quiz answers are NOT counted here;
-     * they accrue to {@link #answeredQuestions}.
+     * Raw lifetime count of behavior events the user has produced — telemetry only.
+     * It does NOT feed confidence: behavior_confidence is derived from the saturated,
+     * diversity-aware {@code MatchingScorer.behaviorEvidence} over {@link #behaviorCounts},
+     * specifically so spamming one action can't inflate it. Quiz answers are not counted
+     * here; they accrue to {@link #answeredQuestions}.
      */
     @Builder.Default
     @Column(name = "meaningful_behavior_events", nullable = false)
@@ -88,31 +106,8 @@ public class UserProfile {
         }
     }
 
-    public double getBehaviorScore(int r) {
-        return switch (r) {
-            case 0 -> behaviorLeaderScore;
-            case 1 -> behaviorPlannerScore;
-            case 2 -> behaviorExpertScore;
-            case 3 -> behaviorCreativeScore;
-            case 4 -> behaviorCommunicatorScore;
-            case 5 -> behaviorTeamPlayerScore;
-            case 6 -> behaviorChallengerScore;
-            default -> throw new IllegalArgumentException("Invalid role index: " + r);
-        };
-    }
-
-    public void addBehaviorDelta(int r, double delta) {
-        double current = getBehaviorScore(r);
-        double updated = Math.min(1.0, Math.max(0.0, current + delta));
-        switch (r) {
-            case 0 -> behaviorLeaderScore = updated;
-            case 1 -> behaviorPlannerScore = updated;
-            case 2 -> behaviorExpertScore = updated;
-            case 3 -> behaviorCreativeScore = updated;
-            case 4 -> behaviorCommunicatorScore = updated;
-            case 5 -> behaviorTeamPlayerScore = updated;
-            case 6 -> behaviorChallengerScore = updated;
-            default -> throw new IllegalArgumentException("Invalid role index: " + r);
-        }
+    /** Records one occurrence of {@code type}. The role vector is derived later from these counts. */
+    public void incrementBehaviorCount(BehaviorEventType type) {
+        behaviorCounts.merge(type, 1, Integer::sum);
     }
 }

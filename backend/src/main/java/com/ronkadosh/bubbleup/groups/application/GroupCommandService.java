@@ -11,6 +11,7 @@ import com.ronkadosh.bubbleup.chat.model.ChatMessageType;
 import com.ronkadosh.bubbleup.common.error.AppException;
 import com.ronkadosh.bubbleup.common.error.ErrorCode;
 import com.ronkadosh.bubbleup.common.events.BehaviorEventType;
+import com.ronkadosh.bubbleup.common.events.GroupJoinedEvent;
 import com.ronkadosh.bubbleup.common.events.GroupMembershipChangedEvent;
 import com.ronkadosh.bubbleup.common.events.UserBehaviorEvent;
 import com.ronkadosh.bubbleup.enrollment.internal.EnrollmentInternalService;
@@ -115,6 +116,8 @@ public class GroupCommandService {
                 .build());
         chatInternalService.postSystemMessage(
                 groupId, ChatMessageType.SYSTEM_JOIN, requesterId, displayFor(requesterId));
+        eventPublisher.publishEvent(new UserBehaviorEvent(requesterId, BehaviorEventType.JOINED_GROUP));
+        eventPublisher.publishEvent(new GroupJoinedEvent(requesterId, groupId));
         eventPublisher.publishEvent(new GroupMembershipChangedEvent(groupId));
         return GroupMemberResponse.from(member, authInternalService.getIdentity(requesterId).orElse(null));
     }

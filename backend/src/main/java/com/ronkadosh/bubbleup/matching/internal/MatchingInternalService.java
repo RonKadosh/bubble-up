@@ -1,6 +1,7 @@
 package com.ronkadosh.bubbleup.matching.internal;
 
 import com.ronkadosh.bubbleup.matching.internal.dto.GroupRecommendation;
+import com.ronkadosh.bubbleup.matching.internal.dto.MatchSnapshot;
 import com.ronkadosh.bubbleup.matching.internal.dto.MatchingReliability;
 
 import java.util.List;
@@ -24,4 +25,11 @@ public interface MatchingInternalService {
      * confidence. Drives the onboarding widget and the Settings matching section.
      */
     MatchingReliability getReliability(UUID userId);
+
+    /**
+     * The match score for one (user, group) pair — cached row if present, else scored
+     * live. Lets the matching-feedback module stamp an explicit rating with the user's
+     * match %, including for members (who aren't in their own candidate cache).
+     */
+    MatchSnapshot matchSnapshotFor(UUID userId, UUID groupId);
 }

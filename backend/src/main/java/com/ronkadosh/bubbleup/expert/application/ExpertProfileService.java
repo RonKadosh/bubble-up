@@ -5,6 +5,8 @@ import com.ronkadosh.bubbleup.common.config.ExpertProperties;
 import com.ronkadosh.bubbleup.common.datetime.TimeProvider;
 import com.ronkadosh.bubbleup.common.error.AppException;
 import com.ronkadosh.bubbleup.common.error.ErrorCode;
+import com.ronkadosh.bubbleup.common.events.BehaviorEventType;
+import com.ronkadosh.bubbleup.common.events.UserBehaviorEvent;
 import com.ronkadosh.bubbleup.expert.api.dto.ApplyAsExpertRequest;
 import com.ronkadosh.bubbleup.expert.api.dto.ExpertProfileResponse;
 import com.ronkadosh.bubbleup.expert.api.dto.UpdateExpertProfileRequest;
@@ -12,6 +14,7 @@ import com.ronkadosh.bubbleup.expert.model.ExpertProfile;
 import com.ronkadosh.bubbleup.expert.model.VerificationStatus;
 import com.ronkadosh.bubbleup.expert.persistence.ExpertProfileRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +30,7 @@ public class ExpertProfileService {
     private final AuthInternalService authInternalService;
     private final TimeProvider timeProvider;
     private final ExpertProperties expertProperties;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public ExpertProfileResponse applyAsExpert(UUID userId, ApplyAsExpertRequest request) {
@@ -59,6 +63,7 @@ public class ExpertProfileService {
         if (saved.getVerificationStatus() == VerificationStatus.VERIFIED) {
             authInternalService.promoteToExpert(userId);
         }
+        eventPublisher.publishEvent(new UserBehaviorEvent(userId, BehaviorEventType.APPLIED_AS_EXPERT));
         return ExpertProfileResponse.from(saved);
     }
 

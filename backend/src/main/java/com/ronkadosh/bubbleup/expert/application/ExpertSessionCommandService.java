@@ -7,6 +7,8 @@ import com.ronkadosh.bubbleup.calendar.model.CalendarOwnerType;
 import com.ronkadosh.bubbleup.common.datetime.TimeProvider;
 import com.ronkadosh.bubbleup.common.error.AppException;
 import com.ronkadosh.bubbleup.common.error.ErrorCode;
+import com.ronkadosh.bubbleup.common.events.BehaviorEventType;
+import com.ronkadosh.bubbleup.common.events.UserBehaviorEvent;
 import com.ronkadosh.bubbleup.common.websocket.WebSocketDestination;
 import com.ronkadosh.bubbleup.common.websocket.WebSocketPublisher;
 import com.ronkadosh.bubbleup.expert.api.dto.CreateExpertSessionRequest;
@@ -22,6 +24,7 @@ import com.ronkadosh.bubbleup.expert.persistence.ExpertSessionRepository;
 import com.ronkadosh.bubbleup.groups.internal.GroupInternalService;
 import com.ronkadosh.bubbleup.room.internal.RoomInternalService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,6 +45,7 @@ public class ExpertSessionCommandService {
     private final WhiteboardWriterRegistry whiteboardWriterRegistry;
     private final WebSocketPublisher webSocketPublisher;
     private final TimeProvider timeProvider;
+    private final ApplicationEventPublisher eventPublisher;
 
     /** Group enrollment closes this long before the session's {@code startsAt}. */
     private static final Duration ENROLLMENT_CLOSES_BEFORE = Duration.ofMinutes(5);
@@ -73,6 +77,7 @@ public class ExpertSessionCommandService {
                 .build());
         UUID roomId = roomInternalService.createRoomForExpertSession(
                 session.getId(), event.id(), expertUserId);
+        eventPublisher.publishEvent(new UserBehaviorEvent(expertUserId, BehaviorEventType.CREATED_EXPERT_SESSION));
         return ExpertSessionResponse.from(session, roomId, 0, event.startsAt(), event.endsAt());
     }
 

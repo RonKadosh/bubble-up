@@ -1,8 +1,10 @@
 package com.ronkadosh.bubbleup.common.config;
 
+import com.ronkadosh.bubbleup.common.events.BehaviorEventType;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.time.Duration;
+import java.util.Map;
 
 @ConfigurationProperties(prefix = "app.matching")
 public record MatchingProperties(
@@ -18,20 +20,24 @@ public record MatchingProperties(
         double matchedDisplayThreshold,
         Confidence confidence,
         Trending trending,
-        BehaviorDeltas deltas
+        // Per-action-type behavior signal definitions, keyed by event type. See BehaviorSignal.
+        Map<BehaviorEventType, BehaviorSignal> signals
 ) {
     /**
      * Cold-start confidence knobs.
      * <ul>
      *   <li>{@code question_confidence = min(answered / questionCap, 1)}</li>
-     *   <li>{@code behavior_confidence = min(events / behaviorCap, 1)}</li>
+     *   <li>{@code behavior_confidence = min(behavior_evidence / behaviorEvidenceCap, 1)} —
+     *       behavior_evidence = Σ over action types of {@code count/(count+k)} (saturated,
+     *       diversity-aware; see {@code MatchingScorer.behaviorEvidence}). Volume of ONE
+     *       action can't inflate it — only a spread of distinct actions does.</li>
      *   <li>{@code user_confidence = min(questionWeight·qc + behaviorWeight·bc, userCap)}</li>
      *   <li>{@code group_profile_confidence = avg(member_confs) · min(member_count / groupMemberCap, 1)}</li>
      * </ul>
      */
     public record Confidence(
             double questionCap,
-            double behaviorCap,
+            double behaviorEvidenceCap,
             double questionWeight,
             double behaviorWeight,
             double userCap,
@@ -56,11 +62,20 @@ public record MatchingProperties(
             double upcomingCap
     ) {}
 
-    public record BehaviorDeltas(
-            double createdGroupLeader,
-            double addedMemberLeader,
-            double createdCalendarEventPlanner,
-            double uploadedFileExpert,
-            double sentMessageCommunicator
+    /**
+     * One behavior signal's contribution rule.
+     * <ul>
+     *   <li>{@code k} — half-saturation count for the diminishing-returns curve
+     *       {@code count/(count+k)}. Large k (chat: ~8) caps a frequent action's total
+     *       contribution low so volume can't dominate the shape; small k (=1) lets one
+     *       rare, high-intent act already signal strongly.</li>
+     *   <li>{@code roles} — how much this action feeds each role, keyed by role name
+     *       ({@code leader, planner, expert, creative, communicator, teamPlayer,
+     *       challenger}). An action may feed two roles.</li>
+     * </ul>
+     */
+    public record BehaviorSignal(
+            double k,
+            Map<String, Double> roles
     ) {}
 }

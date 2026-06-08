@@ -27,10 +27,18 @@ public class MatchingController {
     private final MatchingQueryService queryService;
     private final CurrentUserProvider currentUserProvider;
 
+    /**
+     * Next unanswered quiz question. {@code ignoreCooldown=true} is for the deliberate
+     * "build my profile" flow (Settings → Matching) where the user opts to answer
+     * consecutively; the default (false) keeps the passive Daily-Drop cadence.
+     */
     @GetMapping("/quiz/next")
-    public ApiResponse<NextQuestionResponse> nextQuestion(Locale locale) {
+    public ApiResponse<NextQuestionResponse> nextQuestion(
+            Locale locale,
+            @RequestParam(name = "ignoreCooldown", defaultValue = "false") boolean ignoreCooldown) {
         UUID userId = currentUserProvider.get().id();
-        return ApiResponse.success(queryService.getNextQuestion(userId, locale.getLanguage()));
+        return ApiResponse.success(
+                queryService.getNextQuestion(userId, locale.getLanguage(), ignoreCooldown));
     }
 
     @PostMapping("/quiz/answers")

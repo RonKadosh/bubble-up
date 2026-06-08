@@ -4,7 +4,14 @@ import { Card } from '../components/Card'
 import { PageShell } from '../components/PageHeader'
 import { Tabs } from '../components/Tabs'
 import { ReliabilityMeter } from '../components/ReliabilityMeter'
-import { getReliability, type Reliability } from '../api/matching'
+import { Button } from '../components/Button'
+import {
+  getReliability,
+  getNextQuestion,
+  submitAnswer,
+  type Reliability,
+  type NextQuestion,
+} from '../api/matching'
 import { SUPPORTED_LANGUAGES } from '../i18n'
 import { useLanguageStore } from '../store/languageStore'
 import { useThemeStore, type Theme } from '../store/themeStore'
@@ -103,6 +110,12 @@ function LanguageSection() {
 function MatchingSection() {
   const { t } = useTranslation()
   const [reliability, setReliability] = useState<Reliability | null>(null)
+  // The on-demand "build your profile" flow: fetch + answer questions back-to-back
+  // (cooldown bypassed) until the pool is exhausted.
+  const [question, setQuestion] = useState<NextQuestion | null>(null)
+  const [finished, setFinished] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -111,6 +124,43 @@ function MatchingSection() {
       .catch(() => { /* best-effort; section just stays in its loading state */ })
     return () => { cancelled = true }
   }, [])
+
+  async function loadNext() {
+    setBusy(true)
+    setError(null)
+    try {
+      const next = await getNextQuestion(true)   // ignore cooldown — deliberate flow
+      if (next.hasQuestion) {
+        setQuestion(next)
+      } else {
+        setQuestion(null)
+        setFinished(true)
+      }
+    } catch {
+      setError(t('matching.error'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function onAnswer(answerId: string) {
+    if (!question?.questionId) return
+    setBusy(true)
+    setError(null)
+    try {
+      await submitAnswer(question.questionId, answerId)
+      // Refresh the meter so it climbs as they answer, then advance to the next.
+      getReliability().then(setReliability).catch(() => { /* best-effort */ })
+      await loadNext()
+    } catch {
+      setError(t('matching.error'))
+      setBusy(false)
+    }
+  }
+
+  const answered = reliability?.answeredQuestions ?? 0
+  const cap = reliability?.questionCap ?? 0
+  const allAnswered = finished || (cap > 0 && answered >= cap)
 
   return (
     <Card size="lg" className="p-5 tablet:p-6 shadow-bubble max-w-2xl">
@@ -122,11 +172,38 @@ function MatchingSection() {
         <div className="h-2.5 rounded-full bg-surface-muted/60 animate-pulse" />
       )}
       <p className="text-xs text-muted mt-4">
-        {t('settings.matching.answered', {
-          answered: reliability?.answeredQuestions ?? 0,
-          cap: reliability?.questionCap ?? 0,
-        })}
+        {t('settings.matching.answered', { answered, cap })}
       </p>
+
+      <div className="mt-4 border-t border-line pt-4">
+        {question?.hasQuestion ? (
+          <div>
+            <p className="text-sm text-base mb-3 leading-snug">{question.questionText}</p>
+            <div className="flex flex-col gap-2">
+              {(question.options ?? []).map((opt) => (
+                <Button
+                  key={opt.id}
+                  variant="secondary"
+                  size="sm"
+                  wrap
+                  disabled={busy}
+                  onClick={() => onAnswer(opt.id)}
+                >
+                  {opt.text}
+                </Button>
+              ))}
+            </div>
+            {busy && <p className="mt-2 text-xs text-secondary">{t('matching.submitting')}</p>}
+          </div>
+        ) : allAnswered ? (
+          <p className="text-sm text-secondary">{t('settings.matching.complete')}</p>
+        ) : (
+          <Button variant="primary" size="sm" disabled={busy} onClick={loadNext}>
+            {t('settings.matching.answerCta')}
+          </Button>
+        )}
+        {error && <p className="mt-2 text-xs text-danger">{error}</p>}
+      </div>
     </Card>
   )
 }

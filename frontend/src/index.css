@@ -169,14 +169,17 @@
   .bg-bubble-magenta-soft { background-color: color-mix(in srgb, var(--bubble-magenta) 12%, transparent); }
   .bg-bubble-green-soft   { background-color: color-mix(in srgb, var(--bubble-green)   12%, transparent); }
 
-  .admin-bubble-kpi {
+  /* Glassy "soap bubble" surface: tinted gradient background + two off-edge
+     pseudo-element rings with an inset highlight. Pair with `relative overflow-hidden`
+     so the rings clip into the corners. Used on the admin KPI card and the login card. */
+  .bubble-surface {
     background:
       radial-gradient(circle at 82% 26%, color-mix(in srgb, var(--bubble-magenta) 18%, transparent), transparent 28%),
       radial-gradient(circle at 92% 76%, color-mix(in srgb, var(--bubble-green) 14%, transparent), transparent 24%),
       linear-gradient(135deg, var(--surface), color-mix(in srgb, var(--bubble-blue) 7%, var(--surface)));
   }
-  .admin-bubble-kpi::before,
-  .admin-bubble-kpi::after {
+  .bubble-surface::before,
+  .bubble-surface::after {
     content: "";
     position: absolute;
     border-radius: 9999px;
@@ -184,21 +187,21 @@
     border: 1px solid color-mix(in srgb, var(--bubble-magenta) 34%, transparent);
     box-shadow: inset 8px 8px 16px color-mix(in srgb, white 45%, transparent);
   }
-  .admin-bubble-kpi::before {
+  .bubble-surface::before {
     width: 4.75rem;
     height: 4.75rem;
     right: -1.4rem;
     bottom: -2.1rem;
     opacity: 0.55;
   }
-  .admin-bubble-kpi::after {
+  .bubble-surface::after {
     width: 2.25rem;
     height: 2.25rem;
     right: 5.25rem;
     top: -0.85rem;
     opacity: 0.38;
   }
-  .admin-bubble-kpi > * {
+  .bubble-surface > * {
     position: relative;
     z-index: 1;
   }

@@ -85,6 +85,31 @@ public class MatchingCommandService {
         eventPublisher.publishEvent(new UserBehaviorEvent(userId, BehaviorEventType.USER_ANSWERED_QUIZ_QUESTION));
     }
 
+    /**
+     * Demo/seed helper: answers up to {@code count} of the user's unanswered questions,
+     * each time picking the option that most strongly expresses {@code targetRole}
+     * (0=Leader, 1=Planner, 2=Expert, 3=Creative, 4=Communicator, 5=TeamPlayer,
+     * 6=Challenger), so the resulting character vector deliberately leans that way.
+     * Real {@code QuizResponse} rows mean the profile survives later recomputes. Lives
+     * here (not in the seeder) because the answer-option weights are private to this
+     * module. No cooldown is involved — that gate lives only in {@code getNextQuestion}.
+     */
+    @Transactional
+    public void seedCharacterAnswers(UUID userId, int targetRole, int count) {
+        for (int i = 0; i < count; i++) {
+            List<QuizQuestion> pool = quizQuestionRepository.findUnansweredActiveByUserId(userId);
+            if (pool.isEmpty()) break;
+            QuizQuestion question = pool.get(0);
+            List<QuizAnswerOption> options = answerOptionRepository.findAllByQuestionId(question.getId());
+            if (options.isEmpty()) break;
+            QuizAnswerOption best = options.get(0);
+            for (QuizAnswerOption o : options) {
+                if (o.weightsArray()[targetRole] > best.weightsArray()[targetRole]) best = o;
+            }
+            submitAnswer(userId, question.getId(), best.getId());
+        }
+    }
+
     @Transactional
     public UserProfile getOrCreateUserProfile(UUID userId) {
         return userProfileRepository.findByUserId(userId)
@@ -120,18 +145,13 @@ public class MatchingCommandService {
     }
 
     @Transactional
-    public void applyBehaviorDelta(UUID userId, BehaviorEventType eventType) {
+    public void recordBehaviorEvent(UUID userId, BehaviorEventType eventType) {
         UserProfile profile = getOrCreateUserProfile(userId);
-        switch (eventType) {
-            case CREATED_GROUP          -> profile.addBehaviorDelta(0, props.deltas().createdGroupLeader());
-            case ADDED_MEMBER           -> profile.addBehaviorDelta(0, props.deltas().addedMemberLeader());
-            case CREATED_CALENDAR_EVENT -> profile.addBehaviorDelta(1, props.deltas().createdCalendarEventPlanner());
-            case UPLOADED_FILE          -> profile.addBehaviorDelta(2, props.deltas().uploadedFileExpert());
-            case SENT_MESSAGE           -> profile.addBehaviorDelta(4, props.deltas().sentMessageCommunicator());
-            default -> { /* future placeholder — no delta configured */ }
-        }
-        // Every mapped behavior event counts toward behavior_confidence. Quiz answers
-        // do NOT pass through here (they go to recomputeUserQuizProfile / answeredQuestions).
+        // Just bump the raw count — role mapping + saturation happen at read time in
+        // MatchingScorer.behaviorVector, driven by app.matching.signals config.
+        profile.incrementBehaviorCount(eventType);
+        // Every behavior event counts toward behavior_confidence. Quiz answers do NOT
+        // pass through here (they go to recomputeUserQuizProfile / answeredQuestions).
         profile.setMeaningfulBehaviorEvents(profile.getMeaningfulBehaviorEvents() + 1);
         profile.setUpdatedAt(timeProvider.now());
         userProfileRepository.save(profile);
@@ -177,25 +197,30 @@ public class MatchingCommandService {
         } else {
             // Each member's confidence weights their contribution to the group vector,
             // so a strong-but-well-known member shapes the profile more than a guess.
+            // Each member's blended role vector is computed once (behavior is normalized
+            // as a whole vector, so it can't be done role-by-role).
             double[] confs = new double[memberProfiles.size()];
+            double[][] memberFinal = new double[memberProfiles.size()][];
             double confSum = 0;
             for (int i = 0; i < memberProfiles.size(); i++) {
                 UserProfile p = memberProfiles.get(i);
                 confs[i] = MatchingScorer.userConfidence(
-                        p.getAnsweredQuestions(), p.getMeaningfulBehaviorEvents(), props);
+                        p.getAnsweredQuestions(),
+                        MatchingScorer.behaviorEvidence(p.getBehaviorCounts(), props), props);
                 confSum += confs[i];
+                memberFinal[i] = MatchingScorer.userFinalScores(p, 0, props);
             }
             for (int r = 0; r < 7; r++) {
                 double avg;
                 if (confSum > 0) {
                     double weighted = 0;
                     for (int i = 0; i < memberProfiles.size(); i++) {
-                        weighted += MatchingScorer.finalScore(r, memberProfiles.get(i), 0, props) * confs[i];
+                        weighted += memberFinal[i][r] * confs[i];
                     }
                     avg = weighted / confSum;
                 } else {
                     double sum = 0;   // all members fully unknown → plain average
-                    for (UserProfile p : memberProfiles) sum += MatchingScorer.finalScore(r, p, 0, props);
+                    for (int i = 0; i < memberProfiles.size(); i++) sum += memberFinal[i][r];
                     avg = sum / memberProfiles.size();
                 }
                 groupProfile.setAvgScore(r, avg);
@@ -234,8 +259,25 @@ public class MatchingCommandService {
                 .forEach(summary -> recomputeGroupProfile(summary.id()));
     }
 
-    @Transactional
+    /**
+     * Entry point — wraps the transactional refresh with a one-shot retry on
+     * unique-key conflict, mirroring {@link #recomputeGroupProfile(UUID)}. With many
+     * behavior events firing, two async handlers for the same user can both see "no
+     * cache row yet" for a (user, group) pair and race on INSERT; the loser hits the
+     * {@code user_match_cache} unique constraint. The retry's {@code findByUserIdAndGroupId}
+     * then sees the winner's row and updates in place. Not {@code @Transactional} — the
+     * retry must run in a fresh transaction (the failed one is rollback-only).
+     */
     public void refreshUserMatchCache(UUID userId) {
+        try {
+            self.doRefreshUserMatchCache(userId);
+        } catch (DataIntegrityViolationException e) {
+            self.doRefreshUserMatchCache(userId);
+        }
+    }
+
+    @Transactional
+    public void doRefreshUserMatchCache(UUID userId) {
         UserProfile profile = getOrCreateUserProfile(userId);
         var now = timeProvider.now();
 
@@ -261,7 +303,8 @@ public class MatchingCommandService {
         int daysActive = (int) ChronoUnit.DAYS.between(profile.getUpdatedAt(), now);
         double[] userFinal = MatchingScorer.userFinalScores(profile, daysActive, props);
         double userConfidence = MatchingScorer.userConfidence(
-                profile.getAnsweredQuestions(), profile.getMeaningfulBehaviorEvents(), props);
+                profile.getAnsweredQuestions(),
+                MatchingScorer.behaviorEvidence(profile.getBehaviorCounts(), props), props);
 
         for (GroupProfile gp : groupProfiles) {
             UUID courseId = groupInternalService.getCourseIdForGroup(gp.getGroupId())

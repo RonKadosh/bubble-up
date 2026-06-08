@@ -3,6 +3,8 @@ package com.ronkadosh.bubbleup.expert.application;
 import com.ronkadosh.bubbleup.common.datetime.TimeProvider;
 import com.ronkadosh.bubbleup.common.error.AppException;
 import com.ronkadosh.bubbleup.common.error.ErrorCode;
+import com.ronkadosh.bubbleup.common.events.BehaviorEventType;
+import com.ronkadosh.bubbleup.common.events.UserBehaviorEvent;
 import com.ronkadosh.bubbleup.expert.api.dto.BookingRequestResponse;
 import com.ronkadosh.bubbleup.expert.api.dto.CreateBookingRequest;
 import com.ronkadosh.bubbleup.expert.api.dto.CreateExpertSessionRequest;
@@ -18,6 +20,7 @@ import com.ronkadosh.bubbleup.expert.persistence.ExpertSessionGroupEnrollmentRep
 import com.ronkadosh.bubbleup.expert.persistence.ExpertSessionRepository;
 import com.ronkadosh.bubbleup.groups.internal.GroupInternalService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +38,7 @@ public class ExpertBookingService {
     private final GroupInternalService groupInternalService;
     private final ExpertSessionCommandService sessionCommands;
     private final TimeProvider timeProvider;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public BookingRequestResponse createRequest(UUID requesterId, CreateBookingRequest request) {
@@ -61,6 +65,7 @@ public class ExpertBookingService {
                 .message(request.message())
                 .status(BookingRequestStatus.PENDING)
                 .build());
+        eventPublisher.publishEvent(new UserBehaviorEvent(requesterId, BehaviorEventType.BOOKED_EXPERT));
         return BookingRequestResponse.from(saved);
     }
 
