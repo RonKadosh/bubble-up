@@ -36,6 +36,14 @@ app:
     enabled: false
   agents:
     enabled: false
+  help:
+    ai:
+      enabled: false
+      provider: openai
+      base-url: https://api.openai.com/v1
+      api-key:
+      model: gpt-5-nano
+      timeout: PT20S
   # Tests own their data — keep dev seeders OFF regardless of their (now ON) dev defaults,
   # so seeded demo/scenario bubbles don't pollute the shared in-memory test DB.
   demo:

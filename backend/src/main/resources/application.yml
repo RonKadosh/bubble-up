@@ -6,7 +6,7 @@ spring:
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:create-drop}
     show-sql: false
     properties:
       hibernate:
@@ -53,6 +53,14 @@ app:
     enabled: false
   agents:
     enabled: false
+  help:
+    ai:
+      enabled: ${APP_HELP_AI_ENABLED:false}
+      provider: ${APP_HELP_AI_PROVIDER:openai}
+      base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
+      api-key: ${OPENAI_API_KEY:}
+      model: ${APP_HELP_AI_MODEL:gpt-5-nano}
+      timeout: ${APP_HELP_AI_TIMEOUT:PT20S}
   expert:
     # When true (v1 default), expert applicants are auto-verified on apply.
     # Flip to false to require admin approval via /admin/experts.

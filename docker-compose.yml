@@ -29,6 +29,7 @@ services:
       DB_NAME: bubbleup
       DB_USERNAME: bubbleup
       DB_PASSWORD: bubbleup
+      SPRING_JPA_HIBERNATE_DDL_AUTO: ${SPRING_JPA_HIBERNATE_DDL_AUTO:-create-drop}
       JWT_SECRET: bubbleup-dev-secret-key-change-this-in-production-must-be-at-least-256-bits
       JWT_EXPIRATION_MS: 86400000
       CORS_ALLOWED_ORIGINS: http://localhost:3000
@@ -41,6 +42,13 @@ services:
       APP_JITSI_PRIVATE_KEY_PEM: ${APP_JITSI_PRIVATE_KEY_PEM:-}
       # Default ON for docker-compose so first-run users see demo bubbles immediately.
       APP_DEMO_SEED_ENABLED: ${APP_DEMO_SEED_ENABLED:-true}
+      # Optional Help Center AI assistant (OpenAI). Defaults OFF; local catalog still works.
+      APP_HELP_AI_ENABLED: ${APP_HELP_AI_ENABLED:-false}
+      APP_HELP_AI_PROVIDER: ${APP_HELP_AI_PROVIDER:-openai}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      APP_HELP_AI_MODEL: ${APP_HELP_AI_MODEL:-gpt-5-nano}
+      APP_HELP_AI_TIMEOUT: ${APP_HELP_AI_TIMEOUT:-PT20S}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy
