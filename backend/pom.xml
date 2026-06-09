@@ -35,6 +35,19 @@
       <artifactId>spring-boot-starter-security</artifactId>
     </dependency>
 
+    <!-- OAuth2 client (Google sign-in) -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-oauth2-client</artifactId>
+    </dependency>
+
+    <!-- AWS SES (verification email) -->
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>ses</artifactId>
+      <version>2.30.21</version>
+    </dependency>
+
     <!-- JPA + PostgreSQL -->
     <dependency>
       <groupId>org.springframework.boot</groupId>

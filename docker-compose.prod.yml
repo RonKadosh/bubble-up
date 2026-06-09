@@ -51,6 +51,12 @@ services:
       APP_JITSI_PRIVATE_KEY_PEM: ${APP_JITSI_PRIVATE_KEY_PEM}
       APP_JITSI_SERVER_URL: ${APP_JITSI_SERVER_URL:-https://8x8.vc}
       APP_JITSI_TOKEN_TTL: ${APP_JITSI_TOKEN_TTL:-PT2H}
+      # Google OAuth2 + SES (v0.2). Blank values let the app boot but disable
+      # the OAuth login chain (SecurityConfig gates on registration presence).
+      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
+      GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET:-}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-}
+      AWS_SES_REGION: ${AWS_SES_REGION:-us-east-1}
       APP_DEMO_SEED_ENABLED: "false"
       JAVA_TOOL_OPTIONS: "-Xmx384m -XX:MaxRAMPercentage=60"
     volumes:

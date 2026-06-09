@@ -39,6 +39,17 @@ services:
       APP_JITSI_APP_ID: ${APP_JITSI_APP_ID:-}
       APP_JITSI_KID: ${APP_JITSI_KID:-}
       APP_JITSI_PRIVATE_KEY_PEM: ${APP_JITSI_PRIVATE_KEY_PEM:-}
+      # Google OAuth2 (v0.2). Blank = OAuth chain disabled, password auth still
+      # works in dev until Phase E removes it. Fill in from your local .env.
+      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
+      GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET:-}
+      # SES (verification email when Google email isn't .ac.il).
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-}
+      AWS_SES_REGION: ${AWS_SES_REGION:-us-east-1}
+      # AWS keys for the SES SDK in dev. In prod the EC2 instance role grants
+      # ses:SendEmail without baked-in keys.
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
       # Default ON for docker-compose so first-run users see demo bubbles immediately.
       APP_DEMO_SEED_ENABLED: ${APP_DEMO_SEED_ENABLED:-true}
     depends_on:
