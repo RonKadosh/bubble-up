@@ -384,3 +384,12 @@ export function PaletteIcon(p: IconProps) {
     </Svg>
   )
 }
+
+export function CameraIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M3 8a2 2 0 0 1 2-2h2l1.2-1.6a1 1 0 0 1 .8-.4h6a1 1 0 0 1 .8.4L17 6h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+      <circle cx="12" cy="13" r="3.2" />
+    </Svg>
+  )
+}

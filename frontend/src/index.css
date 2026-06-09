@@ -381,4 +381,11 @@
   }
   .bubble-loader      { animation: bubble-burst 1.8s ease-in-out infinite; }
   .bubble-loader-fill { animation: bubble-fill-rise 1.8s ease-in-out infinite; }
+
+  /* Mobile account menu: rolls down from the top bar. */
+  @keyframes rolldown {
+    0%   { opacity: 0; transform: translateY(-8px) scaleY(0.96); }
+    100% { opacity: 1; transform: translateY(0)    scaleY(1); }
+  }
+  .animate-rolldown { transform-origin: top; animation: rolldown 180ms cubic-bezier(.34,1.2,.64,1) both; }
 }

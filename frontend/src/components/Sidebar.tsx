@@ -1,5 +1,5 @@
-import { type ComponentType, useEffect } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { type ComponentType, useEffect, useState } from 'react'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../store/authStore'
 import {
@@ -17,9 +17,11 @@ import {
   BubbleLogo,
   BulbIcon,
   CapIcon,
+  CloseIcon,
   HelpIcon,
   LockIcon,
   LogoutIcon,
+  MenuIcon,
   ReportIcon,
   SettingsIcon,
   ShieldIcon,
@@ -108,11 +110,105 @@ function NavRow({ to, onClick, Icon, label, variant = 'default', ariaLabel, lock
   )
 }
 
+/**
+ * Mobile bottom-tab item — a stacked icon + label cell on the brand-gradient
+ * footer. Mirrors `NavRow`'s locked/active states but laid out for a horizontal
+ * bar instead of the vertical rail.
+ */
+function MobileTab({ to, Icon, label, locked = false, lockedLabel }: NavRowProps) {
+  const base = 'relative flex flex-col items-center justify-center gap-0.5 flex-1 min-w-0 py-1 bubble-pop'
+
+  if (locked) {
+    return (
+      <div aria-label={lockedLabel ?? label} aria-disabled="true" className={`${base} text-on-brand/40 cursor-not-allowed`}>
+        <span className="relative grid place-items-center w-12 h-7 rounded-full">
+          <Icon className="w-5 h-5" />
+          <span className="absolute -top-0.5 end-2 grid place-items-center w-3.5 h-3.5 rounded-full bg-surface text-secondary shadow-sm">
+            <LockIcon className="w-2 h-2" />
+          </span>
+        </span>
+        <span className="text-[0.62rem] font-medium leading-none truncate max-w-full">{label}</span>
+      </div>
+    )
+  }
+
+  return (
+    <NavLink to={to!} aria-label={label} className={`${base} text-on-brand/80`}>
+      {({ isActive }) => (
+        <>
+          <span
+            className={`grid place-items-center w-12 h-7 rounded-full transition-colors ${
+              isActive ? 'bg-white/30 text-on-brand backdrop-blur-sm' : ''
+            }`}
+          >
+            <Icon className="w-5 h-5" />
+          </span>
+          <span className={`text-[0.62rem] leading-none truncate max-w-full ${isActive ? 'font-semibold text-on-brand' : 'font-medium'}`}>
+            {label}
+          </span>
+        </>
+      )}
+    </NavLink>
+  )
+}
+
+/**
+ * Row in the mobile account rolldown — a full-width icon + label on a surface
+ * panel. Used for the utility actions (settings / help / report / logout) that
+ * live in the rail's footer on desktop.
+ */
+function MobileMenuRow({ to, onClick, Icon, label, variant = 'default', locked = false, lockedLabel }: NavRowProps) {
+  const base = 'flex items-center gap-3 w-full px-3 py-3 rounded-2xl text-sm font-medium transition-colors bubble-pop'
+
+  if (locked) {
+    return (
+      <div aria-label={lockedLabel ?? label} aria-disabled="true" className={`${base} text-secondary/50 cursor-not-allowed`}>
+        <Icon className="w-5 h-5 shrink-0" />
+        <span className="flex-1 text-start">{label}</span>
+        <LockIcon className="w-4 h-4 text-secondary/60" />
+      </div>
+    )
+  }
+
+  const cls = `${base} ${
+    variant === 'danger' ? 'text-danger hover:bg-surface-muted' : 'text-base hover:bg-surface-hover'
+  }`
+
+  if (to) {
+    return (
+      <NavLink to={to} onClick={onClick} className={cls}>
+        <Icon className="w-5 h-5 shrink-0" />
+        <span className="flex-1 text-start">{label}</span>
+      </NavLink>
+    )
+  }
+
+  return (
+    <button type="button" onClick={onClick} className={cls}>
+      <Icon className="w-5 h-5 shrink-0" />
+      <span className="flex-1 text-start">{label}</span>
+    </button>
+  )
+}
+
 export default function Layout() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const location = useLocation()
   const clearAuth = useAuthStore((s) => s.clearAuth)
   const me = useAuthStore((s) => s.user)
+
+  // Mobile-only account rolldown (settings / help / report / logout). On
+  // tablet+ these live in the rail footer and this stays closed/unused.
+  const [menuOpen, setMenuOpen] = useState(false)
+  // Close the rolldown whenever the route changes or Escape is pressed.
+  useEffect(() => { setMenuOpen(false) }, [location.pathname])
+  useEffect(() => {
+    if (!menuOpen) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuOpen(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [menuOpen])
 
   // Progressive feature unlocking: lockable nav greys out until the onboarding
   // wizard reaches the level that unlocks it. Onboarded/loading → nothing locked.
@@ -142,8 +238,60 @@ export default function Layout() {
   }
 
   return (
-    <div className="container-app flex h-screen bg-base p-2 tablet:p-3 gap-2 tablet:gap-3">
-      <aside className="relative z-10 flex flex-col w-[4.5rem] bg-brand-gradient-vertical text-on-brand shadow-bubble rounded-[2rem] overflow-visible shrink-0">
+    <div className="container-app flex flex-col tablet:flex-row h-screen bg-base p-2 tablet:p-3 gap-2 tablet:gap-3">
+      {/* Mobile top bar — brand + account rolldown trigger. Phone only. */}
+      <header className="tablet:hidden relative z-20 flex items-center justify-between ps-3 pe-2 h-14 bg-brand-gradient-vertical text-on-brand shadow-bubble rounded-[1.5rem] shrink-0">
+        <NavLink
+          to="/dashboard"
+          aria-label={t('nav.home')}
+          className="flex items-center gap-2 px-1 py-1 rounded-full text-on-brand bubble-pop"
+        >
+          <BubbleLogo className="w-6 h-6" />
+          <span className="font-semibold tracking-tight">Bubble.up</span>
+        </NavLink>
+        <button
+          type="button"
+          onClick={() => setMenuOpen((o) => !o)}
+          aria-label={menuOpen ? t('nav.closeMenu') : t('nav.menu')}
+          aria-expanded={menuOpen}
+          className="grid place-items-center w-10 h-10 rounded-full text-on-brand hover:bg-white/15 transition-colors bubble-pop"
+        >
+          {menuOpen ? <CloseIcon className="w-5 h-5" /> : <MenuIcon className="w-5 h-5" />}
+        </button>
+      </header>
+
+      {/* Mobile account rolldown — settings / help / report / logout. */}
+      {menuOpen && (
+        <div className="tablet:hidden fixed inset-0 z-40" role="dialog" aria-modal="true" aria-label={t('nav.menu')}>
+          <button
+            type="button"
+            aria-label={t('nav.closeMenu')}
+            onClick={() => setMenuOpen(false)}
+            className="absolute inset-0 bg-black/30 backdrop-blur-sm"
+          />
+          <div className="absolute inset-x-2 top-2 origin-top rounded-[1.5rem] bg-surface border border-line shadow-themed p-2 animate-rolldown">
+            <div className="flex items-center justify-between px-2 pb-1.5">
+              <span className="text-xs font-semibold uppercase tracking-wide text-secondary">{t('nav.menu')}</span>
+              <button
+                type="button"
+                onClick={() => setMenuOpen(false)}
+                aria-label={t('nav.closeMenu')}
+                className="grid place-items-center w-8 h-8 rounded-full text-secondary hover:bg-surface-hover transition-colors"
+              >
+                <CloseIcon className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="flex flex-col gap-1">
+              <MobileMenuRow to="/settings" Icon={SettingsIcon} label={t('nav.settings')} {...lockProps('settings')} />
+              <MobileMenuRow onClick={() => { setMenuOpen(false); handleHelp() }} Icon={HelpIcon} label={t('nav.help')} />
+              <MobileMenuRow to="/report" onClick={() => setMenuOpen(false)} Icon={ReportIcon} label={t('nav.report')} />
+              <MobileMenuRow onClick={() => { setMenuOpen(false); handleLogout() }} Icon={LogoutIcon} label={t('nav.logout')} variant="danger" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      <aside className="hidden tablet:flex relative z-10 flex-col w-[4.5rem] bg-brand-gradient-vertical text-on-brand shadow-bubble rounded-[2rem] overflow-visible shrink-0">
         <div className="flex items-center justify-center px-3 py-4 border-b border-white/20">
           <NavLink
             to="/dashboard"
@@ -182,6 +330,20 @@ export default function Layout() {
         <OnboardingGuide />
         <Outlet />
       </main>
+
+      {/* Mobile bottom nav — the main destinations. Phone only. */}
+      <nav className="tablet:hidden relative z-20 flex items-stretch gap-1 px-2 py-1 bg-brand-gradient-vertical text-on-brand shadow-bubble rounded-[1.5rem] shrink-0">
+        <MobileTab to="/dashboard" Icon={BubbleLogo} label={t('nav.home')} />
+        <MobileTab to="/academy" Icon={CapIcon} label={t('nav.academy')} {...lockProps('academy')} />
+        <MobileTab to="/experts" Icon={BulbIcon} label={t('nav.experts')} {...lockProps('experts')} />
+        {(me?.role === 'EXPERT' || me?.role === 'ADMIN') && (
+          <MobileTab to="/expert" Icon={CapIcon} label={t('expert.hubNav')} />
+        )}
+        {me?.role === 'ADMIN' && (
+          <MobileTab to="/admin" Icon={ShieldIcon} label="Admin" />
+        )}
+      </nav>
+
       <PersistentVideo />
       <QuizPrompt />
       <UserProfileCard />

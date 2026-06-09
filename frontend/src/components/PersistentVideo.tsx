@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useActiveRoomStore } from '../store/activeRoomStore'
+import { useRoomLayoutStore } from '../store/roomLayoutStore'
+import { useViewportStore } from '../store/viewportStore'
 import { BubbleRoom, getRoom } from '../api/room'
 import { subscribeToRoomLifecycle } from '../api/ws'
 import { VideoPanel } from '../pages/room/VideoPanel'
@@ -23,6 +25,7 @@ import { VideoPanel } from '../pages/room/VideoPanel'
 const PIP_WIDTH = 280
 const PIP_HEIGHT = 158 // 16:9
 const PIP_MARGIN = 16
+const PHONE_MAX_PX = 600
 
 interface Rect {
   top: number
@@ -32,11 +35,18 @@ interface Rect {
 }
 
 function pipRect(): Rect {
+  const phone = window.innerWidth < PHONE_MAX_PX
+  // On phone the floating thumbnail is small and lifted clear of the bottom nav
+  // *and* the chat composer row, so it never sits on top of the controls.
+  const width = phone ? 124 : PIP_WIDTH
+  const height = Math.round((width * 9) / 16)
+  const sideMargin = phone ? 12 : PIP_MARGIN
+  const bottomMargin = phone ? 150 : PIP_MARGIN
   return {
-    top: window.innerHeight - PIP_HEIGHT - PIP_MARGIN,
-    left: window.innerWidth - PIP_WIDTH - PIP_MARGIN,
-    width: PIP_WIDTH,
-    height: PIP_HEIGHT,
+    top: window.innerHeight - height - bottomMargin,
+    left: window.innerWidth - width - sideMargin,
+    width,
+    height,
   }
 }
 
@@ -45,8 +55,13 @@ export function PersistentVideo() {
   const roomId = useActiveRoomStore((s) => s.roomId)
   const location = useLocation()
   const navigate = useNavigate()
+  const isPhone = useViewportStore((s) => s.tier === 'phone')
   const [room, setRoom] = useState<BubbleRoom | null>(null)
   const [rect, setRect] = useState<Rect>(() => pipRect())
+  // True only while actually docked to the room's video cell. Goes false when the
+  // anchor isn't mounted (e.g. phone, a non-video tab is focused) so we render as
+  // a floating PiP rather than freezing at the cell's last size.
+  const [anchored, setAnchored] = useState(false)
   const containerRef = useRef<HTMLDivElement | null>(null)
 
   // Fetch the room once when activeRoom is set. Jitsi needs the JWT + roomName
@@ -97,6 +112,25 @@ export function PersistentVideo() {
     let anchorEl: HTMLElement | null = null
     let pollHandle: number | null = null
 
+    // Idempotent commit — the 250ms poll runs forever while a call is active, so
+    // bail out of state updates when nothing actually moved to avoid re-rendering
+    // (and re-laying-out the Jitsi iframe) 4×/sec for no reason.
+    const apply = (next: Rect, anchoredVal: boolean) => {
+      setAnchored(anchoredVal)
+      setRect((prev) =>
+        prev.top === next.top && prev.left === next.left && prev.width === next.width && prev.height === next.height
+          ? prev
+          : next,
+      )
+    }
+
+    const goPip = () => {
+      anchorEl = null
+      observer?.disconnect()
+      observer = null
+      apply(pipRect(), false)
+    }
+
     const measure = () => {
       if (stopped) return
       if (onRoomPage) {
@@ -109,28 +143,22 @@ export function PersistentVideo() {
             observer.observe(el)
           }
           const r = el.getBoundingClientRect()
-          setRect({ top: r.top, left: r.left, width: r.width, height: r.height })
+          apply({ top: r.top, left: r.left, width: r.width, height: r.height }, true)
           return
         }
-        // Anchor not mounted yet — keep last rect, retry shortly.
+        // On the room page but the video panel isn't mounted (phone: a non-video
+        // tab is focused) → float as a small PiP instead of covering the panel.
+        goPip()
         return
       }
       // Off the room page → PiP.
-      anchorEl = null
-      observer?.disconnect()
-      observer = null
-      setRect(pipRect())
+      goPip()
     }
 
     measure()
-    // Anchor may mount slightly after route change. Poll briefly to catch it.
-    pollHandle = window.setInterval(measure, 200)
-    const stopPoll = window.setTimeout(() => {
-      if (pollHandle != null) {
-        window.clearInterval(pollHandle)
-        pollHandle = null
-      }
-    }, 3000)
+    // Poll continuously while mounted: the anchor mounts/unmounts on phone tab
+    // switches, which aren't route changes, so a one-shot measure isn't enough.
+    pollHandle = window.setInterval(measure, 250)
     window.addEventListener('resize', measure)
 
     return () => {
@@ -138,15 +166,20 @@ export function PersistentVideo() {
       observer?.disconnect()
       window.removeEventListener('resize', measure)
       if (pollHandle != null) window.clearInterval(pollHandle)
-      window.clearTimeout(stopPoll)
     }
   }, [roomId, onRoomPage, location.pathname])
 
   if (!roomId || !room) return null
 
-  // When on the room page we sit inside the bento cell's rounded box — match
-  // the bottom inner radius. In PiP mode it's a generic rounded card.
-  const radiusStyle: React.CSSProperties = onRoomPage
+  // Phone: while off the room page we DON'T float a PiP — the call stays alive
+  // (iframe stays mounted) but is parked off-screen, so navigating around the app
+  // doesn't shove a video window over the UI. The user returns by re-entering the
+  // room and ends the call with Leave. Desktop/tablet keep the floating PiP.
+  const hiddenOffscreen = isPhone && !onRoomPage
+
+  // When docked to the room page we sit inside the bento cell's rounded box —
+  // match the bottom inner radius. As a floating PiP it's a generic rounded card.
+  const radiusStyle: React.CSSProperties = anchored
     ? {
         borderTopLeftRadius: 0,
         borderTopRightRadius: 0,
@@ -155,19 +188,42 @@ export function PersistentVideo() {
       }
     : { borderRadius: '1rem' }
 
+  // Tapping the floating PiP returns to the video: if we're already on the room
+  // page (phone, off the video tab) just refocus the video cell; otherwise go to
+  // the room route.
+  const returnToVideo = () => {
+    if (onRoomPage) useRoomLayoutStore.getState().setFocused('video')
+    else if (roomPagePath) navigate(roomPagePath)
+  }
+
+  // Parked off-screen (kept a sane size so Jitsi keeps the stream flowing — a
+  // display:none / 0×0 box can make the browser suspend the call).
+  const offscreenStyle: React.CSSProperties = {
+    top: 0,
+    left: -10000,
+    width: PIP_WIDTH,
+    height: PIP_HEIGHT,
+    pointerEvents: 'none',
+  }
+
   return (
     <div
       ref={containerRef}
-      className={`fixed z-30 overflow-hidden bg-black transition-all duration-200 ease-out ${
-        onRoomPage ? '' : 'shadow-bubble ring-1 ring-white/10'
-      }`}
-      style={{
-        top: rect.top,
-        left: rect.left,
-        width: rect.width,
-        height: rect.height,
-        ...radiusStyle,
-      }}
+      aria-hidden={hiddenOffscreen || undefined}
+      className={`fixed z-30 overflow-hidden bg-black ${
+        hiddenOffscreen ? '' : 'transition-all duration-200 ease-out'
+      } ${anchored || hiddenOffscreen ? '' : 'shadow-bubble ring-1 ring-white/10'}`}
+      style={
+        hiddenOffscreen
+          ? offscreenStyle
+          : {
+              top: rect.top,
+              left: rect.left,
+              width: rect.width,
+              height: rect.height,
+              ...radiusStyle,
+            }
+      }
     >
       {/* Wrapped div so the absolutely-positioned children inside VideoPanel
           (Jitsi iframe via parentNode) get the right layout box.
@@ -177,14 +233,14 @@ export function PersistentVideo() {
           swallowed. */}
       <div
         className="w-full h-full"
-        style={onRoomPage ? undefined : { pointerEvents: 'none' }}
+        style={anchored ? undefined : { pointerEvents: 'none' }}
       >
         <VideoPanel room={room} />
       </div>
-      {!onRoomPage && (
+      {!anchored && !hiddenOffscreen && (
         <button
           type="button"
-          onClick={() => roomPagePath && navigate(roomPagePath)}
+          onClick={returnToVideo}
           aria-label={t('room.pip.returnAria')}
           className="group absolute inset-0 flex flex-col justify-between items-stretch p-2 text-white cursor-pointer hover:bg-black/30 transition-colors"
         >
