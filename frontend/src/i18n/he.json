@@ -66,6 +66,28 @@
       "complete": "עניתם על כל השאלות — פרופיל ההתאמה שלכם נבנה במלואו."
     }
   },
+  "help": {
+    "title": "עזרה",
+    "subtitle": "מצא/י את הצעד הבא לקורסים, בועות, חדרים חיים, מומחים והגדרה ראשונית.",
+    "askLabel": "שאל/י את Bubble.up",
+    "askPlaceholder": "מה את/ה מנסה לעשות?",
+    "askButton": "שאלה",
+    "asking": "חושב...",
+    "answerTitle": "תשובה",
+    "sourceAssistant": "תשובת עוזר",
+    "sourceSaved": "תשובה שמורה",
+    "sourceGuide": "תשובת מדריך",
+    "topicsHeading": "נושאי עזרה",
+    "searchLabel": "חיפוש נושאים",
+    "searchPlaceholder": "חיפוש לפי פעולה או אזור",
+    "quickHeading": "פעולות מהירות",
+    "recentHeading": "תשובות אחרונות",
+    "recentEmpty": "אין עדיין תשובות שמורות.",
+    "askThis": "שאל/י על זה",
+    "empty": "אין נושאי עזרה שתואמים לחיפוש הזה.",
+    "errorLoad": "לא ניתן לטעון נושאי עזרה.",
+    "errorAsk": "לא ניתן לענות על זה כרגע."
+  },
   "profile": {
     "title": "הפרופיל שלך",
     "titleOther": "פרופיל",

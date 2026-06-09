@@ -234,7 +234,7 @@ export default function Layout() {
   }
 
   function handleHelp() {
-    alert(`${t('nav.help')}: ${t('common.comingSoon')}`)
+    navigate('/help')
   }
 
   return (

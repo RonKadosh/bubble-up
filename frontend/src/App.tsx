@@ -14,6 +14,7 @@ import ExpertProfileEditPage from './pages/expert/ExpertProfileEditPage'
 import BookingRequestsPage from './pages/expert/BookingRequestsPage'
 import ExpertDirectoryPage from './pages/ExpertDirectoryPage'
 import ExpertPublicProfilePage from './pages/ExpertPublicProfilePage'
+import HelpPage from './pages/HelpPage'
 import AdminLayoutPage from './pages/admin/AdminLayoutPage'
 import ReportPage from './pages/report/ReportPage'
 import CoursePage from './pages/CoursePage'
@@ -99,6 +100,7 @@ export default function App() {
           <Route path="/profile" element={<Navigate to="/settings" replace />} />
           <Route path="/profile/:userId" element={<ProfilePage />} />
           <Route path="/settings" element={<RequireUnlocked feature="settings"><SettingsPage /></RequireUnlocked>} />
+          <Route path="/help" element={<HelpPage />} />
           <Route path="/rooms/:roomId" element={<BubbleRoomPage />} />
           <Route path="/sessions/:sessionId" element={<ExpertRoomPage />} />
           <Route path="/become-expert" element={<ExpertOnboardingPage />} />

@@ -66,6 +66,28 @@
       "complete": "You've answered every question — your matching profile is fully built."
     }
   },
+  "help": {
+    "title": "Help",
+    "subtitle": "Find the next step for courses, Bubbles, live rooms, experts, and setup.",
+    "askLabel": "Ask Bubble.up",
+    "askPlaceholder": "What are you trying to do?",
+    "askButton": "Ask",
+    "asking": "Thinking...",
+    "answerTitle": "Answer",
+    "sourceAssistant": "Assistant answer",
+    "sourceSaved": "Saved answer",
+    "sourceGuide": "Guide answer",
+    "topicsHeading": "Help topics",
+    "searchLabel": "Search topics",
+    "searchPlaceholder": "Search by action or area",
+    "quickHeading": "Quick actions",
+    "recentHeading": "Recent answers",
+    "recentEmpty": "No saved answers yet.",
+    "askThis": "Ask about this",
+    "empty": "No help topics match that search.",
+    "errorLoad": "Could not load help topics.",
+    "errorAsk": "Could not answer that right now."
+  },
   "profile": {
     "title": "Your profile",
     "titleOther": "Profile",
