@@ -6,7 +6,12 @@ spring:
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      # `update` keeps existing rows and only ALTERs tables to match the
+      # current entity definitions (add column, add index, etc.). Without
+      # this, every deploy would wipe every user/group/message — anything
+      # not re-seeded on boot. The test profile pins it back to create-drop
+      # so tests still start from a clean slate.
+      ddl-auto: ${HIBERNATE_DDL_AUTO:update}
     show-sql: false
     properties:
       hibernate:
