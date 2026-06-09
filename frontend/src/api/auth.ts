@@ -25,6 +25,23 @@ export interface VerifyEmailResponse {
  */
 export const GOOGLE_OAUTH_START_URL = '/oauth2/authorization/google'
 
+export async function login(email: string, password: string): Promise<AuthResponse> {
+  const res = await client.post<ApiSuccess<AuthResponse>>('/auth/login', { email, password })
+  return res.data.data
+}
+
+export async function register(
+  email: string,
+  password: string,
+  displayName: string,
+): Promise<AuthResponse> {
+  const res = await client.post<ApiSuccess<AuthResponse>>(
+    '/auth/register',
+    { email, password, displayName },
+  )
+  return res.data.data
+}
+
 /**
  * Send a verification link to the academic email the user supplied.
  * Requires an authed session. The link is good for 30 minutes.
