@@ -64,6 +64,17 @@ app:
     private-key-pem: ${APP_JITSI_PRIVATE_KEY_PEM:}
     server-url: ${APP_JITSI_SERVER_URL:https://8x8.vc}
     token-ttl: ${APP_JITSI_TOKEN_TTL:PT2H}
+  mail:
+    # Sender address for transactional emails (academic-email verification).
+    # Must be a verified SES identity in `aws-region`. Blank disables sending —
+    # the verification flow returns MAIL_NOT_CONFIGURED in that case.
+    from: ${MAIL_FROM_ADDRESS:}
+    aws-region: ${AWS_SES_REGION:us-east-1}
+    # How long a verification link is valid for.
+    verification-ttl: ${MAIL_VERIFICATION_TTL:PT30M}
+    # Where the link in the email points. The path is appended to this base.
+    # Defaults to the first CORS-allowed origin (i.e. the frontend).
+    frontend-base-url: ${MAIL_FRONTEND_BASE_URL:${app.cors.allowed-origins}}
   demo:
     seed:
       # Boots 10 demo users + Study Bubbles on first start. Idempotent.

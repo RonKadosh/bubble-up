@@ -22,27 +22,27 @@ import java.util.Optional;
 /**
  * Find-or-create + JWT issuance for users arriving via Google OAuth2.
  *
- * <p>This service is the only place that owns the business rules around
- * "what makes a Google sign-in acceptable" — currently:
+ * <h2>Sign-up policy</h2>
  *
  * <ol>
- *   <li>The Google ID token must carry an {@code email} claim.</li>
- *   <li>Google must have verified the email ({@code email_verified=true}).</li>
- *   <li>The email's domain must resolve to a registered Israeli academic
- *       institution (see {@link UniversityEmailRegistry}).</li>
+ *   <li>The Google ID token must carry an {@code email} claim that Google
+ *       has verified ({@code email_verified=true}).</li>
+ *   <li>If the email itself resolves to a registered Israeli academic
+ *       institution (see {@link UniversityEmailRegistry}) the user is
+ *       <b>fully signed in</b>: {@code emailVerified=true}, role inferred
+ *       from the matched sub-domain.</li>
+ *   <li>If the email is a non-{@code .ac.il} Google account (e.g. a
+ *       personal Gmail) the user is created in a <b>pending</b> state:
+ *       {@code emailVerified=false}, role defaults to STUDENT. They keep
+ *       a session JWT but the frontend routes them to the
+ *       {@code /auth/verify} page, where they enter their academic email
+ *       and prove ownership via {@link EmailVerificationService}.</li>
  * </ol>
  *
- * <p>If all three pass, we look the user up by Google's stable {@code sub}
- * identifier (preferred — survives email changes) and fall back to email.
- * A brand-new user is created on the fly. Either way we return a fresh
- * access + refresh token pair, identical to what the legacy password
- * {@code /api/auth/login} returned, so the frontend's existing JWT handling
- * keeps working without changes.
- *
- * <p>This service does NOT touch HTTP. The Spring Security
- * {@code AuthenticationSuccessHandler} is responsible for translating its
- * return value into a redirect to the frontend. Keeping HTTP out of here
- * makes it cleanly testable without a mock servlet.
+ * <p>Result: every user who can ever read app data has a verified
+ * {@code .ac.il} address, but BGU / HUJI / Bar-Ilan students (who use
+ * Microsoft 365 for student mail and so can't sign in to Google with
+ * their academic address) still have a smooth path in.
  */
 @Service
 @RequiredArgsConstructor
@@ -57,15 +57,6 @@ public class OAuthLoginService {
      * Process a verified Google OAuth2 callback and return our own
      * access+refresh tokens for the corresponding (existing or newly created)
      * user.
-     *
-     * @param googleSub      Google's stable subject identifier (the {@code sub} claim)
-     * @param email          email address from the ID token
-     * @param emailVerified  Google's {@code email_verified} claim
-     * @param displayName    name from Google's profile, or null
-     * @throws AppException with a domain-specific {@link ErrorCode} when any
-     *                      gate above fails. The success handler converts the
-     *                      code into a frontend-friendly query parameter so
-     *                      the UI can render a sensible message.
      */
     @Transactional
     public AuthResponse loginOrRegister(
@@ -80,42 +71,46 @@ public class OAuthLoginService {
         if (!emailVerified) {
             throw new AppException(ErrorCode.OAUTH_EMAIL_UNVERIFIED);
         }
-        Match match = universityRegistry.lookup(email)
-                .orElseThrow(() -> new AppException(ErrorCode.NOT_ACADEMIC_EMAIL,
-                        "Sign-in requires an Israeli academic email address (.ac.il)."));
 
         String normalisedEmail = email.toLowerCase(Locale.ROOT).trim();
+        Optional<Match> academicMatch = universityRegistry.lookup(normalisedEmail);
 
         // 1) Stable sub lookup first — survives email changes on the Google side.
-        //    NOTE: we deliberately don't update the stored email here even if
-        //    the user changed it on Google. The email is treated as immutable
-        //    after first sign-up; a future "change email" endpoint will handle
-        //    that case explicitly with its own re-verification flow.
         Optional<User> existingBySub = userRepository.findByGoogleSub(googleSub);
         if (existingBySub.isPresent()) {
             User user = existingBySub.get();
             requireAccountActive(user);
-            user.setEmailVerified(true);
+            // If their (still-stored) email turned out to be academic now,
+            // promote them. Otherwise leave verification state alone.
+            if (universityRegistry.isAcademicEmail(user.getEmail())) {
+                user.setEmailVerified(true);
+            }
             return issuePair(user);
         }
 
-        // 2) Fall back to email — covers the migration case where a legacy
-        //    password user exists but hasn't yet linked their Google identity.
+        // 2) Email-based fallback for the legacy / migration window.
         Optional<User> existingByEmail = userRepository.findByEmail(normalisedEmail);
         if (existingByEmail.isPresent()) {
             User user = existingByEmail.get();
             requireAccountActive(user);
             user.setGoogleSub(googleSub);
-            user.setEmailVerified(true);
+            if (academicMatch.isPresent()) {
+                user.setEmailVerified(true);
+            }
             return issuePair(user);
         }
 
-        // 3) Brand new user — create row.
+        // 3) Brand new user.
+        UserRole defaultRole = academicMatch
+                .filter(m -> m.kind() == MemberKind.STAFF)
+                .map(m -> UserRole.EXPERT)
+                .orElse(UserRole.STUDENT);
+
         User user = User.builder()
                 .email(normalisedEmail)
                 .googleSub(googleSub)
-                .emailVerified(true)
-                .role(match.kind() == MemberKind.STAFF ? UserRole.EXPERT : UserRole.STUDENT)
+                .emailVerified(academicMatch.isPresent())   // academic Google email = trust Google
+                .role(defaultRole)
                 .displayName(safeName(displayName, normalisedEmail))
                 .build();
         userRepository.save(user);
@@ -133,7 +128,8 @@ public class OAuthLoginService {
                 user.getEmail(),
                 user.getRole().name(),
                 user.getDisplayName(),
-                identity.avatarUrl()
+                identity.avatarUrl(),
+                user.isEmailVerified()
         );
     }
 
