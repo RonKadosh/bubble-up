@@ -58,6 +58,12 @@ services:
       MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-}
       AWS_SES_REGION: ${AWS_SES_REGION:-us-east-1}
       APP_DEMO_SEED_ENABLED: "false"
+      # `update` keeps existing rows on each deploy and only ALTERs tables
+      # to match new entity definitions. The default in application.yml is
+      # `create-drop` (so dev/test resets cleanly); prod overrides to keep
+      # user data alive across releases. Move to `validate` once Flyway
+      # lands.
+      SPRING_JPA_HIBERNATE_DDL_AUTO: ${SPRING_JPA_HIBERNATE_DDL_AUTO:-update}
       JAVA_TOOL_OPTIONS: "-Xmx384m -XX:MaxRAMPercentage=60"
     volumes:
       - /data/files:/var/bubbleup/files

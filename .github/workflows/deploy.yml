@@ -116,6 +116,9 @@ jobs:
           JWT_SECRET=${JWT_SECRET}
           JWT_ACCESS_EXPIRATION_MS=900000
           REFRESH_TOKEN_EXPIRATION_MS=2592000000
+          # Keep existing rows across deploys (application.yml defaults to
+          # create-drop, which would wipe the DB on every restart).
+          SPRING_JPA_HIBERNATE_DDL_AUTO=update
           APP_JITSI_APP_ID=${APP_JITSI_APP_ID}
           APP_JITSI_KID=${APP_JITSI_KID}
           APP_JITSI_PRIVATE_KEY_PEM=${APP_JITSI_PRIVATE_KEY_PEM}
