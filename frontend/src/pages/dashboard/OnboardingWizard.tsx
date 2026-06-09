@@ -120,13 +120,13 @@ export function OnboardingWizard() {
     <div className="flex-1 overflow-y-auto p-4 tablet:p-8 flex items-start tablet:items-center justify-center">
       <Card size="lg" className="w-full max-w-xl p-6 tablet:p-8 shadow-bubble">
         {/* Workspace hook + endowed-progress bar */}
-        <div className="flex items-center justify-between gap-3 mb-1.5">
+        <div className="flex items-start justify-between gap-3 mb-1.5">
           <div className="flex items-center gap-2 min-w-0">
             <span className="w-2.5 h-2.5 rounded-full bg-bubble-magenta shadow-sm shrink-0" aria-hidden />
             <span className="w-1.5 h-1.5 rounded-full bg-bubble-green shrink-0" aria-hidden />
-            <h2 className="text-sm font-bold text-base truncate">{t('onboarding.wizard.workspaceTitle')}</h2>
+            <h2 className="text-sm font-bold text-base leading-tight">{t('onboarding.wizard.workspaceTitle')}</h2>
           </div>
-          <span className="shrink-0 text-xs font-semibold text-base tabular-nums">
+          <span className="shrink-0 text-xs font-semibold text-base tabular-nums whitespace-nowrap">
             {t('onboarding.wizard.percentComplete', { pct })}
           </span>
         </div>

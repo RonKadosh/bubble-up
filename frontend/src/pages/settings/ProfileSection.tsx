@@ -5,6 +5,7 @@ import { useOnboardingStore } from '../../store/onboardingStore'
 import { Avatar } from '../../components/Avatar'
 import { Button } from '../../components/Button'
 import { Card } from '../../components/Card'
+import { CameraIcon } from '../../components/Icons'
 import {
   UserProfile,
   deleteAvatar,
@@ -157,49 +158,54 @@ export default function ProfileSection() {
       )}
 
       <Card size="lg" className="p-5 tablet:p-6 shadow-bubble max-w-2xl">
-        <div className="flex items-start gap-4 tablet:gap-6 flex-wrap">
+        <div className="flex flex-col tablet:flex-row gap-4 tablet:gap-6 tablet:items-start">
           <div className="shrink-0 flex flex-col items-center gap-2">
-            <Avatar
-              id={profile.userId}
-              name={profile.displayName}
-              imageUrl={profile.avatarUrl}
-              size="lg"
-              ring
-              className="!w-20 !h-20"
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0]
+                if (f) handleAvatarFile(f)
+                e.target.value = ''
+              }}
             />
-            {!editing && (
-              <div className="flex flex-col gap-1 items-center">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp,image/gif"
-                  className="hidden"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0]
-                    if (f) handleAvatarFile(f)
-                    e.target.value = ''
-                  }}
-                />
-                <Button
-                  variant="ghost"
-                  size="xs"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={avatarUploading}
-                >
-                  {avatarUploading ? t('common.loading') : t('profile.uploadAvatar')}
-                </Button>
-                {profile.avatarUrl && (
-                  <Button
-                    variant="ghost"
-                    size="xs"
-                    onClick={handleAvatarDelete}
-                    disabled={avatarUploading}
-                    className="text-danger"
-                  >
-                    {t('profile.removeAvatar')}
-                  </Button>
+            {/* The picture itself is the control — tap to change, with a camera
+                badge so the affordance reads on touch where hover hints don't. */}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={avatarUploading}
+              aria-label={t('profile.changeAvatar')}
+              title={t('profile.changeAvatar')}
+              className="group relative rounded-full bubble-pop focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 disabled:opacity-70 disabled:cursor-wait"
+            >
+              <Avatar
+                id={profile.userId}
+                name={profile.displayName}
+                imageUrl={profile.avatarUrl}
+                size="lg"
+                className="!w-20 !h-20"
+              />
+              <span className="absolute -bottom-0.5 -end-0.5 grid place-items-center w-7 h-7 rounded-full bg-primary-500 text-white border-2 border-surface shadow-sm">
+                {avatarUploading ? (
+                  <span className="block w-3.5 h-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin" aria-hidden />
+                ) : (
+                  <CameraIcon className="w-3.5 h-3.5" />
                 )}
-              </div>
+              </span>
+            </button>
+            {profile.avatarUrl && !editing && (
+              <Button
+                variant="ghost"
+                size="xs"
+                onClick={handleAvatarDelete}
+                disabled={avatarUploading}
+                className="text-danger"
+              >
+                {t('profile.removeAvatar')}
+              </Button>
             )}
           </div>
 

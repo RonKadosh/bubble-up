@@ -646,15 +646,21 @@ export default function GroupsPage() {
               onScheduleRoom={() => setScheduleRoomOpen(true)}
               onJoinLive={handleJoinLive}
               onOpenSidebar={() => setMobileSidebarOpen(true)}
-            />
-
-            <MembersStrip
-              members={selectedMembers}
-              presence={presence}
-              me={me?.id ?? null}
-              isOwner={isOwner}
               onOpenInfo={() => setBubbleInfoOpen(true)}
             />
+
+            {/* Members strip is part of the desktop/tablet "group panel"; on phone
+                it's folded into the Bubble Info drawer (opened from the header)
+                so the chat keeps the screen. */}
+            {!isPhone && (
+              <MembersStrip
+                members={selectedMembers}
+                presence={presence}
+                me={me?.id ?? null}
+                isOwner={isOwner}
+                onOpenInfo={() => setBubbleInfoOpen(true)}
+              />
+            )}
 
             <div className="relative flex-1 min-h-0 flex flex-col overflow-hidden">
             <BubbleInfoDrawer

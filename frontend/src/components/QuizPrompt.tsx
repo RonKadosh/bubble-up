@@ -125,7 +125,7 @@ export function QuizPrompt() {
     <div
       role="dialog"
       aria-label={t('matching.title')}
-      className="fixed z-40 bottom-4 start-4 max-w-[min(22rem,calc(100vw-2rem))] bg-surface border border-line shadow-bubble rounded-3xl p-4"
+      className="fixed z-40 bottom-[5.5rem] start-3 end-3 tablet:bottom-4 tablet:start-4 tablet:end-auto tablet:max-w-[min(22rem,calc(100vw-2rem))] bg-surface border border-line shadow-bubble rounded-3xl p-4"
     >
       <div className="flex items-center gap-2 mb-2">
         <span className="inline-block w-2 h-2 rounded-full bg-brand-gradient-strong" aria-hidden />

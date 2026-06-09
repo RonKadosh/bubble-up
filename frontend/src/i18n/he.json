@@ -16,6 +16,8 @@
     "retry": "נסה/י שוב",
     "you": "אתה",
     "close": "סגירה",
+    "collapse": "צמצום",
+    "expand": "הרחבה",
     "rateLimited": "פעולה מהירה מדי — האט/י ונסה/י שוב עוד רגע."
   },
   "nav": {
@@ -35,7 +37,9 @@
     "dashboard": "לוח בקרה",
     "profile": "פרופיל",
     "settings": "הגדרות",
-    "locked": "נפתח בשלב {{n}}"
+    "locked": "נפתח בשלב {{n}}",
+    "menu": "תפריט",
+    "closeMenu": "סגירת התפריט"
   },
   "settings": {
     "title": "הגדרות",
@@ -76,6 +80,7 @@
     "enrollmentYearLabel": "שנה",
     "uploadAvatar": "החלפת תמונה",
     "removeAvatar": "הסרת תמונה",
+    "changeAvatar": "החלפת תמונת פרופיל",
     "saveButton": "שמירת שינויים",
     "savingButton": "שומר…",
     "joinedAt": "הצטרף ב־{{date}}",

@@ -1,8 +1,10 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Button } from './Button'
+import { ChevronIcon } from './Icons'
 import { useOnboardingStore } from '../store/onboardingStore'
+import { useViewportStore } from '../store/viewportStore'
 import type { OnboardingStatus } from '../api/onboarding'
 
 /**
@@ -41,34 +43,54 @@ export function OnboardingGuide() {
   const navigate = useNavigate()
   const status = useOnboardingStore((s) => s.status)
   const ensureHydrated = useOnboardingStore((s) => s.ensureHydrated)
+  const isPhone = useViewportStore((s) => s.tier === 'phone')
   useEffect(() => { ensureHydrated() }, [ensureHydrated])
+  // On phone the banner is collapsed by default so it doesn't crush the page;
+  // the title stays visible and a chevron expands the detail on demand.
+  const [expanded, setExpanded] = useState(false)
 
   const guide = (location.state as { guide?: unknown } | null)?.guide
   if (!isGuideKey(guide)) return null
 
   const def = GUIDES[guide]
   const done = status ? def.done(status) : false
+  // Always open on tablet+; on phone open when expanded or once the step is done
+  // (so the "Back to setup" CTA is reachable).
+  const open = !isPhone || expanded || done
 
   return (
     <div className="shrink-0 p-3 tablet:p-4 pb-0">
       <div className="ring-iridescent p-[1.5px] rounded-3xl shadow-themed">
-        <div className={`rounded-[calc(1.5rem-1.5px)] p-4 flex items-start gap-3 transition-colors ${done ? 'bg-bubble-green-soft' : 'bg-primary-50'}`}>
+        <div className={`rounded-[calc(1.5rem-1.5px)] p-3 tablet:p-4 flex items-start gap-3 transition-colors ${done ? 'bg-bubble-green-soft' : 'bg-primary-50'}`}>
           <span
             className={`shrink-0 w-2.5 h-2.5 mt-1.5 rounded-full ${done ? 'bg-bubble-green' : 'bg-brand-gradient-strong'}`}
             aria-hidden
           />
           <div className="flex-1 min-w-0">
-            <p className="text-[0.7rem] font-bold uppercase tracking-wide text-primary-600 mb-0.5">
-              {t('onboarding.guide.badge')}
-            </p>
-            <p className="text-sm font-semibold text-base">{t(def.titleKey)}</p>
-            <p className="text-sm text-muted mt-0.5">{t(def.bodyKey)}</p>
-            {done && (
+            {open && (
+              <p className="text-[0.7rem] font-bold uppercase tracking-wide text-primary-600 mb-0.5">
+                {t('onboarding.guide.badge')}
+              </p>
+            )}
+            <p className="text-sm font-semibold text-base truncate">{t(def.titleKey)}</p>
+            {open && <p className="text-sm text-muted mt-0.5">{t(def.bodyKey)}</p>}
+            {open && done && (
               <Button size="sm" className="mt-3" onClick={() => navigate('/dashboard')}>
                 {t('onboarding.guide.backToSetup')}
               </Button>
             )}
           </div>
+          {isPhone && !done && (
+            <button
+              type="button"
+              onClick={() => setExpanded((v) => !v)}
+              aria-expanded={open}
+              aria-label={t(open ? 'common.collapse' : 'common.expand')}
+              className="shrink-0 -me-1 grid place-items-center w-8 h-8 rounded-full text-primary-600 hover:bg-primary-100 transition-colors"
+            >
+              <ChevronIcon className={`w-4 h-4 transition-transform ${open ? 'rotate-90' : '-rotate-90'}`} />
+            </button>
+          )}
         </div>
       </div>
     </div>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '../../components/Button'
+import { useActiveRoomStore } from '../../store/activeRoomStore'
 import type { BubbleRoom } from '../../api/room'
 import type { ExpertSession } from '../../api/expert'
 import { fmtRelative } from './timeFormat'
@@ -63,7 +64,12 @@ export function ExpertRoomHeader({ session, room, inCall = 0 }: Props) {
         <Button
           variant="danger"
           size="sm"
-          onClick={() => navigate('/experts')}
+          onClick={() => {
+            // Actually end the call — clear the active room so PersistentVideo
+            // disposes the iframe instead of shrinking it to a floating PiP.
+            useActiveRoomStore.getState().clearActive()
+            navigate('/experts')
+          }}
         >
           {t('room.leave')}
         </Button>

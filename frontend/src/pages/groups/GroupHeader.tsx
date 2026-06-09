@@ -2,7 +2,8 @@ import { useTranslation } from 'react-i18next'
 import { Group } from '../../api/groups'
 import { CalendarEvent } from '../../api/calendar'
 import { Button } from '../../components/Button'
-import { MenuIcon } from '../../components/Icons'
+import { ChevronIcon, MenuIcon } from '../../components/Icons'
+import { useViewportStore } from '../../store/viewportStore'
 import { MatchFeedbackControl } from './MatchFeedbackControl'
 
 interface GroupHeaderProps {
@@ -18,6 +19,8 @@ interface GroupHeaderProps {
   onJoinLive: () => void
   /** Opens the GroupSidebar drawer below `desktop`. Ignored at desktop+. */
   onOpenSidebar: () => void
+  /** Opens the Bubble Info drawer. On phone the compact title bar is the trigger. */
+  onOpenInfo: () => void
 }
 
 /** Pulsing red dot — the "live now" indicator, reused as the Join button's leading glyph. */
@@ -39,8 +42,76 @@ function LiveDot() {
  * `GroupSidebar` drawer. Below `tablet`, the action buttons stack under the
  * title instead of sitting beside it so they don't get crushed.
  */
-export function GroupHeader({ group, isOwner, isMember, onJoin, liveSession, onScheduleRoom, onJoinLive, onOpenSidebar }: GroupHeaderProps) {
+export function GroupHeader({ group, isOwner, isMember, onJoin, liveSession, onScheduleRoom, onJoinLive, onOpenSidebar, onOpenInfo }: GroupHeaderProps) {
   const { t } = useTranslation()
+  const isPhone = useViewportStore((s) => s.tier === 'phone')
+
+  // Shared live/join CTA — identical on phone and desktop, just placed differently.
+  const actionCta = (
+    <>
+      {isMember && (
+        liveSession ? (
+          <Button
+            size="sm"
+            onClick={onJoinLive}
+            leftIcon={<LiveDot />}
+            title={t('groups.header.joinLiveTitle')}
+          >
+            {t('groups.header.joinLive')}
+          </Button>
+        ) : (
+          <Button size="sm" onClick={onScheduleRoom}>
+            {t('groups.header.createLive')}
+          </Button>
+        )
+      )}
+      {!isMember && group.visibility === 'PUBLIC' && (
+        group.memberCount >= group.maxMembers ? (
+          <Button size="sm" disabled title={t('groups.header.fullTitle')}>
+            {t('groups.header.full')}
+          </Button>
+        ) : (
+          <Button size="sm" onClick={onJoin}>
+            {t('groups.header.hopIn')}
+          </Button>
+        )
+      )}
+    </>
+  )
+
+  // Phone: a single compact bar — hamburger, tappable title (opens Bubble Info,
+  // which carries the description / members / actions), and the live CTA. The
+  // full "group panel" (description, match feedback, members strip) is dropped
+  // here so the chat gets the screen.
+  if (isPhone) {
+    return (
+      <header className="bg-surface border-b border-line px-2 py-2 flex items-center gap-1.5 shrink-0">
+        <button
+          type="button"
+          onClick={onOpenSidebar}
+          aria-label={t('groups.openBubbleListAria')}
+          className="shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-base hover:bg-surface-hover transition bubble-pop"
+        >
+          <MenuIcon className="w-5 h-5" />
+        </button>
+        <button
+          type="button"
+          onClick={onOpenInfo}
+          aria-haspopup="dialog"
+          aria-label={t('groups.info.openStripAria')}
+          className="flex-1 min-w-0 flex items-center gap-1.5 text-start px-1.5 py-1 rounded-full hover:bg-surface-hover transition"
+        >
+          <h1 className="text-base font-semibold truncate">{group.name}</h1>
+          <span className="shrink-0 text-[0.7rem] px-1.5 py-0.5 rounded-md bg-surface-muted text-secondary tabular-nums">
+            {t('groups.capacity', { count: group.memberCount, max: group.maxMembers })}
+          </span>
+          <ChevronIcon className="w-4 h-4 shrink-0 text-muted -rotate-90" aria-hidden />
+        </button>
+        <div className="shrink-0 flex items-center">{actionCta}</div>
+      </header>
+    )
+  }
+
   return (
     <header className="bg-surface border-b border-line px-3 tablet:px-6 py-3 tablet:py-4 flex flex-col tablet:flex-row tablet:items-center tablet:justify-between gap-2 tablet:gap-3 shrink-0">
       <div className="flex items-center gap-2 min-w-0">

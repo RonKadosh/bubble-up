@@ -16,6 +16,8 @@
     "retry": "Try again",
     "you": "you",
     "close": "Close",
+    "collapse": "Collapse",
+    "expand": "Expand",
     "rateLimited": "You're doing that too fast — please slow down and try again in a moment."
   },
   "nav": {
@@ -35,7 +37,9 @@
     "dashboard": "Dashboard",
     "profile": "Profile",
     "settings": "Settings",
-    "locked": "Unlocks at step {{n}}"
+    "locked": "Unlocks at step {{n}}",
+    "menu": "Menu",
+    "closeMenu": "Close menu"
   },
   "settings": {
     "title": "Settings",
@@ -76,6 +80,7 @@
     "enrollmentYearLabel": "Year of study",
     "uploadAvatar": "Change photo",
     "removeAvatar": "Remove photo",
+    "changeAvatar": "Change profile picture",
     "saveButton": "Save changes",
     "savingButton": "Saving…",
     "joinedAt": "Joined {{date}}",

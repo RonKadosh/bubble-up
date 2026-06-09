@@ -44,12 +44,17 @@ import {
 } from '../api/enrollment'
 import { describeError } from '../api/errors'
 import { useOnboardingStore } from '../store/onboardingStore'
+import { useViewportStore } from '../store/viewportStore'
 
 const TERM_ALL = '__all__'
+
+/** Phone browse drill-down steps: Departments → Courses → Course detail. */
+type MobileStep = 'departments' | 'courses' | 'detail'
 
 export default function AcademyPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const isPhone = useViewportStore((s) => s.tier === 'phone')
 
   const [university, setUniversity] = useState<University | null>(null)
   const [departments, setDepartments] = useState<Department[]>([])
@@ -59,6 +64,8 @@ export default function AcademyPage() {
   const [selectedTermId, setSelectedTermId] = useState<string>(TERM_ALL)
   const [courses, setCourses] = useState<Course[]>([])
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null)
+  // Phone-only: which of the three browse panes is on screen (the drill-down).
+  const [mobileStep, setMobileStep] = useState<MobileStep>('departments')
   const [course, setCourse] = useState<Course | null>(null)
   const [offerings, setOfferings] = useState<Offering[]>([])
 
@@ -277,80 +284,112 @@ export default function AcademyPage() {
           <SectionLabel className="mb-2">
             {t('academy.browseHeading')}
           </SectionLabel>
-          <div className="h-[clamp(28rem,60vh,40rem)] grid grid-cols-1 tablet:grid-cols-[16rem_minmax(0,20rem)_minmax(0,1fr)] gap-3 min-h-0">
-            <Pane title={t('academy.column.departments')}>
-              {loadingShell ? (
-                <PaneSkeleton />
-              ) : departments.length === 0 ? (
-                <PaneEmpty label={t('academy.empty.departments')} />
-              ) : (
-                <ul className="flex flex-col gap-1">
-                  {departments.map((d) => (
-                    <li key={d.id}>
-                      <RowButton
-                        selected={selectedDeptId === d.id}
-                        onClick={() => setSelectedDeptId(d.id)}
-                      >
-                        <div className="font-medium truncate">{d.name}</div>
-                        <div className="text-xs text-muted truncate">{d.shortCode}</div>
-                      </RowButton>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Pane>
+          {(() => {
+            const departmentsBody = loadingShell ? (
+              <PaneSkeleton />
+            ) : departments.length === 0 ? (
+              <PaneEmpty label={t('academy.empty.departments')} />
+            ) : (
+              <ul className="flex flex-col gap-1">
+                {departments.map((d) => (
+                  <li key={d.id}>
+                    <RowButton
+                      selected={selectedDeptId === d.id}
+                      onClick={() => { setSelectedDeptId(d.id); setMobileStep('courses') }}
+                    >
+                      <div className="font-medium truncate">{d.name}</div>
+                      <div className="text-xs text-muted truncate">{d.shortCode}</div>
+                    </RowButton>
+                  </li>
+                ))}
+              </ul>
+            )
 
-            <Pane title={t('academy.column.courses')}>
-              {!selectedDeptId ? (
-                <PaneEmpty label={t('academy.empty.courses')} />
-              ) : loadingCourses ? (
-                <PaneSkeleton />
-              ) : courses.length === 0 ? (
-                <PaneEmpty label={t('academy.empty.courses')} />
-              ) : (
-                <ul className="flex flex-col gap-1">
-                  {courses.map((c) => (
-                    <li key={c.id}>
-                      <RowButton
-                        selected={selectedCourseId === c.id}
-                        onClick={() => setSelectedCourseId(c.id)}
-                      >
-                        <div className="text-xs font-mono text-muted">{c.code}</div>
-                        <div className="font-medium truncate">{c.name}</div>
-                        {enrolledCourseIds.has(c.id) && (
-                          <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-md bg-bubble-green-soft text-bubble-green">
-                            <span className="w-1.5 h-1.5 rounded-full bg-success" />
-                            {t('academy.enrolledBadge')}
-                          </span>
-                        )}
-                      </RowButton>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Pane>
+            const coursesBody = !selectedDeptId ? (
+              <PaneEmpty label={t('academy.empty.courses')} />
+            ) : loadingCourses ? (
+              <PaneSkeleton />
+            ) : courses.length === 0 ? (
+              <PaneEmpty label={t('academy.empty.courses')} />
+            ) : (
+              <ul className="flex flex-col gap-1">
+                {courses.map((c) => (
+                  <li key={c.id}>
+                    <RowButton
+                      selected={selectedCourseId === c.id}
+                      onClick={() => { setSelectedCourseId(c.id); setMobileStep('detail') }}
+                    >
+                      <div className="text-xs font-mono text-muted">{c.code}</div>
+                      <div className="font-medium truncate">{c.name}</div>
+                      {enrolledCourseIds.has(c.id) && (
+                        <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-md bg-bubble-green-soft text-bubble-green">
+                          <span className="w-1.5 h-1.5 rounded-full bg-success" />
+                          {t('academy.enrolledBadge')}
+                        </span>
+                      )}
+                    </RowButton>
+                  </li>
+                ))}
+              </ul>
+            )
 
-            <Pane title={t('academy.column.detail')}>
-              {!selectedCourseId ? (
-                <PaneEmpty label={t('academy.empty.detail')} />
-              ) : loadingDetail || !course ? (
-                <PaneSkeleton />
-              ) : (
-                <CourseDetail
-                  course={course}
-                  offerings={offerings}
-                  termsById={termsById}
-                  deptsById={deptsById}
-                  currentTerm={currentTerm}
-                  enrollment={enrolledCourseIds.get(course.id) ?? null}
-                  enrollBusy={enrollBusy}
-                  onEnroll={() => handleEnroll(course.id)}
-                  onUnenroll={(eid) => setPendingUnenroll(eid)}
-                  onOpenCourse={() => navigate(`/courses/${course.id}`)}
-                />
-              )}
-            </Pane>
-          </div>
+            const detailBody = !selectedCourseId ? (
+              <PaneEmpty label={t('academy.empty.detail')} />
+            ) : loadingDetail || !course ? (
+              <PaneSkeleton />
+            ) : (
+              <CourseDetail
+                course={course}
+                offerings={offerings}
+                termsById={termsById}
+                deptsById={deptsById}
+                currentTerm={currentTerm}
+                enrollment={enrolledCourseIds.get(course.id) ?? null}
+                enrollBusy={enrollBusy}
+                onEnroll={() => handleEnroll(course.id)}
+                onUnenroll={(eid) => setPendingUnenroll(eid)}
+                onOpenCourse={() => navigate(`/courses/${course.id}`)}
+              />
+            )
+
+            // Phone: one pane at a time with a back chevron — no three-way squash.
+            if (isPhone) {
+              const selectedDept = departments.find((d) => d.id === selectedDeptId) ?? null
+              return (
+                <div className="h-[clamp(26rem,64vh,42rem)] min-h-0">
+                  {mobileStep === 'departments' && (
+                    <Pane title={t('academy.column.departments')}>{departmentsBody}</Pane>
+                  )}
+                  {mobileStep === 'courses' && (
+                    <Pane
+                      title={selectedDept?.name ?? t('academy.column.courses')}
+                      onBack={() => setMobileStep('departments')}
+                      backLabel={t('academy.column.departments')}
+                    >
+                      {coursesBody}
+                    </Pane>
+                  )}
+                  {mobileStep === 'detail' && (
+                    <Pane
+                      title={course?.name ?? t('academy.column.detail')}
+                      onBack={() => setMobileStep('courses')}
+                      backLabel={selectedDept?.name ?? t('academy.column.courses')}
+                    >
+                      {detailBody}
+                    </Pane>
+                  )}
+                </div>
+              )
+            }
+
+            return (
+              <div className="h-[clamp(28rem,60vh,40rem)] grid grid-cols-1 tablet:grid-cols-[16rem_minmax(0,20rem)_minmax(0,1fr)] gap-3 min-h-0">
+                <Pane title={t('academy.column.departments')}>{departmentsBody}</Pane>
+                <Pane title={t('academy.column.courses')}>{coursesBody}</Pane>
+                <Pane title={t('academy.column.detail')}>{detailBody}</Pane>
+              </div>
+            )
+          })()}
         </section>
       </PageShell>
 
@@ -545,11 +584,32 @@ function CourseGlyph({ id, label }: { id: string; label: string }) {
   )
 }
 
-function Pane({ title, children }: { title: string; children: React.ReactNode }) {
+function Pane({
+  title,
+  children,
+  onBack,
+  backLabel,
+}: {
+  title: string
+  children: React.ReactNode
+  /** Phone drill-down: when set, the header shows a back chevron. */
+  onBack?: () => void
+  backLabel?: string
+}) {
   return (
     <Card size="lg" className="flex flex-col min-h-0 h-full">
-      <div className="px-4 py-3 border-b border-line shrink-0">
-        <h2 className="text-sm font-semibold text-secondary">{title}</h2>
+      <div className="px-4 py-3 border-b border-line shrink-0 flex items-center gap-2">
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            aria-label={backLabel}
+            className="shrink-0 -ms-1.5 grid place-items-center w-7 h-7 rounded-full text-primary-600 hover:bg-surface-muted transition bubble-pop"
+          >
+            <ChevronIcon className="w-4 h-4 rtl:rotate-180" />
+          </button>
+        )}
+        <h2 className="text-sm font-semibold text-secondary truncate">{title}</h2>
       </div>
       <div className="flex-1 min-h-0 overflow-y-auto p-2">{children}</div>
     </Card>
