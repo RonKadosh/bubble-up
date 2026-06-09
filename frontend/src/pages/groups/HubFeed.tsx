@@ -42,9 +42,12 @@ function FeedLine({ icon: Icon, tone = 'text-muted', title = false, children }: 
   children: ReactNode
 }) {
   return (
-    <p className={`flex items-center gap-2 min-w-0 ${title ? 'font-semibold text-base' : 'text-sm text-secondary'}`}>
-      <Icon className={`shrink-0 ${title ? 'w-[1.05rem] h-[1.05rem]' : 'w-4 h-4'} ${tone}`} />
-      <span className="truncate">{children}</span>
+    <p className={`flex items-start gap-2 min-w-0 ${title ? 'font-semibold text-base' : 'text-sm text-secondary'}`}>
+      <Icon className={`shrink-0 mt-0.5 ${title ? 'w-[1.05rem] h-[1.05rem]' : 'w-4 h-4'} ${tone}`} />
+      {/* Wrap to two lines rather than hard-truncating: on phone a single line
+          clips the verb + Bubble name off membership/activity lines, losing the
+          whole message. Two lines keep meaning while still bounding card height. */}
+      <span className="line-clamp-2">{children}</span>
     </p>
   )
 }
@@ -182,9 +185,12 @@ function courseLabel(item: FeedItem): string {
 export function HubFeed({
   onSelectGroup,
   onOpenCreate,
+  onOpenBubbleList,
 }: {
   onSelectGroup: (groupId: string) => void
   onOpenCreate: () => void
+  /** Phone/tablet only: opens the Bubble-list drawer. Rendered below the header. */
+  onOpenBubbleList?: () => void
 }) {
   const { t } = useTranslation()
 
@@ -221,6 +227,18 @@ export function HubFeed({
   return (
     <>
       <PageShell title={t('dashboard.title')} subtitle={t('dashboard.subtitle')}>
+        {/* Bubble-list entry — phone/tablet only, sitting just below the header. */}
+        {onOpenBubbleList && (
+          <div className="desktop:hidden mb-4">
+            <button
+              type="button"
+              onClick={onOpenBubbleList}
+              className="bubble-pop rounded-full bg-brand-gradient-strong text-on-brand text-sm font-semibold px-5 py-2 shadow-themed"
+            >
+              {t('groups.openBubbleList')}
+            </button>
+          </div>
+        )}
         {loading ? (
           <FeedSkeleton />
         ) : (
@@ -372,17 +390,33 @@ function FeedItemCard({
           <Avatar id={item.groupId} name={item.groupName ?? '?'} size="md" ring />
         )}
         <div className="flex-1 min-w-0">{rendered.body}</div>
+        {/* Tablet+: CTA sits inline at the end of the row. */}
         {showCta && (
+          <div className="shrink-0 hidden tablet:block">
+            <Button
+              size="sm"
+              variant={isJoinCta(item.cta!) ? 'primary' : 'secondary'}
+              onClick={(e) => { e.stopPropagation(); activate() }}
+            >
+              {rendered.ctaLabel}
+            </Button>
+          </div>
+        )}
+      </div>
+      {/* Phone: the CTA stacks full-width below the content instead of beside it —
+          otherwise it crushes the text into a sliver of "…" on narrow widths. */}
+      {showCta && (
+        <div className="tablet:hidden mt-3">
           <Button
             size="sm"
             variant={isJoinCta(item.cta!) ? 'primary' : 'secondary'}
-            className="shrink-0"
+            className="w-full"
             onClick={(e) => { e.stopPropagation(); activate() }}
           >
             {rendered.ctaLabel}
           </Button>
-        )}
-      </div>
+        </div>
+      )}
     </Card>
   )
 }

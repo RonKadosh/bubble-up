@@ -606,22 +606,13 @@ export default function GroupsPage() {
           ) : onboarded ? (
             // Home: the cross-Bubble activity feed. Its "open this Bubble" CTAs
             // select in place (no navigation, since we're already in the hub).
-            <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-              <div className="desktop:hidden p-2 border-b border-line shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setMobileSidebarOpen(true)}
-                  className="bubble-pop rounded-full bg-brand-gradient-strong text-on-brand text-sm font-semibold px-5 py-2 shadow-themed"
-                >
-                  {t('groups.openBubbleList')}
-                </button>
-              </div>
-              <div className="flex-1 min-h-0">
-                <HubFeed
-                  onSelectGroup={setSelectedId}
-                  onOpenCreate={() => navigate('/groups', { state: { openCreate: true } })}
-                />
-              </div>
+            // The Bubble-list entry sits just below the feed header (HubFeed).
+            <div className="flex-1 min-h-0">
+              <HubFeed
+                onSelectGroup={setSelectedId}
+                onOpenCreate={() => navigate('/groups', { state: { openCreate: true } })}
+                onOpenBubbleList={() => setMobileSidebarOpen(true)}
+              />
             </div>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-muted text-sm gap-3 px-6 text-center">

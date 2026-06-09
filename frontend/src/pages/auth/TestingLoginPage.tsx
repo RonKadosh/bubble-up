@@ -130,7 +130,11 @@ export default function TestingLoginPage() {
 
                 <div>
                   <label className="text-xs font-medium text-secondary mb-1 block">{t('login.password')}</label>
-                  <div className="relative">
+                  {/* Credential field is LTR (dir on the input) — keep the wrapper LTR
+                      too so the reveal button's logical `end-2` lands on the same side
+                      as the input's reserved `pe-14` padding (otherwise the password
+                      text overlaps the button under RTL). */}
+                  <div className="relative" dir="ltr">
                     <input
                       type={showPassword ? 'text' : 'password'}
                       placeholder={isRegister ? t('login.passwordPlaceholderRegister') : 'password'}

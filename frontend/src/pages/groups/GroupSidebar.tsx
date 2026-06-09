@@ -154,7 +154,7 @@ export function GroupSidebar({ groups, selectedId, meId, unreadByGroup, liveGrou
           desktop:static desktop:z-auto desktop:w-80 desktop:translate-x-0 desktop:shadow-none
           fixed inset-y-0 start-0 z-40 w-[18rem] max-w-[85vw] shadow-bubble
           transition-transform duration-200 ease-out
-          ${mobileOpen ? 'translate-x-0' : '-translate-x-full desktop:translate-x-0'}
+          ${mobileOpen ? 'translate-x-0' : '-translate-x-full rtl:translate-x-full desktop:translate-x-0 desktop:rtl:translate-x-0'}
         `}
       >
       <div className="p-4 border-b border-line flex items-center justify-between gap-2">

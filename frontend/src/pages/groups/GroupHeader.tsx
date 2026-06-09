@@ -1,8 +1,9 @@
 import { useTranslation } from 'react-i18next'
 import { Group } from '../../api/groups'
 import { CalendarEvent } from '../../api/calendar'
+import { Avatar } from '../../components/Avatar'
 import { Button } from '../../components/Button'
-import { ChevronIcon, MenuIcon } from '../../components/Icons'
+import { MenuIcon } from '../../components/Icons'
 import { useViewportStore } from '../../store/viewportStore'
 import { MatchFeedbackControl } from './MatchFeedbackControl'
 
@@ -79,10 +80,10 @@ export function GroupHeader({ group, isOwner, isMember, onJoin, liveSession, onS
     </>
   )
 
-  // Phone: a single compact bar — hamburger, tappable title (opens Bubble Info,
-  // which carries the description / members / actions), and the live CTA. The
-  // full "group panel" (description, match feedback, members strip) is dropped
-  // here so the chat gets the screen.
+  // Phone: a single compact bar — hamburger (Bubble list), the group icon, and
+  // the live CTA. Tapping the icon opens the Bubble Info drawer, which carries
+  // the name, description, the "is this Bubble a fit?" feedback, members and
+  // actions. The full "group panel" is dropped here so the chat gets the screen.
   if (isPhone) {
     return (
       <header className="bg-surface border-b border-line px-2 py-2 flex items-center gap-1.5 shrink-0">
@@ -99,14 +100,11 @@ export function GroupHeader({ group, isOwner, isMember, onJoin, liveSession, onS
           onClick={onOpenInfo}
           aria-haspopup="dialog"
           aria-label={t('groups.info.openStripAria')}
-          className="flex-1 min-w-0 flex items-center gap-1.5 text-start px-1.5 py-1 rounded-full hover:bg-surface-hover transition"
+          className="shrink-0 rounded-full bubble-pop"
         >
-          <h1 className="text-base font-semibold truncate">{group.name}</h1>
-          <span className="shrink-0 text-[0.7rem] px-1.5 py-0.5 rounded-md bg-surface-muted text-secondary tabular-nums">
-            {t('groups.capacity', { count: group.memberCount, max: group.maxMembers })}
-          </span>
-          <ChevronIcon className="w-4 h-4 shrink-0 text-muted -rotate-90" aria-hidden />
+          <Avatar id={group.id} name={group.name} size="md" ring />
         </button>
+        <div className="flex-1 min-w-0" />
         <div className="shrink-0 flex items-center">{actionCta}</div>
       </header>
     )

@@ -25,7 +25,6 @@ import { VideoPanel } from '../pages/room/VideoPanel'
 const PIP_WIDTH = 280
 const PIP_HEIGHT = 158 // 16:9
 const PIP_MARGIN = 16
-const PHONE_MAX_PX = 600
 
 interface Rect {
   top: number
@@ -34,19 +33,14 @@ interface Rect {
   height: number
 }
 
+// The floating picture-in-picture rect (desktop/tablet only — phone never floats
+// a PiP; see `hiddenOffscreen` below). Bottom-right of the viewport.
 function pipRect(): Rect {
-  const phone = window.innerWidth < PHONE_MAX_PX
-  // On phone the floating thumbnail is small and lifted clear of the bottom nav
-  // *and* the chat composer row, so it never sits on top of the controls.
-  const width = phone ? 124 : PIP_WIDTH
-  const height = Math.round((width * 9) / 16)
-  const sideMargin = phone ? 12 : PIP_MARGIN
-  const bottomMargin = phone ? 150 : PIP_MARGIN
   return {
-    top: window.innerHeight - height - bottomMargin,
-    left: window.innerWidth - width - sideMargin,
-    width,
-    height,
+    top: window.innerHeight - PIP_HEIGHT - PIP_MARGIN,
+    left: window.innerWidth - PIP_WIDTH - PIP_MARGIN,
+    width: PIP_WIDTH,
+    height: PIP_HEIGHT,
   }
 }
 
@@ -171,11 +165,12 @@ export function PersistentVideo() {
 
   if (!roomId || !room) return null
 
-  // Phone: while off the room page we DON'T float a PiP — the call stays alive
-  // (iframe stays mounted) but is parked off-screen, so navigating around the app
-  // doesn't shove a video window over the UI. The user returns by re-entering the
-  // room and ends the call with Leave. Desktop/tablet keep the floating PiP.
-  const hiddenOffscreen = isPhone && !onRoomPage
+  // Phone: never float a PiP. The call stays alive (iframe stays mounted) but is
+  // parked off-screen unless it's docked into the room's video cell, so a tiny
+  // video window never sits over the chat/whiteboard/other tabs or other pages.
+  // The user returns by re-entering the room's Video tab and ends with Leave.
+  // Desktop/tablet keep the floating PiP.
+  const hiddenOffscreen = isPhone && !anchored
 
   // When docked to the room page we sit inside the bento cell's rounded box —
   // match the bottom inner radius. As a floating PiP it's a generic rounded card.

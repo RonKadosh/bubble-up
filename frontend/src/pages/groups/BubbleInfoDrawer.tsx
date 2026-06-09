@@ -5,6 +5,7 @@ import { PresenceEntry } from '../../api/presence'
 import { Avatar } from '../../components/Avatar'
 import { Button } from '../../components/Button'
 import { useUserCardStore } from '../../store/userCardStore'
+import { MatchFeedbackControl } from './MatchFeedbackControl'
 import { formatRelative } from './timeFormat'
 
 interface BubbleInfoDrawerProps {
@@ -104,6 +105,13 @@ export function BubbleInfoDrawer({
             </div>
             {group.description && (
               <p className="text-sm text-secondary mt-1">{group.description}</p>
+            )}
+            {/* "Is this Bubble a fit?" — on phone the header is just the icon, so
+                the match-feedback control that desktop shows inline lives here. */}
+            {!isOwner && (
+              <div className="mt-2">
+                <MatchFeedbackControl key={group.id} groupId={group.id} />
+              </div>
             )}
           </div>
 
