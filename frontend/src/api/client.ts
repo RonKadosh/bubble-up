@@ -45,6 +45,7 @@ async function performRefresh(refreshToken: string): Promise<string> {
     role: string
     displayName: string
     avatarUrl: string | null
+    emailVerified: boolean
   }>>(
     '/auth/refresh', { refreshToken }, config
   )
@@ -55,6 +56,7 @@ async function performRefresh(refreshToken: string): Promise<string> {
     role: data.role,
     displayName: data.displayName,
     avatarUrl: data.avatarUrl,
+    emailVerified: data.emailVerified,
   })
   return data.accessToken
 }

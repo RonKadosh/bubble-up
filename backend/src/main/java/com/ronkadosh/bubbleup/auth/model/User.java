@@ -116,4 +116,13 @@ public class User {
             status = UserStatus.ACTIVE;
         }
     }
+
+    /**
+     * Privileged email change used only after the user proves ownership of an
+     * academic mailbox.
+     */
+    public void verifyEmail(String verifiedEmail) {
+        this.email = verifiedEmail;
+        this.emailVerified = true;
+    }
 }

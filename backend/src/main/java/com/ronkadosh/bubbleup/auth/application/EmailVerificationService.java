@@ -150,12 +150,7 @@ public class EmailVerificationService {
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
         // Promote the verified academic email to the user's primary email.
-        // We don't @Setter `email` on User (see the field comment), so we
-        // route through a small JPQL update instead.
-        if (!user.getEmail().equalsIgnoreCase(token.getRequestedEmail())) {
-            userRepository.updateEmail(user.getId(), token.getRequestedEmail());
-        }
-        user.setEmailVerified(true);
+        user.verifyEmail(token.getRequestedEmail());
         return user;
     }
 

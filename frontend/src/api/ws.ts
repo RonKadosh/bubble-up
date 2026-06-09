@@ -49,6 +49,7 @@ async function refreshAccessToken(): Promise<string | null> {
         role: string
         displayName: string
         avatarUrl: string | null
+        emailVerified: boolean
       }>>(
         '/auth/refresh', { refreshToken: rt }, { _isRefreshCall: true } as any
       )
@@ -59,6 +60,7 @@ async function refreshAccessToken(): Promise<string | null> {
         role: data.role,
         displayName: data.displayName,
         avatarUrl: data.avatarUrl,
+        emailVerified: data.emailVerified,
       })
       return data.accessToken
     } catch {

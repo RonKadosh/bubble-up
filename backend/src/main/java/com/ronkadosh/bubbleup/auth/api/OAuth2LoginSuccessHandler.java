@@ -79,15 +79,22 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     }
 
     /**
-     * Redirect to {@code <frontend>/auth/callback#accessToken=...&refreshToken=...}.
+     * Redirect to {@code <frontend>/auth/callback#accessToken=...&refreshToken=...}
+     * plus the user summary the React auth store needs.
      * The URL fragment is invisible to the server side (browsers strip fragments
      * from {@code Referer}, redirect logs, etc.), so the tokens don't bleed
      * into request logs we don't control.
      */
     private String buildSuccessRedirect(AuthResponse tokens) {
         return frontendOrigin() + "/auth/callback#"
-                + "accessToken=" + URLEncoder.encode(tokens.accessToken(), StandardCharsets.UTF_8)
-                + "&refreshToken=" + URLEncoder.encode(tokens.refreshToken(), StandardCharsets.UTF_8);
+                + "accessToken=" + url(tokens.accessToken())
+                + "&refreshToken=" + url(tokens.refreshToken())
+                + "&userId=" + url(tokens.userId().toString())
+                + "&email=" + url(tokens.email())
+                + "&role=" + url(tokens.role())
+                + "&displayName=" + url(tokens.displayName())
+                + "&avatarUrl=" + url(tokens.avatarUrl() == null ? "" : tokens.avatarUrl())
+                + "&emailVerified=" + tokens.emailVerified();
     }
 
     /**
@@ -98,7 +105,11 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
      */
     private String buildErrorRedirect(String errorCode) {
         return frontendOrigin() + "/auth/callback?error="
-                + URLEncoder.encode(errorCode, StandardCharsets.UTF_8);
+                + url(errorCode);
+    }
+
+    private static String url(String value) {
+        return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 
     private String frontendOrigin() {

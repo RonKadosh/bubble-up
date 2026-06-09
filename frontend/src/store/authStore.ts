@@ -8,6 +8,13 @@ export interface AuthUser {
   displayName: string
   /** Cache-busted absolute path from the server, or null when no avatar set. */
   avatarUrl: string | null
+  /**
+   * True once the user has proved ownership of an Israeli academic email
+   * (either directly via a .ac.il Google account, or via a SES-sent
+   * verification link). The router uses this to push unverified users to
+   * /auth/verify before any other page.
+   */
+  emailVerified: boolean
 }
 
 interface AuthState {
@@ -34,8 +41,8 @@ export const useAuthStore = create<AuthState>()(
       },
       clearAuth: () => set({ accessToken: null, refreshToken: null, user: null }),
     }),
-    // Bumped from v2 → v3 because AuthUser gained `displayName` + `avatarUrl`.
-    // Existing users on v2 re-login (no migration needed in dev's create-drop world).
-    { name: 'bubbleup-auth-v3' }
+    // Bumped v3 -> v4: AuthUser gained `emailVerified`. Existing v3 users get
+    // re-prompted to sign in via Google (no migration in dev's create-drop world).
+    { name: 'bubbleup-auth-v4' }
   )
 )

@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import LoginPage from './pages/LoginPage'
+import OAuthCallbackPage from './pages/auth/OAuthCallbackPage'
+import VerifyEmailPage from './pages/auth/VerifyEmailPage'
 import DashboardPage from './pages/DashboardPage'
 import GroupsPage from './pages/GroupsPage'
 import ProfilePage from './pages/ProfilePage'
@@ -27,7 +29,12 @@ import { connectWs, disconnectWs } from './api/ws'
 
 function RequireAuth({ children }: { children: JSX.Element }) {
   const accessToken = useAuthStore((s) => s.accessToken)
+  const emailVerified = useAuthStore((s) => s.user?.emailVerified ?? false)
   if (!accessToken) return <Navigate to="/login" replace />
+  // Users who signed in with a non-.ac.il Google account are sent to the
+  // verification page until they prove ownership of an academic mailbox.
+  // The verification page itself is mounted outside this guard.
+  if (!emailVerified) return <Navigate to="/auth/verify" replace />
   return children
 }
 
@@ -85,6 +92,12 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        {/* OAuth landing pages — public on purpose: /auth/callback reads
+            tokens from the URL fragment and hydrates authStore; /auth/verify
+            handles BOTH the "enter your academic email" form (authed) AND the
+            "redeem the token in the email" path (public). */}
+        <Route path="/auth/callback" element={<OAuthCallbackPage />} />
+        <Route path="/auth/verify" element={<VerifyEmailPage />} />
         <Route
           element={
             <RequireAuth>
