@@ -1,4 +1,11 @@
 spring:
+  # OAuth2 client auto-config tries to validate the Google issuer-uri at
+  # context boot — that's a live HTTPS call to accounts.google.com which is
+  # both unreliable and unwanted in tests. Tests that need OAuth2 wiring
+  # (none today) can re-enable it explicitly via @TestPropertySource.
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.security.oauth2.client.servlet.OAuth2ClientAutoConfiguration
   datasource:
     url: jdbc:h2:mem:bubbleup_test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
     username: sa

@@ -104,7 +104,8 @@ public class AuthCommandService {
                 user.getEmail(),
                 user.getRole().name(),
                 user.getDisplayName(),
-                identity.avatarUrl()
+                identity.avatarUrl(),
+                user.isEmailVerified()
         );
     }
 }

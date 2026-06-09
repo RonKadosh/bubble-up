@@ -64,6 +64,25 @@ resource "aws_iam_role_policy" "ec2_app" {
         Effect   = "Allow"
         Action   = ["s3:ListBucket"]
         Resource = aws_s3_bucket.backups.arn
+      },
+      {
+        # Sending email-verification messages from the backend container.
+        # ses:SendEmail is the legacy text API; ses:SendRawEmail covers MIME
+        # which the AWS Java SDK uses internally for transactional templates.
+        # GetSendQuota lets the backend health-check that SES is reachable.
+        Sid    = "SendVerificationEmail"
+        Effect = "Allow"
+        Action = [
+          "ses:SendEmail",
+          "ses:SendRawEmail",
+          "ses:GetSendQuota"
+        ]
+        Resource = "*"
+        Condition = {
+          StringEquals = {
+            "aws:RequestedRegion" = var.region
+          }
+        }
       }
     ]
   })

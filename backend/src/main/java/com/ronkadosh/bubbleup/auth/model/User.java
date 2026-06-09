@@ -26,8 +26,36 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(nullable = false)
+    /**
+     * Set only for legacy password-based accounts. {@code null} for every user
+     * that signed in via Google OAuth (the post-v0.2 default). The column is
+     * scheduled for removal once the migration is complete and no password
+     * users remain. Until then it stays nullable to keep the column.
+     */
+    @Column(name = "password_hash")
     private String passwordHash;
+
+    /**
+     * Stable Google subject identifier ({@code sub} claim of the ID token).
+     * Unique per Google account; never reused. Used as the primary lookup key
+     * for OAuth sign-ins so that a user changing their Google email still maps
+     * to the same row.
+     */
+    @Column(name = "google_sub", unique = true, length = 64)
+    @Setter
+    private String googleSub;
+
+    /**
+     * True once we've confirmed the user actually owns this email. Always true
+     * when the email itself was the Google account email (Google verifies it
+     * for us). When the user signs in with a personal Google account but wants
+     * to act as e.g. a BGU student, we send a confirmation link via SES — this
+     * flag flips to true when they click it.
+     */
+    @Column(name = "email_verified", nullable = false)
+    @Setter
+    @Builder.Default
+    private boolean emailVerified = false;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
