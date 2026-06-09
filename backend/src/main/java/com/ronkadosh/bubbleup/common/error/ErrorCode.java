@@ -22,6 +22,16 @@ public enum ErrorCode {
     ACCOUNT_SUSPENDED(ErrorCategory.FORBIDDEN, HttpStatus.FORBIDDEN),
     ACCOUNT_BANNED(ErrorCategory.FORBIDDEN, HttpStatus.FORBIDDEN),
 
+    // OAuth2 / Google sign-in
+    /** Google's ID token didn't carry an email claim (rare; user denied scope). */
+    OAUTH_EMAIL_MISSING(ErrorCategory.UNAUTHORIZED, HttpStatus.UNAUTHORIZED),
+    /** Google said the email isn't verified on their side. */
+    OAUTH_EMAIL_UNVERIFIED(ErrorCategory.UNAUTHORIZED, HttpStatus.UNAUTHORIZED),
+    /** Email domain isn't an Israeli academic institution (.ac.il + registered). */
+    NOT_ACADEMIC_EMAIL(ErrorCategory.FORBIDDEN, HttpStatus.FORBIDDEN),
+    /** OAuth client not configured (GOOGLE_OAUTH_CLIENT_ID/_SECRET unset). */
+    OAUTH_NOT_CONFIGURED(ErrorCategory.INTERNAL, HttpStatus.SERVICE_UNAVAILABLE),
+
     // Groups
     GROUP_NOT_FOUND(ErrorCategory.NOT_FOUND, HttpStatus.NOT_FOUND),
     GROUP_IS_FULL(ErrorCategory.CONFLICT, HttpStatus.CONFLICT),

@@ -35,6 +35,12 @@
       <artifactId>spring-boot-starter-security</artifactId>
     </dependency>
 
+    <!-- OAuth2 client (Google sign-in) -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-oauth2-client</artifactId>
+    </dependency>
+
     <!-- JPA + PostgreSQL -->
     <dependency>
       <groupId>org.springframework.boot</groupId>

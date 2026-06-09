@@ -18,6 +18,27 @@ spring:
       max-file-size: 25MB
       max-request-size: 26MB
 
+  # Google sign-in. When CLIENT_ID/SECRET are blank the registration is
+  # effectively disabled (Spring still wires the auto-config but the
+  # /oauth2/authorization/google endpoint will fail with a clear error).
+  # This lets the app boot in environments that don't have OAuth set up yet
+  # (e.g. a CI job running mvn verify without secrets).
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_OAUTH_CLIENT_ID:}
+            client-secret: ${GOOGLE_OAUTH_CLIENT_SECRET:}
+            scope:
+              - openid
+              - email
+              - profile
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+        provider:
+          google:
+            issuer-uri: https://accounts.google.com
+
 server:
   port: 8080
 
