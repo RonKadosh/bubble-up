@@ -12,15 +12,23 @@ interface Props {
   room: BubbleRoom
   /** Live count of users currently in the video call. */
   inCall?: number
+  /**
+   * The Bubble the user entered this session from (via a chat/calendar link or a
+   * feed CTA). When set, the header offers "Open Bubble" (juggle back to the hub
+   * while the call stays alive as a PiP) and Leave returns there instead of the
+   * expert directory. Null when entered context-free (e.g. a direct link).
+   */
+  fromGroupId?: string | null
 }
 
 /**
- * Header for the expert-session room — visually parallel to {@link RoomHeader}
- * but titled with the session title (not the static "Bubble Room") and the
- * "open" action sends the user to the expert's public profile instead of the
- * groups hub.
+ * Header for the expert-session room — visually parallel to {@link RoomHeader}.
+ * When the user arrived from a Bubble it mirrors {@link RoomHeader}'s juggle:
+ * "Open Bubble" pops back to the hub (call persists as a PiP) and Leave returns
+ * to the Bubble. Without an originating Bubble it falls back to the expert's
+ * public profile / the directory.
  */
-export function ExpertRoomHeader({ session, room, inCall = 0 }: Props) {
+export function ExpertRoomHeader({ session, room, inCall = 0, fromGroupId = null }: Props) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const [now, setNow] = useState(() => Date.now())
@@ -53,14 +61,25 @@ export function ExpertRoomHeader({ session, room, inCall = 0 }: Props) {
         {timeLabel && <span className="text-xs text-muted truncate">{timeLabel}</span>}
       </div>
       <div className="flex items-center gap-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate(`/experts/${session.expertUserId}`)}
-          title={t('expertRoom.openProfileTitle')}
-        >
-          {t('expertRoom.openProfile')}
-        </Button>
+        {fromGroupId ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate('/groups')}
+            title={t('room.openBubbleTitle')}
+          >
+            {t('room.openBubble')}
+          </Button>
+        ) : (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate(`/experts/${session.expertUserId}`)}
+            title={t('expertRoom.openProfileTitle')}
+          >
+            {t('expertRoom.openProfile')}
+          </Button>
+        )}
         <Button
           variant="danger"
           size="sm"
@@ -68,7 +87,8 @@ export function ExpertRoomHeader({ session, room, inCall = 0 }: Props) {
             // Actually end the call — clear the active room so PersistentVideo
             // disposes the iframe instead of shrinking it to a floating PiP.
             useActiveRoomStore.getState().clearActive()
-            navigate('/experts')
+            // Return to the Bubble we came from when we know it; otherwise the directory.
+            navigate(fromGroupId ? '/groups' : '/experts')
           }}
         >
           {t('room.leave')}

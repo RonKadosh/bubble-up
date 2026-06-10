@@ -12,6 +12,8 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, UUID> {
 
     List<Enrollment> findAllByUserId(UUID userId);
 
+    List<Enrollment> findAllByOfferingId(UUID offeringId);
+
     List<Enrollment> findAllByUserIdAndOfferingIdIn(UUID userId, Collection<UUID> offeringIds);
 
     boolean existsByUserIdAndOfferingId(UUID userId, UUID offeringId);

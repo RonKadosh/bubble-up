@@ -13,6 +13,7 @@ import { PersistentVideo } from './PersistentVideo'
 import { QuizPrompt } from './QuizPrompt'
 import { OnboardingGuide } from './OnboardingGuide'
 import { UserProfileCard } from './UserProfileCard'
+import { Toaster } from './Toaster'
 import {
   BubbleLogo,
   BulbIcon,
@@ -305,6 +306,7 @@ export default function Layout() {
       <PersistentVideo />
       <QuizPrompt />
       <UserProfileCard />
+      <Toaster />
     </div>
   )
 }

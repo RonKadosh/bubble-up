@@ -58,11 +58,17 @@ public class FeedQueryService {
         FeedContext ctx = new FeedContext(userId, groupIds, groupNames, timeProvider.now(), FETCH_LIMIT);
 
         Map<FeedSection, List<FeedItemResponse>> bySection = new EnumMap<>(FeedSection.class);
+        Set<UUID> itemGroupIds = new LinkedHashSet<>();
         for (FeedSource source : sources) {
             List<FeedItemResponse> items = source.fetch(ctx);
             if (items.isEmpty()) continue;
+            for (FeedItemResponse i : items) if (i.groupId() != null) itemGroupIds.add(i.groupId());
             bySection.computeIfAbsent(source.section(), s -> new ArrayList<>()).addAll(items);
         }
+
+        // Cover-image URLs for every group referenced by any item — including
+        // discovery (non-member) groups, so a Bubble's photo shows on its cards.
+        Map<UUID, String> imageUrls = groupInternalService.getGroupImageUrls(itemGroupIds);
 
         List<FeedSectionResponse> sections = new ArrayList<>();
         for (FeedSection section : FeedSection.values()) {
@@ -71,7 +77,12 @@ public class FeedQueryService {
             sortSection(section, items);
             int cap = SECTION_CAPS.getOrDefault(section, FETCH_LIMIT);
             List<FeedItemResponse> capped = items.size() > cap ? items.subList(0, cap) : items;
-            sections.add(new FeedSectionResponse(section.name(), List.copyOf(capped)));
+            List<FeedItemResponse> withImages = capped.stream()
+                    .map(i -> i.groupId() != null && imageUrls.containsKey(i.groupId())
+                            ? i.withGroupImage(imageUrls.get(i.groupId()))
+                            : i)
+                    .toList();
+            sections.add(new FeedSectionResponse(section.name(), withImages));
         }
         return new FeedResponse(sections);
     }

@@ -1,14 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Group, Visibility } from '../../api/groups'
-import {
-  Course,
-  Department,
-  University,
-  getCoursesByDepartment,
-  getDepartments,
-  getUniversities,
-} from '../../api/catalog'
+import { Enrollment, listMyCurrentEnrollments } from '../../api/enrollment'
 import { Avatar } from '../../components/Avatar'
 import { Button } from '../../components/Button'
 
@@ -40,8 +33,9 @@ interface GroupSidebarProps {
   /**
    * Deep-link from elsewhere (dashboard / course page) to open the create form,
    * optionally pre-targeted to a course. Applied once on arrival; the user can
-   * still change the selection afterwards. {@code prefillDeptId} is needed for
-   * the dept→course cascade to surface {@code prefillCourseId}.
+   * still change the selection afterwards. {@code deptId} is accepted for
+   * backwards-compat with existing callers but ignored now that the course list
+   * is sourced from the user's enrolments rather than a dept cascade.
    */
   initialCreate?: { open: boolean; deptId?: string; courseId?: string } | null
   onInitialCreateConsumed?: () => void
@@ -62,60 +56,38 @@ export function GroupSidebar({ groups, selectedId, meId, unreadByGroup, liveGrou
   const [newDescription, setNewDescription] = useState('')
   const [newVisibility, setNewVisibility] = useState<Visibility>('PUBLIC')
   const [newMaxMembers, setNewMaxMembers] = useState(DEFAULT_MAX_MEMBERS)
-  const [universities, setUniversities] = useState<University[]>([])
-  const [departments, setDepartments] = useState<Department[]>([])
-  const [courses, setCourses] = useState<Course[]>([])
-  const [selectedDeptId, setSelectedDeptId] = useState<string>('')
+  // The user's current-term enrolments — a Bubble can only be created under a
+  // course the creator is actually enrolled in (the backend enforces this too),
+  // so we list those directly instead of cascading the full catalog.
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([])
+  const [loadingCourses, setLoadingCourses] = useState(false)
   const [selectedCourseId, setSelectedCourseId] = useState<string>('')
   const [catalogError, setCatalogError] = useState('')
-  // Course to auto-select once the dept's course list arrives (deep-link prefill).
-  const [pendingCourseId, setPendingCourseId] = useState<string>('')
 
-  // Deep-link: open the create form pre-targeted to a course, then tell the
-  // parent to clear the navigation state so a refresh/back doesn't re-trigger it.
+  // Deep-link: open the create form, optionally pre-targeted to a course, then
+  // tell the parent to clear the navigation state so a refresh/back doesn't
+  // re-trigger it. The course is applied once the enrolment list has loaded.
   useEffect(() => {
     if (!initialCreate?.open) return
     setShowCreate(true)
-    if (initialCreate.deptId) setSelectedDeptId(initialCreate.deptId)
-    if (initialCreate.courseId) setPendingCourseId(initialCreate.courseId)
+    if (initialCreate.courseId) setSelectedCourseId(initialCreate.courseId)
     onInitialCreateConsumed?.()
   }, [initialCreate, onInitialCreateConsumed])
 
-  // Once the cascade has loaded the courses for the prefilled dept, select the
-  // target course (if it's actually in that department's list).
+  // Load the user's enrolled courses the first time the form opens.
   useEffect(() => {
-    if (!pendingCourseId) return
-    if (courses.some((c) => c.id === pendingCourseId)) {
-      setSelectedCourseId(pendingCourseId)
-      setPendingCourseId('')
-    }
-  }, [courses, pendingCourseId])
+    if (!showCreate || enrollments.length > 0 || loadingCourses) return
+    setLoadingCourses(true)
+    listMyCurrentEnrollments()
+      .then(setEnrollments)
+      .catch(() => setCatalogError(t('groups.error.loadEnrollments')))
+      .finally(() => setLoadingCourses(false))
+  }, [showCreate, enrollments.length, loadingCourses, t])
 
-  // Load universities + departments the first time the form opens. v1 only has
-  // BGU, so we auto-select the first university and load its departments.
-  useEffect(() => {
-    if (!showCreate || universities.length > 0) return
-    getUniversities()
-      .then(async (us) => {
-        setUniversities(us)
-        if (us.length === 0) return
-        const depts = await getDepartments(us[0].id)
-        setDepartments(depts)
-      })
-      .catch(() => setCatalogError(t('groups.error.loadCatalog')))
-  }, [showCreate, universities.length, t])
-
-  // Cascade: when the user picks a department, refresh the course list.
-  useEffect(() => {
-    if (!selectedDeptId) {
-      setCourses([])
-      setSelectedCourseId('')
-      return
-    }
-    getCoursesByDepartment(selectedDeptId)
-      .then(setCourses)
-      .catch(() => setCatalogError(t('groups.error.loadCatalog')))
-  }, [selectedDeptId, t])
+  // Distinct enrolled courses (an enrolment without a resolved course is skipped).
+  const enrolledCourses = enrollments
+    .filter((e): e is Enrollment & { courseId: string } => !!e.courseId)
+    .filter((e, i, arr) => arr.findIndex((o) => o.courseId === e.courseId) === i)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -131,7 +103,6 @@ export function GroupSidebar({ groups, selectedId, meId, unreadByGroup, liveGrou
     setNewDescription('')
     setNewVisibility('PUBLIC')
     setNewMaxMembers(DEFAULT_MAX_MEMBERS)
-    setSelectedDeptId('')
     setSelectedCourseId('')
     setShowCreate(false)
   }
@@ -193,38 +164,26 @@ export function GroupSidebar({ groups, selectedId, meId, unreadByGroup, liveGrou
             onChange={(e) => setNewDescription(e.target.value)}
             className="border border-line bg-surface rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary-400"
           />
-          {universities.length > 0 && (
-            <div className="text-xs text-muted px-1">
-              {t('groups.createForm.universityLabel')}: <span className="font-semibold">{universities[0].name}</span>
-            </div>
+          {!loadingCourses && enrolledCourses.length === 0 && !catalogError ? (
+            <p className="text-xs text-muted px-1 py-1">{t('groups.createForm.noEnrolledCourses')}</p>
+          ) : (
+            <select
+              value={selectedCourseId}
+              onChange={(e) => setSelectedCourseId(e.target.value)}
+              disabled={loadingCourses || enrolledCourses.length === 0}
+              className="border border-line bg-surface rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary-400 disabled:opacity-50"
+              required
+            >
+              <option value="">
+                {loadingCourses ? t('groups.createForm.loadingCourses') : t('groups.createForm.selectCourse')}
+              </option>
+              {enrolledCourses.map((c) => (
+                <option key={c.courseId} value={c.courseId}>
+                  {c.courseCode ? `${c.courseCode} — ${c.courseName ?? ''}` : c.courseName ?? c.courseId}
+                </option>
+              ))}
+            </select>
           )}
-          <select
-            value={selectedDeptId}
-            onChange={(e) => setSelectedDeptId(e.target.value)}
-            className="border border-line bg-surface rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary-400"
-            required
-          >
-            <option value="">{t('groups.createForm.selectDepartment')}</option>
-            {departments.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name}
-              </option>
-            ))}
-          </select>
-          <select
-            value={selectedCourseId}
-            onChange={(e) => setSelectedCourseId(e.target.value)}
-            disabled={!selectedDeptId}
-            className="border border-line bg-surface rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary-400 disabled:opacity-50"
-            required
-          >
-            <option value="">{t('groups.createForm.selectCourse')}</option>
-            {courses.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.code} — {c.name}
-              </option>
-            ))}
-          </select>
           {catalogError && <p className="text-xs text-danger">{catalogError}</p>}
           <div className="flex gap-3 text-xs">
             <label className="flex items-center gap-1">
@@ -292,7 +251,7 @@ export function GroupSidebar({ groups, selectedId, meId, unreadByGroup, liveGrou
           const content = (
             <>
               <div className={`relative ${isLive ? 'avatar-live-red' : hasUnread ? 'avatar-live' : ''}`}>
-                <Avatar id={g.id} name={g.name} size="md" />
+                <Avatar id={g.id} name={g.name} imageUrl={g.imageUrl} size="md" />
                 {isLive && (
                   <span className="absolute -top-0.5 -end-0.5 flex h-3 w-3" aria-label={t('groups.liveNow')} title={t('groups.liveNow')}>
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-75" />

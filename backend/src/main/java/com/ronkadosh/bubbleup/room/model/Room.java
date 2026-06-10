@@ -83,6 +83,16 @@ public class Room {
     @Setter
     private Instant registrationClosedNotifiedAt;
 
+    /**
+     * GROUP rooms only. Stamped the first tick after the room opens for joining
+     * ({@code event.startsAt - GROUP_OPEN_BEFORE}) when the lifecycle scheduler
+     * posts the {@code SYSTEM_GROUP_ROOM_OPEN} "Bubble is live" card into the
+     * group's chat. Idempotency flag — once non-null, the card has been posted.
+     */
+    @Column(name = "live_notified_at")
+    @Setter
+    private Instant liveNotifiedAt;
+
     @PrePersist
     void onCreate() {
         if (createdAt == null) createdAt = Instant.now();

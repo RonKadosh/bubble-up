@@ -3,8 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Feed, FeedCta, FeedItem, FeedItemKind, FeedSectionKey, getFeed } from '../../api/feed'
 import { Group, getGroup, joinGroup } from '../../api/groups'
+import { CalendarEvent, getEvent } from '../../api/calendar'
 import { listMyCurrentEnrollments } from '../../api/enrollment'
 import { describeError } from '../../api/errors'
+import { useAuthStore } from '../../store/authStore'
+import { useToastStore } from '../../store/toastStore'
+import { EventModal, EventViewModal } from './CalendarPanel'
 import { Avatar } from '../../components/Avatar'
 import { Card } from '../../components/Card'
 import { Button } from '../../components/Button'
@@ -193,9 +197,13 @@ export function HubFeed({
   onOpenBubbleList?: () => void
 }) {
   const { t } = useTranslation()
+  const meId = useAuthStore((s) => s.user?.id ?? null)
+  const showToast = useToastStore((s) => s.show)
 
   const [feed, setFeed] = useState<Feed | null>(null)
   const [loading, setLoading] = useState(true)
+  /** The event opened from an UPCOMING card — view first, edit on demand. */
+  const [eventModal, setEventModal] = useState<{ mode: 'view' | 'edit'; event: CalendarEvent; groupId: string } | null>(null)
   /**
    * Current-term enrolment count. Lets the empty Discovery state tell apart
    * "you haven't enrolled in anything" (→ enroll) from "your courses just have
@@ -220,6 +228,21 @@ export function HubFeed({
     })()
     return () => { cancelled = true }
   }, [])
+
+  async function refreshFeed() {
+    try { setFeed(await getFeed()) } catch { /* keep the stale feed on a transient failure */ }
+  }
+
+  // Open the event detail modal for an UPCOMING card (resolve the event by id).
+  async function handleViewEvent(eventId: string, groupId?: string) {
+    if (!groupId) return
+    try {
+      const event = await getEvent(eventId)
+      setEventModal({ mode: 'view', event, groupId })
+    } catch {
+      showToast(t('dashboard.event.loadError'), 'error')
+    }
+  }
 
   const itemsByKey: Partial<Record<FeedSectionKey, FeedItem[]>> = {}
   for (const s of feed?.sections ?? []) itemsByKey[s.key] = s.items
@@ -256,6 +279,7 @@ export function HubFeed({
                   onPreview={setPreview}
                   onSelectGroup={onSelectGroup}
                   onOpenCreate={onOpenCreate}
+                  onViewEvent={handleViewEvent}
                 />
               </section>
             ))}
@@ -268,6 +292,35 @@ export function HubFeed({
           item={preview}
           onClose={() => setPreview(null)}
           onSelectGroup={onSelectGroup}
+        />
+      )}
+
+      {eventModal?.mode === 'view' && (
+        <EventViewModal
+          event={eventModal.event}
+          meId={meId}
+          isOwner={false}
+          isMember
+          groupId={eventModal.groupId}
+          chatRoomId={null}
+          onEdit={() => setEventModal({ ...eventModal, mode: 'edit' })}
+          onClose={() => setEventModal(null)}
+          onSaved={() => { setEventModal(null); refreshFeed() }}
+          onShared={() => setEventModal(null)}
+          onError={(msg) => showToast(msg, 'error')}
+        />
+      )}
+      {eventModal?.mode === 'edit' && (
+        <EventModal
+          groupId={eventModal.groupId}
+          meId={meId}
+          isOwner={false}
+          isMember
+          mode="edit"
+          initialEvent={eventModal.event}
+          onClose={() => setEventModal(null)}
+          onSaved={() => { setEventModal(null); refreshFeed() }}
+          onError={(msg) => showToast(msg, 'error')}
         />
       )}
     </>
@@ -284,6 +337,7 @@ function SectionItems({
   onPreview,
   onSelectGroup,
   onOpenCreate,
+  onViewEvent,
 }: {
   items: FeedItem[]
   emptyKey: string
@@ -292,6 +346,7 @@ function SectionItems({
   onPreview: (item: FeedItem) => void
   onSelectGroup: (groupId: string) => void
   onOpenCreate: () => void
+  onViewEvent: (eventId: string, groupId?: string) => void
 }) {
   const { t } = useTranslation()
   if (items.length === 0) {
@@ -314,6 +369,7 @@ function SectionItems({
           item={item}
           onPreview={onPreview}
           onSelectGroup={onSelectGroup}
+          onViewEvent={onViewEvent}
         />
       ))}
     </div>
@@ -354,10 +410,12 @@ function FeedItemCard({
   item,
   onPreview,
   onSelectGroup,
+  onViewEvent,
 }: {
   item: FeedItem
   onPreview: (item: FeedItem) => void
   onSelectGroup: (groupId: string) => void
+  onViewEvent: (eventId: string, groupId?: string) => void
 }) {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -366,12 +424,14 @@ function FeedItemCard({
 
   // One activation path for both the whole-card click and the CTA button:
   //  - discovery recommendation → open the public preview (you're not a member yet)
+  //  - upcoming event           → open the event detail modal
   //  - live room/session        → jump straight into the call
   //  - anything else with a group → open that Bubble in the hub (in-place select)
   function activate() {
     if (item.kind === 'recommendation') { onPreview(item); return }
     const cta = item.cta
-    if (cta?.type === 'JOIN_SESSION' && cta.targetId) { navigate(`/sessions/${cta.targetId}`); return }
+    if (cta?.type === 'VIEW_EVENT' && cta.targetId) { onViewEvent(cta.targetId, item.groupId); return }
+    if (cta?.type === 'JOIN_SESSION' && cta.targetId) { navigate(`/sessions/${cta.targetId}`, { state: item.groupId ? { fromGroupId: item.groupId } : undefined }); return }
     if (cta?.type === 'JOIN_ROOM' && cta.targetId) { navigate(`/rooms/${cta.targetId}`); return }
     if (item.groupId) onSelectGroup(item.groupId)
   }
@@ -387,7 +447,7 @@ function FeedItemCard({
     >
       <div className="flex items-center gap-3">
         {item.groupId && (
-          <Avatar id={item.groupId} name={item.groupName ?? '?'} size="md" ring />
+          <Avatar id={item.groupId} name={item.groupName ?? '?'} imageUrl={item.groupImageUrl} size="md" ring />
         )}
         <div className="flex-1 min-w-0">{rendered.body}</div>
         {/* Tablet+: CTA sits inline at the end of the row. */}
@@ -486,7 +546,7 @@ function PublicBubbleModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-4 py-3 border-b border-line flex items-center gap-3">
-          <Avatar id={groupId} name={item.groupName ?? item.title ?? '?'} size="md" ring />
+          <Avatar id={groupId} name={item.groupName ?? item.title ?? '?'} imageUrl={group?.imageUrl ?? item.groupImageUrl} size="md" ring />
           <div className="flex-1 min-w-0">
             <p className="text-xs text-bubble-magenta">{badge}</p>
             <h3 className="font-semibold truncate">{item.groupName ?? item.title}</h3>

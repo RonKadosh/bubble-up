@@ -23,6 +23,7 @@ import { useOnboardingStore, isOnboarded } from '../store/onboardingStore'
 import { useBentoLayoutStore, type BentoKey } from '../store/bentoLayoutStore'
 import { useViewportStore } from '../store/viewportStore'
 import { useActiveRoomStore } from '../store/activeRoomStore'
+import { useToastStore } from '../store/toastStore'
 import { BentoCell } from '../components/BentoCell'
 import { BubbleLoader } from '../components/BubbleLoader'
 import { GroupSidebar } from './groups/GroupSidebar'
@@ -452,7 +453,7 @@ export default function GroupsPage() {
     try {
       const room = await getRoomForEvent(liveSession.id)
       if (room.scope === 'EXPERT_SESSION' && room.expertSessionId) {
-        navigate(`/sessions/${room.expertSessionId}`)
+        navigate(`/sessions/${room.expertSessionId}`, { state: selectedId ? { fromGroupId: selectedId } : undefined })
       } else {
         navigate(`/rooms/${room.id}`)
       }
@@ -472,10 +473,14 @@ export default function GroupsPage() {
 
   async function handleAddMember(groupId: string, userId: string) {
     try {
-      await addMember(groupId, userId)
+      const member = await addMember(groupId, userId)
       await loadGroups()
       refreshMembers(groupId)
       refreshRooms()
+      const name = member.displayName ?? `${userId.slice(0, 8)}…`
+      useToastStore.getState().show(t('groups.toast.added', { name }), 'success', {
+        id: userId, name, imageUrl: member.avatarUrl,
+      })
     } catch (e) {
       setError(describeError(e, t,
         {
@@ -488,11 +493,17 @@ export default function GroupsPage() {
   }
 
   async function handleRemoveMember(groupId: string, userId: string) {
+    // Resolve the member before the row disappears from the cache (name + avatar for the toast).
+    const removed = (membersById[groupId] ?? []).find((m) => m.userId === userId)
+    const name = removed?.displayName ?? `${userId.slice(0, 8)}…`
     try {
       await removeMember(groupId, userId)
       await loadGroups()
       refreshMembers(groupId)
       refreshRooms()
+      useToastStore.getState().show(t('groups.toast.removed', { name }), 'success', {
+        id: userId, name, imageUrl: removed?.avatarUrl,
+      })
     } catch {
       setError(t('groups.error.removeGeneric'))
     }
@@ -637,7 +648,7 @@ export default function GroupsPage() {
               onScheduleRoom={() => setScheduleRoomOpen(true)}
               onJoinLive={handleJoinLive}
               onOpenSidebar={() => setMobileSidebarOpen(true)}
-              onOpenInfo={() => setBubbleInfoOpen(true)}
+              onOpenInfo={() => setBubbleInfoOpen((v) => !v)}
             />
 
             {/* Members strip is part of the desktop/tablet "group panel"; on phone
@@ -649,7 +660,7 @@ export default function GroupsPage() {
                 presence={presence}
                 me={me?.id ?? null}
                 isOwner={isOwner}
-                onOpenInfo={() => setBubbleInfoOpen(true)}
+                onOpenInfo={() => setBubbleInfoOpen((v) => !v)}
               />
             )}
 
@@ -668,6 +679,7 @@ export default function GroupsPage() {
               onTransfer={(uid) => handleTransfer(selected.id, uid)}
               onLeave={() => handleLeave(selected.id)}
               onDelete={() => handleDelete(selected.id)}
+              onUpdated={(g) => setGroups((prev) => prev.map((x) => (x.id === g.id ? g : x)))}
             />
 
             {isPhone ? (

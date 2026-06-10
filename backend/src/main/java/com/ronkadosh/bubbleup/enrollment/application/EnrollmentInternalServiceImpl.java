@@ -64,6 +64,15 @@ public class EnrollmentInternalServiceImpl implements EnrollmentInternalService 
         return repo.existsByUserIdAndOfferingId(userId, offeringId);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<UUID> findUserIdsEnrolledInOffering(UUID offeringId) {
+        return repo.findAllByOfferingId(offeringId).stream()
+                .map(Enrollment::getUserId)
+                .distinct()
+                .toList();
+    }
+
     private Optional<UUID> currentTermOfferingForCourse(UUID userId, UUID courseId) {
         return currentTermIdForUser(userId)
                 .flatMap(termId -> catalogInternalService.offeringIdForCourseAndTerm(courseId, termId));

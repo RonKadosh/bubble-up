@@ -26,7 +26,20 @@ public enum ChatMessageType {
      * Carries an EXPERT_SESSION link so members can jump straight into the room
      * (chat + whiteboard live; video opens at {@code startsAt}).
      */
-    SYSTEM_EXPERT_SESSION_OPEN;
+    SYSTEM_EXPERT_SESSION_OPEN,
+    /**
+     * Posted by the room lifecycle scheduler when a GROUP Bubble Room opens for
+     * joining ({@code event.startsAt - GROUP_OPEN_BEFORE}) into the group's default
+     * chat. The "your Bubble is live" card — carries a ROOM link so members jump
+     * straight in. Idempotent via {@code Room.liveNotifiedAt}.
+     */
+    SYSTEM_GROUP_ROOM_OPEN,
+    /**
+     * Posted when ownership is transferred. {@code content} is the rendered
+     * "X transferred ownership to Y" sentence; {@code subjectUserId} is the new
+     * owner. Rendered as a plain centered notice (like {@code SYSTEM_ROOM_EXTENDED}).
+     */
+    SYSTEM_OWNERSHIP_TRANSFER;
 
     /**
      * Human-authored content (a real message or a deliberate share) — the only

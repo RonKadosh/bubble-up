@@ -52,6 +52,13 @@ public interface GroupInternalService {
     Optional<String> getGroupName(UUID groupId);
 
     /**
+     * Cache-busted cover-image URLs for the given groups, keyed by group id. Only
+     * groups that actually have an image appear in the map. Used by the feed to
+     * show a Bubble's photo on its activity/live/discovery cards.
+     */
+    java.util.Map<UUID, String> getGroupImageUrls(java.util.Collection<UUID> groupIds);
+
+    /**
      * True if {@code viewer} and {@code target} are both members of at least one
      * common group. Used by the profile-visibility gate ({@code GET /api/users/{id}/profile}).
      * Self-check ({@code viewer.equals(target)}) returns true without hitting the DB.

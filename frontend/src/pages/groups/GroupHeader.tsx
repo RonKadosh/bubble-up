@@ -3,7 +3,7 @@ import { Group } from '../../api/groups'
 import { CalendarEvent } from '../../api/calendar'
 import { Avatar } from '../../components/Avatar'
 import { Button } from '../../components/Button'
-import { MenuIcon } from '../../components/Icons'
+import { ChevronIcon, MenuIcon } from '../../components/Icons'
 import { useViewportStore } from '../../store/viewportStore'
 import { MatchFeedbackControl } from './MatchFeedbackControl'
 
@@ -100,9 +100,15 @@ export function GroupHeader({ group, isOwner, isMember, onJoin, liveSession, onS
           onClick={onOpenInfo}
           aria-haspopup="dialog"
           aria-label={t('groups.info.openStripAria')}
-          className="shrink-0 rounded-full bubble-pop"
+          title={t('groups.info.openStripAria')}
+          className="relative shrink-0 rounded-full bubble-pop"
         >
-          <Avatar id={group.id} name={group.name} size="md" ring />
+          <Avatar id={group.id} name={group.name} imageUrl={group.imageUrl} size="md" ring />
+          {/* Affordance hint: a small chevron badge so it reads as "tap to open Bubble Info"
+              on touch, where there's no hover cue. */}
+          <span className="absolute -bottom-0.5 -end-0.5 grid place-items-center w-4 h-4 rounded-full bg-surface border border-line text-secondary shadow-sm">
+            <ChevronIcon className="w-2.5 h-2.5 -rotate-90" />
+          </span>
         </button>
         <div className="flex-1 min-w-0" />
         <div className="shrink-0 flex items-center">{actionCta}</div>

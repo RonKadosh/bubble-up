@@ -41,6 +41,16 @@ public class StudyGroup {
     @Builder.Default
     private GroupStatus status = GroupStatus.ACTIVE;
 
+    /** FileStorageService id of the Bubble's cover image, or null for the generated avatar. */
+    @Column(name = "image_file_id")
+    @Setter
+    private String imageFileId;
+
+    /** MIME type the cover image was uploaded as; null when no image is set. */
+    @Column(name = "image_content_type", length = 100)
+    @Setter
+    private String imageContentType;
+
     @Column(name = "offering_id", nullable = false, updatable = false)
     private UUID offeringId;
 

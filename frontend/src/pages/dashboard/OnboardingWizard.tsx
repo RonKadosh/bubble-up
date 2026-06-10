@@ -102,15 +102,15 @@ export function OnboardingWizard() {
   function advance() {
     if (!gateOk) return
     if (isLast) {
-      // Final step → fill the bar to 100% + "You're all set!", let it linger, then
-      // complete (which unmounts into the dashboard).
+      // Final step → fill the bar to 100% + "You're all set!", let it linger briefly,
+      // then complete (which unmounts into the dashboard).
       setCelebration('allSet')
-      window.setTimeout(() => setWizardLevel(level + 1), 2600)
+      window.setTimeout(() => setWizardLevel(level + 1), 1600)
     } else {
       // Celebrate the feature this level just unlocked (none for the L1 intro).
       if (unlockKey) {
         setCelebration(unlockKey)
-        window.setTimeout(() => setCelebration(null), 2400)
+        window.setTimeout(() => setCelebration(null), 1500)
       }
       setWizardLevel(level + 1)
     }
@@ -127,7 +127,7 @@ export function OnboardingWizard() {
             <h2 className="text-sm font-bold text-base leading-tight">{t('onboarding.wizard.workspaceTitle')}</h2>
           </div>
           <span className="shrink-0 text-xs font-semibold text-base tabular-nums whitespace-nowrap">
-            {t('onboarding.wizard.percentComplete', { pct })}
+            {t('onboarding.wizard.percentComplete', { pct: displayPct })}
           </span>
         </div>
         {/* Grey → light-blue gradient, revealed left-to-right as the % climbs. */}

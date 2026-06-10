@@ -34,6 +34,8 @@ export interface FeedItem {
   kind: FeedItemKind
   groupId?: string
   groupName?: string
+  /** Cache-busted Bubble cover-image URL, or absent for the generated avatar. */
+  groupImageUrl?: string
   /** Universal sort key (occurrence/activity time). Absent for discovery. */
   ts?: string
   title?: string

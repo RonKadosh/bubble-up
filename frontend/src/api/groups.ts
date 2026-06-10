@@ -16,6 +16,8 @@ export interface Group {
   memberCount: number
   /** Max members allowed in this Bubble. Chosen once at creation (4–10); immutable. */
   maxMembers: number
+  /** Cache-busted cover-image URL, or null when no image is set (falls back to the generated avatar). */
+  imageUrl: string | null
   createdAt: string
 }
 
@@ -104,8 +106,42 @@ export async function deleteGroup(id: string): Promise<void> {
   await client.delete(`/groups/${id}`)
 }
 
+/** Upload / replace the Bubble's cover image (owner only). Returns the updated group. */
+export async function uploadGroupImage(id: string, file: File): Promise<Group> {
+  const form = new FormData()
+  form.append('file', file)
+  const res = await client.post<ApiSuccess<Group>>(`/groups/${id}/image`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return res.data.data
+}
+
+/** Clear the Bubble's cover image (owner only). Returns the updated group. */
+export async function deleteGroupImage(id: string): Promise<Group> {
+  const res = await client.delete<ApiSuccess<Group>>(`/groups/${id}/image`)
+  return res.data.data
+}
+
 export async function getMembers(groupId: string): Promise<GroupMember[]> {
   const res = await client.get<ApiSuccess<GroupMember[]>>(`/groups/${groupId}/members`)
+  return res.data.data
+}
+
+/** A user the owner can add: enrolled in the Bubble's offering, not yet a member. */
+export interface GroupCandidate {
+  userId: string
+  displayName: string | null
+  avatarUrl: string | null
+}
+
+/**
+ * Owner-only: students enrolled in this Bubble's offering who aren't members yet.
+ * Optional {@code q} filters by display name. Backs the member-search picker.
+ */
+export async function getGroupCandidates(groupId: string, q?: string): Promise<GroupCandidate[]> {
+  const res = await client.get<ApiSuccess<GroupCandidate[]>>(`/groups/${groupId}/candidates`, {
+    params: q ? { q } : undefined,
+  })
   return res.data.data
 }
 
@@ -116,6 +152,16 @@ export async function joinGroup(id: string): Promise<GroupMember> {
 
 export async function addMember(groupId: string, userId: string): Promise<GroupMember> {
   const res = await client.post<ApiSuccess<GroupMember>>(`/groups/${groupId}/members`, { userId })
+  return res.data.data
+}
+
+/**
+ * Bubbles the caller can invite {@code userId} into — owned, not full, sharing the
+ * target's enrolled offering, target not already a member. Backs the user card's
+ * "Invite to Bubble" action.
+ */
+export async function getInvitableGroups(userId: string): Promise<Group[]> {
+  const res = await client.get<ApiSuccess<Group[]>>(`/groups/invitable-for/${userId}`)
   return res.data.data
 }
 

@@ -166,6 +166,55 @@ public class RoomLifecycleScheduler {
                 self.notifyRegistrationClosedTx(roomId, now);
             }
         }
+
+        // Pass D: GROUP room opens for joining — at startsAt - GROUP_OPEN_BEFORE,
+        // post the "your Bubble is live" card into the group's chat. Idempotent via
+        // liveNotifiedAt. Mirrors Pass C, group-scope twin.
+        if (room.getScope() == RoomScope.GROUP
+                && room.getLiveNotifiedAt() == null
+                && event.startsAt() != null) {
+            Instant opensAt = event.startsAt().minus(RoomQueryService.GROUP_OPEN_BEFORE);
+            if (!now.isBefore(opensAt) && now.isBefore(event.endsAt())) {
+                self.notifyGroupRoomLiveTx(roomId, now);
+            }
+        }
+    }
+
+    /**
+     * Stamps {@code liveNotifiedAt} on the GROUP room and posts the
+     * {@link ChatMessageType#SYSTEM_GROUP_ROOM_OPEN} card into the group's chat.
+     * The post runs in a separate transaction so a chat failure can't roll back the
+     * stamp (and re-spam every tick) — same pattern as the end-soon warning.
+     */
+    @Transactional
+    public void notifyGroupRoomLiveTx(UUID roomId, Instant now) {
+        Room room = roomRepository.findById(roomId).orElse(null);
+        if (room == null
+                || room.getEndedAt() != null
+                || room.getLiveNotifiedAt() != null
+                || room.getScope() != RoomScope.GROUP) {
+            return;
+        }
+        room.setLiveNotifiedAt(now);
+        roomRepository.save(room);
+        UUID groupId = room.getGroupId();
+        if (groupId == null) return;
+        try {
+            self.postGroupRoomLiveMessageTx(groupId, room.getId());
+        } catch (RuntimeException e) {
+            log.warn("[RoomLifecycle] group-room-live post failed for room {}: {}", room.getId(), e.getMessage());
+        }
+    }
+
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
+    public void postGroupRoomLiveMessageTx(UUID groupId, UUID roomId) {
+        chatInternalService.postSystemMessageWithLink(
+                groupId,
+                ChatMessageType.SYSTEM_GROUP_ROOM_OPEN,
+                "Your Bubble is live — hop into the room.",
+                ChatLinkTargetType.ROOM,
+                roomId
+        );
     }
 
     @Transactional

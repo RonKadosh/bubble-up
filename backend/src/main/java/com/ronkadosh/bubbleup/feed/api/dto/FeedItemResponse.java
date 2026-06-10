@@ -41,11 +41,22 @@ public record FeedItemResponse(
         // "<labels> and N others/more". collapsedCount == labels.size() → no overflow.
         List<String> collapsedLabels,
         Integer collapsedCount,
-        FeedCta cta
+        FeedCta cta,
+        /** Cache-busted Bubble cover-image URL, or null for the generated avatar.
+         *  Injected by FeedQueryService after sources build their items. */
+        String groupImageUrl
 ) {
     /** Builder-ish factory keeps source call sites readable despite the wide record. */
     public static Builder of(String kind) {
         return new Builder(kind);
+    }
+
+    /** Returns a copy with the cover-image URL set — used by the feed post-process. */
+    public FeedItemResponse withGroupImage(String url) {
+        return new FeedItemResponse(kind, groupId, groupName, ts, title, subtitle,
+                startsAt, endsAt, eventType, unreadCount, matchPercent, memberCount,
+                participantCount, displayMode, reasonLabels, courseCode, courseName,
+                collapsedLabels, collapsedCount, cta, url);
     }
 
     public static final class Builder {
@@ -98,7 +109,7 @@ public record FeedItemResponse(
             return new FeedItemResponse(kind, groupId, groupName, ts, title, subtitle,
                     startsAt, endsAt, eventType, unreadCount, matchPercent, memberCount,
                     participantCount, displayMode, reasonLabels, courseCode, courseName,
-                    collapsedLabels, collapsedCount, cta);
+                    collapsedLabels, collapsedCount, cta, null);
         }
     }
 }

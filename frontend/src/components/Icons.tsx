@@ -393,3 +393,89 @@ export function CameraIcon(p: IconProps) {
     </Svg>
   )
 }
+
+/* ---- Chat glyphs: replace the old inline emoji in ChatPanel ---- */
+
+export function PlusIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <line x1="12" y1="5" x2="12" y2="19" />
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </Svg>
+  )
+}
+
+/** Paper-plane send glyph. Mirror with `rtl:-scale-x-100` so it points the right way in RTL. */
+export function SendIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <line x1="22" y1="2" x2="11" y2="13" />
+      <polygon points="22 2 15 22 11 13 2 9 22 2" />
+    </Svg>
+  )
+}
+
+export function PinIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <line x1="12" y1="17" x2="12" y2="22" />
+      <path d="M9 4h6l-1 7 3 2v2H7v-2l3-2-1-7z" />
+    </Svg>
+  )
+}
+
+/** Curved reply arrow ("corner up-left"). Mirror with `rtl:-scale-x-100`. */
+export function ReplyIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <polyline points="9 14 4 9 9 4" />
+      <path d="M20 20v-7a4 4 0 0 0-4-4H4" />
+    </Svg>
+  )
+}
+
+export function ClockIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <circle cx="12" cy="12" r="9" />
+      <polyline points="12 7 12 12 15.5 14" />
+    </Svg>
+  )
+}
+
+export function PollIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <line x1="6" y1="20" x2="6" y2="12" />
+      <line x1="12" y1="20" x2="12" y2="4" />
+      <line x1="18" y1="20" x2="18" y2="9" />
+    </Svg>
+  )
+}
+
+/** Crown — used for ownership / "made owner" notices. */
+export function CrownIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M3 8l3.5 3L12 5l5.5 6L21 8l-1.5 10h-15z" />
+      <line x1="5" y1="20" x2="19" y2="20" />
+    </Svg>
+  )
+}
+
+export function FolderIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+    </Svg>
+  )
+}
+
+export function LinkIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72" />
+      <path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72" />
+    </Svg>
+  )
+}

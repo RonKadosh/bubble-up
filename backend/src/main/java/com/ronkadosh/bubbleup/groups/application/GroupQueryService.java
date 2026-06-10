@@ -11,7 +11,9 @@ import com.ronkadosh.bubbleup.catalog.internal.dto.TermRef;
 import com.ronkadosh.bubbleup.common.context.UserRole;
 import com.ronkadosh.bubbleup.common.error.AppException;
 import com.ronkadosh.bubbleup.common.error.ErrorCode;
+import com.ronkadosh.bubbleup.common.file.FileStorageService;
 import com.ronkadosh.bubbleup.enrollment.internal.EnrollmentInternalService;
+import com.ronkadosh.bubbleup.groups.api.dto.GroupCandidateResponse;
 import com.ronkadosh.bubbleup.groups.api.dto.GroupMemberResponse;
 import com.ronkadosh.bubbleup.groups.api.dto.GroupResponse;
 import com.ronkadosh.bubbleup.groups.model.GroupMember;
@@ -50,6 +52,7 @@ public class GroupQueryService {
     private final AuthInternalService authInternalService;
     private final CalendarInternalService calendarInternalService;
     private final EnrollmentInternalService enrollmentInternalService;
+    private final FileStorageService fileStorageService;
 
     @Transactional(readOnly = true)
     public List<GroupResponse> getAllGroups() {
@@ -242,6 +245,29 @@ public class GroupQueryService {
         return toResponse(group);
     }
 
+    /**
+     * Read the cover-image bytes + the content type they were uploaded as. Throws
+     * {@code GROUP_IMAGE_NOT_FOUND} when the Bubble has no image set. Public stream
+     * (served unauthenticated) — mirrors the user-avatar path in
+     * {@code UserProfileQueryService.getAvatar}.
+     */
+    @Transactional(readOnly = true)
+    public ImageStream getImage(UUID groupId) {
+        StudyGroup group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new AppException(ErrorCode.GROUP_IMAGE_NOT_FOUND));
+        if (group.getImageFileId() == null) {
+            throw new AppException(ErrorCode.GROUP_IMAGE_NOT_FOUND);
+        }
+        byte[] bytes = fileStorageService.download(group.getImageFileId());
+        String contentType = group.getImageContentType() != null
+                ? group.getImageContentType()
+                : "image/jpeg";
+        return new ImageStream(bytes, contentType);
+    }
+
+    /** Tuple returned by {@link #getImage(UUID)}. */
+    public record ImageStream(byte[] bytes, String contentType) {}
+
     @Transactional(readOnly = true)
     public List<GroupMemberResponse> getMembers(UUID groupId, UUID requesterId) {
         if (!groupRepository.existsById(groupId)) {
@@ -260,6 +286,76 @@ public class GroupQueryService {
             out.add(GroupMemberResponse.from(m, identities.get(m.getUserId())));
         }
         return out;
+    }
+
+    /**
+     * Owner-only search for users the owner can add to this Bubble: students
+     * enrolled in the Bubble's offering who aren't already members. Backs the
+     * offering-scoped member search that replaced the paste-a-UUID box. Optional
+     * {@code q} filters on display name (case-insensitive contains); results are
+     * name-sorted and capped at {@code CANDIDATE_LIMIT}.
+     */
+    @Transactional(readOnly = true)
+    public List<GroupCandidateResponse> getAddableCandidates(UUID groupId, UUID requesterId, String q) {
+        StudyGroup group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new AppException(ErrorCode.GROUP_NOT_FOUND));
+        requireOwner(groupId, requesterId);
+
+        Set<UUID> memberIds = new HashSet<>();
+        for (GroupMember m : memberRepository.findAllByGroupId(groupId)) memberIds.add(m.getUserId());
+
+        List<UUID> enrolled = enrollmentInternalService.findUserIdsEnrolledInOffering(group.getOfferingId());
+        List<UUID> candidateIds = enrolled.stream()
+                .filter(id -> !memberIds.contains(id))
+                .toList();
+        if (candidateIds.isEmpty()) return List.of();
+
+        Map<UUID, UserIdentity> identities = authInternalService.getIdentitiesByIds(candidateIds);
+        String needle = q == null ? "" : q.trim().toLowerCase(Locale.ROOT);
+        return candidateIds.stream()
+                .map(identities::get)
+                .filter(java.util.Objects::nonNull)
+                .filter(idn -> needle.isEmpty()
+                        || (idn.displayName() != null && idn.displayName().toLowerCase(Locale.ROOT).contains(needle)))
+                .sorted(java.util.Comparator.comparing(
+                        idn -> idn.displayName() == null ? "" : idn.displayName(),
+                        String.CASE_INSENSITIVE_ORDER))
+                .limit(CANDIDATE_LIMIT)
+                .map(idn -> new GroupCandidateResponse(idn.userId(), idn.displayName(), idn.avatarUrl()))
+                .toList();
+    }
+
+    private static final int CANDIDATE_LIMIT = 20;
+
+    /**
+     * Bubbles the caller can invite {@code targetUserId} into: bubbles the caller
+     * owns that are ACTIVE, not full, share the target's enrolled offering, and
+     * don't already contain the target. Backs the "Invite to Bubble" action on the
+     * user card. Empty (not an error) when there's nowhere to invite them.
+     */
+    @Transactional(readOnly = true)
+    public List<GroupResponse> getInvitableGroupsForUser(UUID requesterId, UUID targetUserId) {
+        if (requesterId.equals(targetUserId)) return List.of();
+        return memberRepository.findAllByUserId(requesterId).stream()
+                .filter(m -> m.getRole() == MembershipRole.OWNER)
+                .map(m -> groupRepository.findById(m.getGroupId()).orElse(null))
+                .filter(java.util.Objects::nonNull)
+                .filter(g -> g.getStatus() == GroupStatus.ACTIVE)
+                .filter(g -> memberRepository.countByGroupId(g.getId()) < g.getMaxMembers())
+                .filter(g -> !memberRepository.existsByGroupIdAndUserId(g.getId(), targetUserId))
+                .filter(g -> enrollmentInternalService.isEnrolledInOffering(targetUserId, g.getOfferingId()))
+                .map(this::toResponse)
+                .toList();
+    }
+
+    /** Owner-gate mirroring {@code GroupCommandService.requireOwner}. */
+    private void requireOwner(UUID groupId, UUID userId) {
+        MembershipRole role = memberRepository.findByGroupIdAndUserId(groupId, userId)
+                .map(GroupMember::getRole)
+                .orElseThrow(() -> new AppException(ErrorCode.NOT_GROUP_OWNER));
+        if (role != MembershipRole.OWNER) {
+            throw new AppException(ErrorCode.NOT_GROUP_OWNER);
+        }
     }
 
     /**

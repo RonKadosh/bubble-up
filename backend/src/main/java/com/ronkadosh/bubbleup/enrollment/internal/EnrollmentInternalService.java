@@ -40,4 +40,11 @@ public interface EnrollmentInternalService {
      * {@code offeringId}, and the offering already encodes both course and term.
      */
     boolean isEnrolledInOffering(UUID userId, UUID offeringId);
+
+    /**
+     * All user ids enrolled in the given offering. Backs member-search /
+     * invite-from-roster: a bubble's addable candidates are exactly the offering's
+     * enrolled students (minus current members). Empty when nobody is enrolled.
+     */
+    List<UUID> findUserIdsEnrolledInOffering(UUID offeringId);
 }
