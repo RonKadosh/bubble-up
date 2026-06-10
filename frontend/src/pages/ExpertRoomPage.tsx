@@ -8,6 +8,7 @@ import { getExpertSession, type ExpertSession } from '../api/expert'
 import { subscribeToExpertSessionWriters, subscribeToRoomPresence } from '../api/ws'
 import { errorCode } from '../api/errors'
 import { ExpertRoomHeader } from './room/ExpertRoomHeader'
+import { RoomGateError, RoomGateLoading } from './room/RoomGate'
 import { RoomBentoShell } from './room/RoomBentoShell'
 import { WhiteboardPanel } from './room/WhiteboardPanel'
 import { ExpertRoomChatPanel } from './room/ExpertRoomChatPanel'
@@ -119,18 +120,11 @@ export default function ExpertRoomPage() {
   if (!sessionId) return <Navigate to="/experts" replace />
 
   if (loadError) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full p-8 gap-3">
-        <p className="text-base">{loadError}</p>
-        <a href="/experts" className="text-sm text-link underline">{t('expertRoom.backToDirectory')}</a>
-      </div>
-    )
+    return <RoomGateError message={loadError} backTo="/experts" backLabel={t('expertRoom.backToDirectory')} />
   }
 
   if (!session || !room) {
-    return (
-      <div className="flex items-center justify-center h-full text-muted text-sm">{t('expertRoom.loadingSession')}</div>
-    )
+    return <RoomGateLoading label={t('expertRoom.loadingSession')} />
   }
 
   // Video cell:

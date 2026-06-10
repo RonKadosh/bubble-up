@@ -108,12 +108,12 @@ export function UserProfileCard() {
   const isSelf = !!me && me.id === userId
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4" onClick={close}>
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4 animate-fade-in" onClick={close}>
       <div
         role="dialog"
         aria-modal="true"
         onClick={(e) => e.stopPropagation()}
-        className="bg-surface rounded-3xl shadow-bubble border border-line w-full max-w-sm overflow-hidden"
+        className="bg-surface rounded-3xl shadow-bubble animate-pop-in border border-line w-full max-w-sm overflow-hidden"
       >
         <div className="flex justify-end px-3 pt-3">
           <button

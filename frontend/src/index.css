@@ -46,9 +46,12 @@
     --warning: #d4a72c;
     --danger: #d94f4f;
 
-    /* Silver — cool grey-blue, partner of the brand blue. */
-    --silver: #cfdae3;
+    /* Silver — cool neutral, partner of the brand blue. */
+    --silver: #c4d0d6;
     --silver-soft: #e6ecf1;
+    /* The specular highlight stop inside the brand gradients — the bright band
+       that makes the silver read metallic instead of dull. */
+    --brand-sheen: #e8eef1;
 
     /* Bubble iridescence — light mode: soft pastel rim colours. */
     --bubble-magenta: #e8aed0;
@@ -87,6 +90,9 @@
 
     --silver: #2a3540;
     --silver-soft: #1f2932;
+    /* Dark sheen: just lighter than the dark silver, so the highlight still
+       reads as sheen without becoming a white slab on the dark sidebar. */
+    --brand-sheen: #3a4853;
 
     /* Dark mode iridescence — match real soap bubbles on dark backgrounds:
        deep amethyst edge, dark teal edge, deep navy specular. All muted, never neon. */
@@ -103,20 +109,49 @@
       0 0 36px rgba(56, 154, 224, 0.18);
   }
 
+  :root {
+    /* Two-font system (both Hebrew-complete, loaded in main.tsx):
+       Rubik (rounded terminals — the bubbly voice) for headings, buttons, and
+       Bubble names; Assistant (Hebrew-first humanist) for body and chat. */
+    --font-heading: 'Rubik Variable', 'Assistant Variable', ui-sans-serif, system-ui,
+                    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-body: 'Assistant Variable', ui-sans-serif, system-ui,
+                 "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+
   html, body, #root {
     height: 100%;
   }
   body {
     background-color: var(--bg);
     color: var(--text);
-    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-                 "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: var(--font-body);
     -webkit-font-smoothing: antialiased;
+  }
+  /* The heading voice: real headings and buttons get it automatically;
+     span/p-based titles (bubble names, panel labels) opt in via .font-heading. */
+  h1, h2, h3, h4, button {
+    font-family: var(--font-heading);
   }
   ::selection {
     background-color: var(--color-primary-200);
     color: var(--color-primary-900);
   }
+
+  /* Themed thin scrollbars — quiet, brand-tinted, auto dark via the vars. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+  }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--border-strong);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover { background-color: var(--text-muted); }
 }
 
 @layer utilities {
@@ -127,6 +162,10 @@
     width: 100%;
     max-width: 1600px;
   }
+
+  /* The heading typeface for span/p-based titles (bubble names, panel labels,
+     the sidebar brand) — h1–h4 and buttons get it from the base layer. */
+  .font-heading { font-family: var(--font-heading); }
 
   /* Semantic neutral tokens — auto dark-mode via CSS variable swap. */
   .bg-base { background-color: var(--bg); }
@@ -165,6 +204,11 @@
   .border-bubble-green\/30   { border-color: color-mix(in srgb, var(--bubble-green) 30%, transparent); }
   .text-bubble-magenta   { color: var(--bubble-magenta); }
   .text-bubble-green     { color: var(--bubble-green); }
+  /* Readable accent text — the bubble rim colors pulled toward the text tone,
+     for icon chips and badges that must stay legible (the raw rim colors are
+     pastel-on-light / deep-on-dark, fine for borders but weak for glyphs). */
+  .text-accent-magenta { color: color-mix(in srgb, var(--bubble-magenta) 60%, var(--text)); }
+  .text-accent-green   { color: color-mix(in srgb, var(--bubble-green) 60%, var(--text)); }
   .bg-surface\/80 { background-color: color-mix(in srgb, var(--surface) 80%, transparent); }
   .bg-bubble-magenta-soft { background-color: color-mix(in srgb, var(--bubble-magenta) 12%, transparent); }
   .bg-bubble-green-soft   { background-color: color-mix(in srgb, var(--bubble-green)   12%, transparent); }
@@ -307,23 +351,49 @@
   .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
   .no-scrollbar::-webkit-scrollbar { display: none; }
 
-  /* Brand gradients: light-blue → silver. The signature Bubble.up look. */
+  /* Brand gradients: light-blue → sheen → silver. The signature Bubble.up
+     look — the --brand-sheen stop is the specular highlight that makes the
+     silver tail read metallic instead of dull grey. */
   .bg-brand-gradient {
-    background-image: linear-gradient(135deg, var(--color-primary-300) 0%, var(--color-primary-200) 40%, var(--silver) 100%);
+    background-image: linear-gradient(135deg, var(--color-primary-300) 0%, var(--brand-sheen) 55%, var(--silver) 100%);
   }
   .bg-brand-gradient-soft {
     background-image: linear-gradient(135deg, var(--color-primary-100) 0%, var(--color-primary-50) 45%, var(--silver-soft) 100%);
   }
   .bg-brand-gradient-strong {
-    background-image: linear-gradient(135deg, var(--color-primary-400) 0%, var(--color-primary-300) 50%, var(--silver) 100%);
+    background-image: linear-gradient(135deg, var(--color-primary-400) 0%, var(--color-primary-300) 30%, var(--brand-sheen) 65%, var(--silver) 100%);
   }
   .bg-brand-gradient-vertical {
-    background-image: linear-gradient(180deg, var(--color-primary-300) 0%, var(--color-primary-400) 40%, var(--silver) 100%);
+    background-image: linear-gradient(180deg, var(--color-primary-300) 0%, var(--color-primary-400) 38%, var(--brand-sheen) 72%, var(--silver) 100%);
+  }
+  /* Dark mode: the sheen/silver stops are dark slates, so an early sheen would
+     darken the middle of pills and put the navy text-on-brand on a dark patch.
+     Keep the blue half long (the pre-sheen proportions) and let the sheen land
+     late, as a quiet edge highlight. */
+  .dark .bg-brand-gradient {
+    background-image: linear-gradient(135deg, var(--color-primary-300) 0%, var(--color-primary-200) 40%, var(--brand-sheen) 80%, var(--silver) 100%);
+  }
+  .dark .bg-brand-gradient-strong {
+    background-image: linear-gradient(135deg, var(--color-primary-400) 0%, var(--color-primary-300) 50%, var(--brand-sheen) 82%, var(--silver) 100%);
+  }
+  .dark .bg-brand-gradient-vertical {
+    background-image: linear-gradient(180deg, var(--color-primary-300) 0%, var(--color-primary-400) 40%, var(--brand-sheen) 80%, var(--silver) 100%);
+  }
+  /* The navy punch — for THE primary action only (one per page), with white
+     text. Never on large surfaces: the sidebar, tabs, and ambient chrome keep
+     the silver family. Pairs with design-philosophy "functional contrast". */
+  .bg-brand-gradient-deep {
+    background-image: linear-gradient(135deg, var(--color-primary-400) 0%, var(--color-primary-600) 45%, var(--color-primary-800) 100%);
   }
   .bg-bubble-glow {
     background:
       radial-gradient(ellipse at 20% 20%, rgba(255,255,255,0.45) 0%, transparent 50%),
-      linear-gradient(135deg, var(--color-primary-300) 0%, var(--color-primary-200) 50%, var(--silver) 100%);
+      linear-gradient(135deg, var(--color-primary-300) 0%, var(--brand-sheen) 60%, var(--silver) 100%);
+  }
+  .dark .bg-bubble-glow {
+    background:
+      radial-gradient(ellipse at 20% 20%, rgba(255,255,255,0.45) 0%, transparent 50%),
+      linear-gradient(135deg, var(--color-primary-300) 0%, var(--color-primary-200) 50%, var(--brand-sheen) 82%, var(--silver) 100%);
   }
   .text-on-brand { color: #0d2334; }
 
@@ -388,4 +458,159 @@
     100% { opacity: 1; transform: translateY(0)    scaleY(1); }
   }
   .animate-rolldown { transform-origin: top; animation: rolldown 180ms cubic-bezier(.34,1.2,.64,1) both; }
+
+  /* The signature hairline: an iridescent 1px line that fades out at both ends.
+     Use as a divider accent under header bands — sparse, it should whisper. */
+  .divider-iridescent {
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      transparent,
+      color-mix(in srgb, var(--bubble-magenta) 55%, transparent) 18%,
+      color-mix(in srgb, var(--bubble-blue) 65%, transparent) 50%,
+      color-mix(in srgb, var(--bubble-green) 55%, transparent) 82%,
+      transparent
+    );
+  }
+
+  /* Slow vertical drift for decorative bubbles (login scene). Per-bubble
+     variety via --drift-duration / --drift-delay inline styles; a negative
+     delay desynchronizes phases so the field never moves in lockstep. */
+  @keyframes bubble-drift {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(calc(var(--drift-distance, -10px))); }
+  }
+  .bubble-drift {
+    animation: bubble-drift var(--drift-duration, 7s) ease-in-out var(--drift-delay, 0s) infinite;
+  }
+
+  /* Modal / dialog entrance: the panel inflates softly into place. */
+  @keyframes pop-in {
+    0%   { opacity: 0; transform: translateY(6px) scale(0.97); }
+    100% { opacity: 1; transform: translateY(0)   scale(1); }
+  }
+  .animate-pop-in { animation: pop-in 200ms cubic-bezier(.34,1.3,.64,1) both; }
+
+  /* Overlay backdrop fade — pair with animate-pop-in on the panel inside. */
+  @keyframes fade-in {
+    0%   { opacity: 0; }
+    100% { opacity: 1; }
+  }
+  .animate-fade-in { animation: fade-in 150ms ease-out both; }
+
+  /* Page-element entrance: rise + fade, slower than pop-in. Login card. */
+  @keyframes rise-in {
+    0%   { opacity: 0; transform: translateY(14px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  .animate-rise-in { animation: rise-in 420ms cubic-bezier(.22,1,.36,1) both; }
+
+  /* Toast entrance: surfaces from below like a bubble reaching the top. */
+  @keyframes toast-in {
+    0%   { opacity: 0; transform: translateY(10px) scale(0.95); }
+    100% { opacity: 1; transform: translateY(0)    scale(1); }
+  }
+  .animate-toast-in { animation: toast-in 240ms cubic-bezier(.34,1.4,.64,1) both; }
+
+  /* Whisper tints — flat, very light color washes over the surface, one hue
+     per feed section (LIVE / UPCOMING / ACTIVITY). Deliberately fainter than
+     the matched-card bubble-surface so Discovery stays the loudest voice.
+     color-mix against var(--surface) keeps them correct in dark mode. */
+  .bg-tint-yellow { background-color: color-mix(in srgb, var(--warning) 6%, var(--surface)); }
+  .bg-tint-green  { background-color: color-mix(in srgb, var(--bubble-green) 7%, var(--surface)); }
+  .bg-tint-blue   { background-color: color-mix(in srgb, var(--bubble-blue) 9%, var(--surface)); }
+  /* On hover the tint deepens a touch instead of washing out to surface-hover
+     (these land after .hover\:bg-surface-hover, so they win on tinted cards).
+     Scoped to .bubble-pop so only interactive surfaces react — static tinted
+     panels (the onboarding guide banner) stay put. */
+  .bubble-pop.bg-tint-yellow:hover { background-color: color-mix(in srgb, var(--warning) 10%, var(--surface)); }
+  .bubble-pop.bg-tint-green:hover  { background-color: color-mix(in srgb, var(--bubble-green) 11%, var(--surface)); }
+  .bubble-pop.bg-tint-blue:hover   { background-color: color-mix(in srgb, var(--bubble-blue) 14%, var(--surface)); }
+  /* Dark mode: the dark bubble-* vars are too dark to tint with — mix from the
+     bright accents instead so the whisper still registers on a dark surface. */
+  .dark .bg-tint-yellow       { background-color: color-mix(in srgb, var(--warning) 9%, var(--surface)); }
+  .dark .bg-tint-green        { background-color: color-mix(in srgb, var(--success) 8%, var(--surface)); }
+  .dark .bg-tint-blue         { background-color: color-mix(in srgb, var(--color-primary-400) 10%, var(--surface)); }
+  .dark .bubble-pop.bg-tint-yellow:hover { background-color: color-mix(in srgb, var(--warning) 13%, var(--surface)); }
+  .dark .bubble-pop.bg-tint-green:hover  { background-color: color-mix(in srgb, var(--success) 12%, var(--surface)); }
+  .dark .bubble-pop.bg-tint-blue:hover   { background-color: color-mix(in srgb, var(--color-primary-400) 14%, var(--surface)); }
+  /* Magenta whisper (onboarding's matching step). No hover pair — used on
+     static cards, not interactive rows. */
+  .bg-tint-magenta       { background-color: color-mix(in srgb, var(--bubble-magenta) 8%, var(--surface)); }
+  .dark .bg-tint-magenta { background-color: color-mix(in srgb, #e8aed0 9%, var(--surface)); }
+
+  /* Soft brand-blue fill for icon chips — partner of bg-warning-soft /
+     bg-bubble-*-soft, but mixed against the surface so it works in dark. */
+  .bg-primary-soft { background-color: color-mix(in srgb, var(--color-primary-400) 14%, var(--surface)); }
+
+  /* Soap-film fill for decorative EmptyBubbles: a glassy white wash with one
+     whisper hue pooling at the bottom-right, like color on a real bubble's
+     skin. Pick the hue with a .bubble-hue-* class; dark mode swaps both the
+     wash (dimmer white) and the hue source (brighter accents) automatically. */
+  .bubble-fill {
+    background:
+      radial-gradient(circle at 72% 78%, var(--bubble-fill-hue, transparent) 0%, transparent 58%),
+      linear-gradient(135deg,
+        color-mix(in srgb, white 82%, transparent) 0%,
+        color-mix(in srgb, white 38%, transparent) 55%,
+        color-mix(in srgb, white 12%, transparent) 100%);
+  }
+  .dark .bubble-fill {
+    background:
+      radial-gradient(circle at 72% 78%, var(--bubble-fill-hue, transparent) 0%, transparent 58%),
+      linear-gradient(135deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.06) 55%, rgba(255,255,255,0.02) 100%);
+  }
+  .bubble-hue-blue          { --bubble-fill-hue: color-mix(in srgb, var(--bubble-blue) 30%, transparent); }
+  .bubble-hue-magenta       { --bubble-fill-hue: color-mix(in srgb, var(--bubble-magenta) 26%, transparent); }
+  .bubble-hue-green         { --bubble-fill-hue: color-mix(in srgb, var(--bubble-green) 24%, transparent); }
+  .bubble-hue-yellow        { --bubble-fill-hue: color-mix(in srgb, var(--warning) 18%, transparent); }
+  .dark .bubble-hue-blue    { --bubble-fill-hue: color-mix(in srgb, var(--color-primary-400) 30%, transparent); }
+  .dark .bubble-hue-magenta { --bubble-fill-hue: color-mix(in srgb, #e8aed0 24%, transparent); }
+  .dark .bubble-hue-green   { --bubble-fill-hue: color-mix(in srgb, var(--success) 22%, transparent); }
+  .dark .bubble-hue-yellow  { --bubble-fill-hue: color-mix(in srgb, var(--warning) 20%, transparent); }
+
+  /* "Spark in the Calm" — soft colored outer glow for matched Discovery cards.
+     The one place cards may glow; everything else keeps the flat themed shadow. */
+  .glow-match {
+    box-shadow:
+      0 2px 8px rgba(13, 71, 116, 0.05),
+      0 8px 28px color-mix(in srgb, var(--bubble-magenta) 22%, transparent);
+    transition: box-shadow 250ms;
+  }
+  .glow-match:hover {
+    box-shadow:
+      0 4px 12px rgba(13, 71, 116, 0.07),
+      0 12px 36px color-mix(in srgb, var(--bubble-magenta) 34%, transparent);
+  }
+
+  /* PageHeader's bubble-dot cluster: a barely-there bob, the two dots out of
+     phase so they read as floating, not blinking. */
+  @keyframes dot-bob {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-2px); }
+  }
+  .animate-dot-bob       { animation: dot-bob 3.2s ease-in-out infinite; }
+  .animate-dot-bob-late  { animation: dot-bob 3.2s ease-in-out 1.1s infinite; }
+
+  /* Accessibility: strip the decorative motion for users who opt out.
+     Functional transitions (hover color, opacity) stay. */
+  @media (prefers-reduced-motion: reduce) {
+    .ring-iridescent,
+    .bubble-drift,
+    .animate-dot-bob,
+    .animate-dot-bob-late,
+    .avatar-live,
+    .avatar-live-red,
+    .bubble-loader,
+    .bubble-loader-fill,
+    .animate-celebrate-badge,
+    .animate-bubble-rise {
+      animation: none;
+    }
+    .bubble-pop,
+    .bubble-pop:hover,
+    .bubble-pop:active {
+      transform: none;
+    }
+  }
 }

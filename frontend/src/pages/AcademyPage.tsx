@@ -732,7 +732,7 @@ function CourseDetail({
             </Button>
           </>
         ) : hasCurrentOffering ? (
-          <Button size="sm" onClick={onEnroll} disabled={enrollBusy}>
+          <Button variant="deep" size="sm" onClick={onEnroll} disabled={enrollBusy}>
             {enrollBusy
               ? t('academy.detail.enrolling')
               : currentTerm

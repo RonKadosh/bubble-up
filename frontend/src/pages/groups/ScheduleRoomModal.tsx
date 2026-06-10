@@ -70,10 +70,10 @@ export function ScheduleRoomModal({ groupId, groupName, onClose, onScheduled, on
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3 tablet:p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3 tablet:p-4 animate-fade-in" onClick={onClose}>
       <form
         onSubmit={handleSubmit}
-        className="bg-surface rounded-3xl shadow-bubble w-full max-w-[28rem] max-h-[80vh] flex flex-col border border-line"
+        className="bg-surface rounded-3xl shadow-bubble animate-pop-in w-full max-w-[28rem] max-h-[80vh] flex flex-col border border-line"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-4 py-3 border-b border-line flex items-center justify-between">
@@ -129,7 +129,7 @@ export function ScheduleRoomModal({ groupId, groupName, onClose, onScheduled, on
           <Button type="button" variant="ghost" size="sm" onClick={onClose}>
             {t('common.cancel')}
           </Button>
-          <Button type="submit" size="sm" disabled={submitting}>
+          <Button variant="deep" type="submit" size="sm" disabled={submitting}>
             {submitting ? t('room.schedule.submitting') : t('room.schedule.submit')}
           </Button>
         </div>

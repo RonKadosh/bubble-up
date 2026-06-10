@@ -9,6 +9,8 @@
   },
   "dependencies": {
     "@excalidraw/excalidraw": "^0.18.1",
+    "@fontsource-variable/assistant": "^5.2.9",
+    "@fontsource-variable/rubik": "^5.2.8",
     "@stomp/stompjs": "^7.3.0",
     "axios": "^1.7.2",
     "i18next": "^23.16.8",

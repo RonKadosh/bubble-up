@@ -795,8 +795,8 @@ export default function GroupsPage() {
       )}
 
       {preparingLive && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="flex flex-col items-center gap-5 rounded-3xl border border-line bg-surface px-10 py-8 shadow-bubble">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-fade-in">
+          <div className="flex flex-col items-center gap-5 rounded-3xl border border-line bg-surface px-10 py-8 shadow-bubble animate-pop-in">
             <BubbleLoader size={72} />
             <p className="text-sm font-medium text-base">{t('room.schedule.preparing')}</p>
           </div>

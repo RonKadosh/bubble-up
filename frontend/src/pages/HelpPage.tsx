@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { askHelp, getHelpQuestions, getHelpTopics, type HelpAskResponse, type HelpQuestion, type HelpTopic } from '../api/help'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
-import { PageHeader, PageWidth, SectionLabel } from '../components/PageHeader'
+import { PageShell, PageWidth, SectionLabel } from '../components/PageHeader'
 import { ArrowLeftIcon, HelpIcon, SearchIcon, SparkleIcon } from '../components/Icons'
 import { useLanguageStore } from '../store/languageStore'
 
@@ -99,13 +99,8 @@ export default function HelpPage() {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto">
-      <PageWidth className="py-6 tablet:py-8 space-y-6">
-        <PageHeader
-          title={t('help.title')}
-          subtitle={t('help.subtitle')}
-        />
-
+    <PageShell title={t('help.title')} subtitle={t('help.subtitle')} bodyClassName="py-4 tablet:py-6">
+      <PageWidth>
         <div className="grid grid-cols-1 desktop:grid-cols-[minmax(0,1fr)_22rem] gap-4 items-start">
           <section className="space-y-4 min-w-0">
             <Card size="lg" className="p-4 tablet:p-5">
@@ -122,7 +117,7 @@ export default function HelpPage() {
                     placeholder={t('help.askPlaceholder')}
                     className="min-w-0 flex-1 border border-line bg-surface text-base rounded-xl px-3 py-2 focus:outline-none focus:border-primary-400"
                   />
-                  <Button type="submit" disabled={asking || !question.trim()} leftIcon={<SparkleIcon className="w-4 h-4" />}>
+                  <Button variant="deep" type="submit" disabled={asking || !question.trim()} leftIcon={<SparkleIcon className="w-4 h-4" />}>
                     {asking ? t('help.asking') : t('help.askButton')}
                   </Button>
                 </div>
@@ -232,7 +227,7 @@ export default function HelpPage() {
           </aside>
         </div>
       </PageWidth>
-    </div>
+    </PageShell>
   )
 }
 

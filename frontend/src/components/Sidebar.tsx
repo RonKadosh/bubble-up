@@ -206,7 +206,7 @@ export default function Layout() {
           className="flex items-center gap-2 px-1 py-1 rounded-full text-on-brand bubble-pop"
         >
           <BubbleLogo className="w-6 h-6" />
-          <span className="font-semibold tracking-tight">Bubble.up</span>
+          <span className="font-heading font-semibold tracking-tight">Bubble.up</span>
         </NavLink>
         <button
           type="button"

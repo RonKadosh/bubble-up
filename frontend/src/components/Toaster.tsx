@@ -30,7 +30,7 @@ export function Toaster() {
           <div
             key={toast.id}
             role="status"
-            className="pointer-events-auto max-w-[20rem] flex items-center gap-2.5 rounded-full bg-surface border border-line shadow-bubble ps-1.5 pe-3 py-1.5 bubble-pop"
+            className="pointer-events-auto max-w-[20rem] flex items-center gap-2.5 rounded-full bg-surface border border-line shadow-bubble ps-1.5 pe-3 py-1.5 bubble-pop animate-toast-in"
           >
             {toast.avatar ? (
               <Avatar id={toast.avatar.id} name={toast.avatar.name} imageUrl={toast.avatar.imageUrl} size="sm" />

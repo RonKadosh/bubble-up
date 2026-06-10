@@ -69,8 +69,9 @@ to the same scale.
 | `--text`           | `#15202b`   | `#eaf4fa`   | Headings, body                         |
 | `--text-secondary` | `#4a5965`   | `#b3c4cf`   | Captions, subtitles                    |
 | `--text-muted`     | `#6f8090`   | `#7f919e`   | Hints, timestamps                      |
-| `--silver`         | `#cfdae3`   | `#2a3540`   | Cool partner of the brand — gradient tail |
+| `--silver`         | `#c4d0d6`   | `#2a3540`   | Cool partner of the brand — gradient tail |
 | `--silver-soft`    | `#e6ecf1`   | `#1f2932`   | Soft variant of the above              |
+| `--brand-sheen`    | `#e8eef1`   | `#3a4853`   | Specular highlight stop inside the brand gradients |
 | `--success`        | `#2fb36d`   | `#35d48a`   | Future use (no semantic green yet)     |
 | `--warning`        | `#d4a72c`   | `#e8bc4b`   | EXAM badge tint                        |
 | `--danger`         | `#d94f4f`   | `#ff7676`   | Destructive actions ("Pop")            |
@@ -96,13 +97,17 @@ These automatically dark-mode-swap.
 
 ### Gradients (the signature)
 
-Bubble.up's hero look is **light blue → silver**, never a single solid color
-across large surfaces. Use:
+Bubble.up's hero look is **light blue → sheen → silver**, never a single solid
+color across large surfaces. The `--brand-sheen` stop is the bright specular
+band that makes the silver tail read metallic instead of dull grey. Use:
 
 - `bg-brand-gradient`         — the standard light-blue → silver
 - `bg-brand-gradient-soft`    — pale primary → soft silver (washes, empty states)
-- `bg-brand-gradient-strong`  — primary-400 → silver (CTAs, active tabs, sidebar)
+- `bg-brand-gradient-strong`  — primary-400 → silver (active tabs, sidebar, soft CTAs)
 - `bg-brand-gradient-vertical`— vertical variant (sidebar)
+- `bg-brand-gradient-deep`    — primary-400 → primary-800 navy, **white text**. The
+  punch. Commit-action buttons only (`<Button variant="deep">`) — never large
+  surfaces; the sidebar/tabs/chrome keep the silver family.
 - `bg-bubble-glow`            — radial highlight + linear gradient (login hero)
 
 Text on top of a gradient uses `text-on-brand` (dark navy `#0d2334`). Don't use
@@ -168,6 +173,24 @@ when static elements wobble on cursor passes.
 For width/height transitions (sidebar collapse): `transition-[width] duration-200 ease-out`.
 For fades (modals, tooltips): plain `transition-opacity` is fine.
 
+### Entrance + ambient motion utilities (index.css)
+
+- `animate-fade-in` on a modal overlay + `animate-pop-in` on its panel — the
+  standard dialog entrance. Every `fixed inset-0 bg-black/40` overlay uses it.
+- `animate-toast-in` — toast pills surfacing from below (Toaster has it built in).
+- `animate-rise-in` — slower once-on-mount rise for page-level heroes (login card).
+- `bubble-drift` — slow ambient float for decorative bubbles; vary per bubble via
+  `--drift-duration` / `--drift-delay` / `--drift-distance` inline styles.
+- `animate-dot-bob` / `animate-dot-bob-late` — PageHeader's bubble-dot cluster.
+- `divider-iridescent` — the signature 1px magenta→blue→green hairline; PageShell
+  lays it over its header border. Use sparingly — it should whisper.
+- `glow-match` — the soft colored outer glow reserved for matched Discovery
+  cards ("Spark in the Calm"). Don't put it on ordinary cards.
+
+All decorative motion is disabled under `prefers-reduced-motion: reduce` (see
+the media query at the bottom of `index.css`) — add new decorative keyframe
+classes to that list.
+
 ---
 
 ## 6. Component inventory
@@ -219,8 +242,9 @@ Three rules:
 3. Lifting it doesn't make the call site harder to read.
 
 If it's only in one page, keep it inline (or under that page's folder — see
-`pages/groups/`). The inline `BubbleCollage` in LoginPage is the canonical
-example of "stays inline because it only renders once".
+`pages/groups/`). Counter-example: the login bubble scene started inline in
+LoginPage and was lifted to `components/AuthScene.tsx` only when the
+TestingLoginPage became a second consumer — that's the promotion bar.
 
 ### When to vary button sizes
 
@@ -230,12 +254,19 @@ Don't homogenize.
 
 | Intent                              | Variant     | Size |
 |-------------------------------------|-------------|------|
-| Page-level "do the thing"           | `primary`   | `md` / `lg` |
-| Form submit inline                  | `primary`   | `sm` |
+| **Commit action** — join / enroll / save / send / create / submit | `deep` | any |
+| Page-level "do the thing" (non-commit: open, browse, start-here)  | `primary`   | `md` / `lg` |
 | Cancel, dismiss                     | `ghost`     | `sm` |
 | Leave, undo                         | `secondary` | `xs` |
 | Pop, destructive                    | `danger`    | `sm` |
 | **Any action inside a BentoCell**   | `cell`      | `xs` / `sm` |
+
+**The `deep` rule:** `deep` is the navy punch — the button that *commits* something
+(joins a Bubble, enrolls, saves a form, sends a request, creates an event). One per
+surface: a page or modal gets at most one deep button in view. Navigation-ish
+primaries (open course, browse, empty-state nudges) and the onboarding wizard stay
+`primary` so the navy keeps its pull. The chat ➤ send button uses the same deep
+gradient directly (it's a raw round button, not `<Button>`).
 
 **The `cell` variant rule:** every `<Button>` and `<IconButton>` that lives inside a `<BentoCell>` must use `variant="cell"` (muted-fill + border pill, no gradient). The only exceptions are the chat ➤ send button (brand gradient, intentional primary anchor) and destructive actions which still use `variant="danger"`. This keeps dark cells visually clean — no gradient blobs competing with the iridescent border.
 
@@ -243,8 +274,18 @@ Don't homogenize.
 
 ## 7. Typography
 
-System UI stack. We don't ship a custom font. Sizes are Tailwind defaults —
-mostly:
+Two-font system, self-hosted via `@fontsource-variable` (imported once in
+`main.tsx`, bundled woff2 — no CDN). **Both families cover Hebrew + Latin**;
+that constraint is non-negotiable for any future font change (Inter / Sora /
+Nunito etc. have no Hebrew and would silently fall back to Segoe UI).
+
+- `--font-heading`: **Rubik** — rounded terminals, the bubbly brand voice.
+  Applied automatically to `h1–h4` and `button`; span/p-based titles (bubble
+  names, panel labels, the brand mark) opt in with the `.font-heading` utility.
+- `--font-body`: **Assistant** — Hebrew-first humanist sans. Applied on `body`;
+  chat, metadata, and inputs inherit it.
+
+Sizes are Tailwind defaults — mostly:
 
 - Page heading: `text-2xl` / `text-3xl` `font-bold`
 - Card heading: `text-base` / `text-lg` `font-semibold`

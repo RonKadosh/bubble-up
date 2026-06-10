@@ -480,10 +480,10 @@ export function EventModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3 tablet:p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3 tablet:p-4 animate-fade-in" onClick={onClose}>
       <form
         onSubmit={handleSubmit}
-        className="bg-surface rounded-3xl shadow-bubble w-full max-w-[28rem] max-h-[80vh] flex flex-col border border-line"
+        className="bg-surface rounded-3xl shadow-bubble animate-pop-in w-full max-w-[28rem] max-h-[80vh] flex flex-col border border-line"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-4 py-3 border-b border-line flex items-center justify-between">
@@ -556,7 +556,7 @@ export function EventModal({
             {t('common.cancel')}
           </Button>
           {!isStarted && (
-            <Button type="submit" size="sm">
+            <Button variant="deep" type="submit" size="sm">
               {isEdit ? t('common.save') : t('common.create')}
             </Button>
           )}
@@ -590,9 +590,9 @@ function DayAgendaModal({ dateStr, events, isMember, onCreate, onSelectEvent, on
   const sorted = [...events].sort((a, b) => a.startsAt.localeCompare(b.startsAt))
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3 tablet:p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3 tablet:p-4 animate-fade-in" onClick={onClose}>
       <div
-        className="bg-surface rounded-3xl shadow-bubble w-full max-w-[26rem] max-h-[80vh] flex flex-col border border-line"
+        className="bg-surface rounded-3xl shadow-bubble animate-pop-in w-full max-w-[26rem] max-h-[80vh] flex flex-col border border-line"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-4 py-3 border-b border-line flex items-center justify-between gap-2">
@@ -734,9 +734,9 @@ export function EventViewModal({
   })()
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3 tablet:p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3 tablet:p-4 animate-fade-in" onClick={onClose}>
       <div
-        className="bg-surface rounded-3xl shadow-bubble w-full max-w-[26rem] max-h-[80vh] flex flex-col border border-line"
+        className="bg-surface rounded-3xl shadow-bubble animate-pop-in w-full max-w-[26rem] max-h-[80vh] flex flex-col border border-line"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-4 py-3 border-b border-line flex items-center justify-between">
