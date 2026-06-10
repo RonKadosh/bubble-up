@@ -212,6 +212,7 @@ function describeRequestError(e: unknown, t: (k: string) => string): string {
   if (err?.code === 'EMAIL_ALREADY_VERIFIED') return t('verifyEmail.errorAlreadyVerified')
   if (err?.code === 'VERIFICATION_TOO_MANY_REQUESTS') return t('verifyEmail.errorRateLimited')
   if (err?.code === 'MAIL_NOT_CONFIGURED') return t('verifyEmail.errorMailDown')
+  if (err?.code === 'MAIL_SEND_FAILED') return t('verifyEmail.errorMailDown')
   if (err?.code === 'USER_NOT_FOUND') return t('verifyEmail.errorRestartSignUp')
   return err?.message || t('verifyEmail.errorGeneric')
 }
