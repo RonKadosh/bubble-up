@@ -634,7 +634,7 @@ export function ChatPanel({ groupId, room, meId, isMember, onError, onUnreadChan
         </div>
         <button
           type="submit"
-          className="bg-brand-gradient-strong text-on-brand rounded-full w-12 h-12 shrink-0 flex items-center justify-center shadow-themed bubble-pop"
+          className="bg-brand-gradient-deep text-white rounded-full w-12 h-12 shrink-0 flex items-center justify-center shadow-themed bubble-pop"
           aria-label={t('groups.chat.sendAria')}
         >
           <SendIcon className="w-5 h-5 rtl:-scale-x-100" />
@@ -1034,9 +1034,9 @@ interface PinnedListModalProps {
 function PinnedListModal({ pinned, onJumpTo, onUnpin, onCancel }: PinnedListModalProps) {
   const { t } = useTranslation()
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3 tablet:p-4" onClick={onCancel}>
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3 tablet:p-4 animate-fade-in" onClick={onCancel}>
       <div
-        className="bg-surface rounded-3xl shadow-bubble w-full max-w-[32rem] max-h-[80vh] flex flex-col border border-line"
+        className="bg-surface rounded-3xl shadow-bubble animate-pop-in w-full max-w-[32rem] max-h-[80vh] flex flex-col border border-line"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-4 py-3 border-b border-line flex items-center justify-between">
@@ -1494,9 +1494,9 @@ function LinkPickerModal({ groupId, onPick, onCancel }: LinkPickerModalProps) {
     (tab === 'calendar' && !!selectedEventId) || (tab === 'file' && !!selectedFileId)
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3 tablet:p-4" onClick={onCancel}>
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3 tablet:p-4 animate-fade-in" onClick={onCancel}>
       <div
-        className="bg-surface rounded-3xl shadow-bubble w-full max-w-[28rem] max-h-[80vh] flex flex-col border border-line"
+        className="bg-surface rounded-3xl shadow-bubble animate-pop-in w-full max-w-[28rem] max-h-[80vh] flex flex-col border border-line"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-4 py-3 border-b border-line flex items-center justify-between">
@@ -1546,7 +1546,7 @@ function LinkPickerModal({ groupId, onPick, onCancel }: LinkPickerModalProps) {
             <Button variant="ghost" size="sm" onClick={onCancel}>
               {t('common.cancel')}
             </Button>
-            <Button size="sm" disabled={!canShare} onClick={handleShare}>
+            <Button variant="deep" size="sm" disabled={!canShare} onClick={handleShare}>
               {t('common.share')}
             </Button>
           </div>
@@ -2153,9 +2153,9 @@ function PollComposerModal({ onCreate, onCancel }: PollComposerModalProps) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3 tablet:p-4" onClick={onCancel}>
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3 tablet:p-4 animate-fade-in" onClick={onCancel}>
       <div
-        className="bg-surface rounded-3xl shadow-bubble w-full max-w-[32rem] max-h-[80vh] flex flex-col border border-line"
+        className="bg-surface rounded-3xl shadow-bubble animate-pop-in w-full max-w-[32rem] max-h-[80vh] flex flex-col border border-line"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-4 py-3 border-b border-line flex items-center justify-between">
@@ -2215,7 +2215,7 @@ function PollComposerModal({ onCreate, onCancel }: PollComposerModalProps) {
           <Button variant="ghost" size="sm" onClick={onCancel}>
             {t('common.cancel')}
           </Button>
-          <Button size="sm" disabled={!valid} onClick={submit}>
+          <Button variant="deep" size="sm" disabled={!valid} onClick={submit}>
             {t('groups.chat.poll.create')}
           </Button>
         </div>

@@ -69,11 +69,11 @@ export function ScheduleExpertSessionModal({ open, onClose, onCreated }: Props) 
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 tablet:p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 tablet:p-4 animate-fade-in"
       onClick={onClose}
     >
       <div
-        className="bg-surface rounded-3xl shadow-bubble border border-line w-full max-w-lg max-h-[85vh] flex flex-col"
+        className="bg-surface rounded-3xl shadow-bubble animate-pop-in border border-line w-full max-w-lg max-h-[85vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-5 py-3 border-b border-line flex items-center justify-between shrink-0">
@@ -141,7 +141,7 @@ export function ScheduleExpertSessionModal({ open, onClose, onCreated }: Props) 
             <Button type="button" variant="ghost" size="sm" onClick={onClose}>
               {t('expert.schedule.cancel')}
             </Button>
-            <Button type="submit" size="sm" disabled={submitting}>
+            <Button variant="deep" type="submit" size="sm" disabled={submitting}>
               {submitting ? t('expert.schedule.creating') : t('expert.schedule.create')}
             </Button>
           </div>

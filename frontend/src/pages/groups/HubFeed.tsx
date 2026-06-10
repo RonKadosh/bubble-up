@@ -72,6 +72,15 @@ const SECTION_META: Record<FeedSectionKey, { labelKey: string; emptyKey: string 
   DISCOVERY: { labelKey: 'dashboard.section.discovery', emptyKey: 'dashboard.empty.discovery' },
 }
 
+// Whisper tint per section — a flat wash, fainter than the matched-card
+// bubble-surface so Discovery stays the loudest. DISCOVERY itself is unmapped:
+// its plain cards stay white and its matched cards glow magenta.
+const SECTION_TINT: Partial<Record<FeedSectionKey, string>> = {
+  LIVE: 'bg-tint-yellow',
+  UPCOMING: 'bg-tint-green',
+  ACTIVITY: 'bg-tint-blue',
+}
+
 // ---------------------------------------------------------------------------
 // Per-kind renderers. Adding a new feed item kind = one entry here + one type
 // in the FeedItemKind union (and a backend FeedSource). The card shell, avatar,
@@ -82,6 +91,8 @@ interface Rendered {
   body: ReactNode
   /** When set (and the item carries a cta), a CTA button is shown with this label. */
   ctaLabel?: string
+  /** Trophy slot at the row end (the matched-Bubble % badge). */
+  badge?: ReactNode
 }
 
 const ITEM_RENDERERS: Record<FeedItemKind, (item: FeedItem, t: Translate) => Rendered> = {
@@ -161,6 +172,9 @@ const ITEM_RENDERERS: Record<FeedItemKind, (item: FeedItem, t: Translate) => Ren
   recommendation: (item, t) => {
     const trending = item.displayMode === 'TRENDING'
     const course = courseLabel(item)
+    // A trustworthy match % is the card's trophy — pulled out of the meta line
+    // into a glowing badge ("Spark in the Calm").
+    const matched = !trending && item.matchPercent != null
     return {
       body: (
         <>
@@ -172,12 +186,23 @@ const ITEM_RENDERERS: Record<FeedItemKind, (item: FeedItem, t: Translate) => Ren
           </p>
           <p className="font-semibold text-base truncate">{item.title}</p>
           {course && <p className="text-sm text-muted truncate">{t('dashboard.discovery.fromCourse', { course })}</p>}
-          <p className="text-sm text-muted truncate">{discoveryMeta(item, t)}</p>
+          <p className="text-sm text-muted truncate">{discoveryMeta(item, t, true, !matched)}</p>
         </>
       ),
+      badge: matched ? <MatchBadge percent={item.matchPercent!} t={t} /> : undefined,
       ctaLabel: t('dashboard.cta.viewBubble'),
     }
   },
+}
+
+/** The match-score trophy: a soft glowing pill, not secondary text. */
+function MatchBadge({ percent, t }: { percent: number; t: Translate }) {
+  return (
+    <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-bubble-magenta-soft border border-bubble-magenta/30 px-2.5 py-1 text-xs font-semibold text-accent-magenta">
+      <SparkleIcon className="w-3.5 h-3.5" />
+      {t('dashboard.discovery.matchPercent', { percent })}
+    </span>
+  )
 }
 
 // "CS101 · Operating Systems" when a code exists, else just the course name.
@@ -367,6 +392,7 @@ function SectionItems({
         <FeedItemCard
           key={`${i}-${item.cta?.targetId ?? item.groupId ?? ''}`}
           item={item}
+          tint={SECTION_TINT[sectionKey]}
           onPreview={onPreview}
           onSelectGroup={onSelectGroup}
           onViewEvent={onViewEvent}
@@ -408,11 +434,14 @@ function DiscoveryEmpty({
 
 function FeedItemCard({
   item,
+  tint,
   onPreview,
   onSelectGroup,
   onViewEvent,
 }: {
   item: FeedItem
+  /** Section whisper-tint class (see SECTION_TINT). Undefined = plain surface. */
+  tint?: string
   onPreview: (item: FeedItem) => void
   onSelectGroup: (groupId: string) => void
   onViewEvent: (eventId: string, groupId?: string) => void
@@ -438,11 +467,18 @@ function FeedItemCard({
 
   const clickable = item.kind === 'recommendation' || !!item.groupId
 
+  // Matched recommendations are the one feed card allowed to glow: the soapy
+  // bubble-surface (same treatment as the admin Bubbles KPI) + a soft colored
+  // outer glow instead of the flat themed shadow.
+  const matched = item.kind === 'recommendation' && item.displayMode === 'MATCHED'
+
   return (
     <Card
       size="lg"
       interactive={clickable}
-      className={`p-4 ${clickable ? 'cursor-pointer text-start w-full' : ''}`}
+      className={`p-4 ${clickable ? 'cursor-pointer text-start w-full' : ''} ${
+        matched ? 'relative overflow-hidden bubble-surface glow-match' : tint ?? ''
+      }`}
       onClick={clickable ? activate : undefined}
     >
       <div className="flex items-center gap-3">
@@ -450,12 +486,13 @@ function FeedItemCard({
           <Avatar id={item.groupId} name={item.groupName ?? '?'} imageUrl={item.groupImageUrl} size="md" ring />
         )}
         <div className="flex-1 min-w-0">{rendered.body}</div>
+        {rendered.badge && <div className="shrink-0">{rendered.badge}</div>}
         {/* Tablet+: CTA sits inline at the end of the row. */}
         {showCta && (
           <div className="shrink-0 hidden tablet:block">
             <Button
               size="sm"
-              variant={isJoinCta(item.cta!) ? 'primary' : 'secondary'}
+              variant={isJoinCta(item.cta!) ? 'deep' : 'secondary'}
               onClick={(e) => { e.stopPropagation(); activate() }}
             >
               {rendered.ctaLabel}
@@ -469,7 +506,7 @@ function FeedItemCard({
         <div className="tablet:hidden mt-3">
           <Button
             size="sm"
-            variant={isJoinCta(item.cta!) ? 'primary' : 'secondary'}
+            variant={isJoinCta(item.cta!) ? 'deep' : 'secondary'}
             className="w-full"
             onClick={(e) => { e.stopPropagation(); activate() }}
           >
@@ -540,9 +577,9 @@ function PublicBubbleModal({
     : 'dashboard.discovery.recommended')
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3 tablet:p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3 tablet:p-4 animate-fade-in" onClick={onClose}>
       <div
-        className="bg-surface rounded-3xl shadow-bubble w-full max-w-[28rem] max-h-[85vh] flex flex-col border border-line"
+        className="bg-surface rounded-3xl shadow-bubble animate-pop-in w-full max-w-[28rem] max-h-[85vh] flex flex-col border border-line"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-4 py-3 border-b border-line flex items-center gap-3">
@@ -593,7 +630,7 @@ function PublicBubbleModal({
             {t('common.cancel')}
           </Button>
           {!isPrivate && (
-            <Button type="button" size="sm" onClick={handleJoin} disabled={loading || joining}>
+            <Button variant="deep" type="button" size="sm" onClick={handleJoin} disabled={loading || joining}>
               {joining ? t('dashboard.publicBubble.joining') : t('dashboard.publicBubble.join')}
             </Button>
           )}
@@ -638,11 +675,12 @@ const TRENDING_REASON_KEYS: Record<string, string> = {
   TRENDING_UPCOMING: 'dashboard.discovery.trending.upcoming',
 }
 
-function discoveryMeta(item: FeedItem, t: Translate, includeMembers = true): string {
+function discoveryMeta(item: FeedItem, t: Translate, includeMembers = true, includePercent = true): string {
   const parts: string[] = []
   if (item.displayMode === 'MATCHED' && item.matchPercent != null) {
-    // Only MATCHED bubbles earn a trustworthy percent.
-    parts.push(t('dashboard.discovery.matchPercent', { percent: item.matchPercent }))
+    // Only MATCHED bubbles earn a trustworthy percent. The feed card opts out
+    // (includePercent=false) because it shows the % as a badge instead.
+    if (includePercent) parts.push(t('dashboard.discovery.matchPercent', { percent: item.matchPercent }))
   } else if (item.reasonLabels && item.reasonLabels.length > 0) {
     const reasons = item.reasonLabels
       .map((code) => TRENDING_REASON_KEYS[code])

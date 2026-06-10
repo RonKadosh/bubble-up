@@ -1,5 +1,9 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+// Brand fonts, self-hosted (bundled woff2 — no CDN call). Rubik = headings /
+// buttons / bubble names; Assistant = body. Both cover Hebrew + Latin.
+import '@fontsource-variable/rubik'
+import '@fontsource-variable/assistant'
 import App from './App'
 import './index.css'
 

@@ -119,7 +119,7 @@ export default function ExpertPublicProfilePage() {
 
               {!viewingSelf && (
                 <div className="mt-5 flex flex-wrap gap-2">
-                  <Button
+                  <Button variant="deep"
                     size="sm"
                     onClick={() => { setActionError(null); setActionInfo(null); setShowBooking(true) }}
                     disabled={myGroups.length === 0}

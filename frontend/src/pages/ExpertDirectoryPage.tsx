@@ -227,7 +227,7 @@ function OpenSessionCard({ session, ownedGroups, onEnrolled }: OpenSessionCardPr
                 ))}
               </div>
             ) : (
-              <Button
+              <Button variant="deep"
                 size="sm"
                 onClick={() => { setError(null); setInfo(null); setPickerOpen(true) }}
               >

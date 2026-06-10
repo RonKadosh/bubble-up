@@ -68,11 +68,11 @@ export function GroupHeader({ group, isOwner, isMember, onJoin, liveSession, onS
       )}
       {!isMember && group.visibility === 'PUBLIC' && (
         group.memberCount >= group.maxMembers ? (
-          <Button size="sm" disabled title={t('groups.header.fullTitle')}>
+          <Button variant="deep" size="sm" disabled title={t('groups.header.fullTitle')}>
             {t('groups.header.full')}
           </Button>
         ) : (
-          <Button size="sm" onClick={onJoin}>
+          <Button variant="deep" size="sm" onClick={onJoin}>
             {t('groups.header.hopIn')}
           </Button>
         )
@@ -170,11 +170,11 @@ export function GroupHeader({ group, isOwner, isMember, onJoin, liveSession, onS
         )}
         {!isMember && group.visibility === 'PUBLIC' && (
           group.memberCount >= group.maxMembers ? (
-            <Button disabled title={t('groups.header.fullTitle')}>
+            <Button variant="deep" disabled title={t('groups.header.fullTitle')}>
               {t('groups.header.full')}
             </Button>
           ) : (
-            <Button onClick={onJoin}>
+            <Button variant="deep" onClick={onJoin}>
               {t('groups.header.hopIn')}
             </Button>
           )

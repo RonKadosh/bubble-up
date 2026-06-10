@@ -6,6 +6,7 @@ import { describeError } from '../../api/errors'
 import { Card } from '../../components/Card'
 import { Button } from '../../components/Button'
 import { FormField, fieldInputClass } from '../../components/FormField'
+import { PageShell } from '../../components/PageHeader'
 
 /**
  * `/report` — the Report Center. A concise, entity-agnostic form: pick a
@@ -55,10 +56,10 @@ export default function ReportPage() {
 
   if (done) {
     return (
-      <div className="flex-1 overflow-y-auto p-8">
+      <PageShell title={t('report.title')} subtitle={t('report.subtitle')}>
         <div className="max-w-2xl mx-auto">
-          <Card size="lg" className="p-8 text-center flex flex-col items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-bubble-green-soft text-bubble-green flex items-center justify-center text-2xl">✓</div>
+          <Card size="lg" className="p-8 text-center flex flex-col items-center gap-4 animate-rise-in">
+            <div className="w-12 h-12 rounded-full bg-bubble-green-soft text-accent-green flex items-center justify-center text-2xl">✓</div>
             <h1 className="text-xl font-bold text-base">{t('report.success.title')}</h1>
             <p className="text-sm text-muted">{t('report.success.body')}</p>
             <Button type="button" size="sm" onClick={() => navigate('/dashboard')}>
@@ -66,20 +67,13 @@ export default function ReportPage() {
             </Button>
           </Card>
         </div>
-      </div>
+      </PageShell>
     )
   }
 
   return (
-    <div className="flex-1 overflow-y-auto p-8">
+    <PageShell title={t('report.title')} subtitle={t('report.subtitle')}>
       <div className="max-w-2xl mx-auto">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-2.5 h-2.5 rounded-full bg-bubble-magenta shadow-sm" />
-          <div className="w-1.5 h-1.5 rounded-full bg-bubble-green" />
-          <h1 className="text-2xl font-bold text-base">{t('report.title')}</h1>
-        </div>
-        <p className="text-sm text-muted mb-6 ms-[1.6rem]">{t('report.subtitle')}</p>
-
         <Card size="lg" className="p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <FormField label={t('report.categoryLabel')} required>
@@ -132,17 +126,17 @@ export default function ReportPage() {
 
             {error && <div className="text-sm text-danger">{error}</div>}
 
-            <Button
+            <Button variant="deep"
               type="submit"
               size="sm"
               disabled={submitting || !subject.trim() || !description.trim()}
-              className="w-full sm:w-auto"
+              className="w-full tablet:w-auto"
             >
               {submitting ? t('report.submitting') : t('report.submit')}
             </Button>
           </form>
         </Card>
       </div>
-    </div>
+    </PageShell>
   )
 }

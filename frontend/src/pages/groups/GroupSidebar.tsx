@@ -229,7 +229,7 @@ export function GroupSidebar({ groups, selectedId, meId, unreadByGroup, liveGrou
               </Button>
             </div>
           </div>
-          <Button type="submit" size="sm" className="mt-1 w-full" disabled={!selectedCourseId}>
+          <Button variant="deep" type="submit" size="sm" className="mt-1 w-full" disabled={!selectedCourseId}>
             {t('groups.createForm.submit')}
           </Button>
         </form>
@@ -260,7 +260,7 @@ export function GroupSidebar({ groups, selectedId, meId, unreadByGroup, liveGrou
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-semibold truncate">{g.name}</p>
+                <p className="font-heading font-semibold truncate">{g.name}</p>
                 <p className={`text-xs truncate ${active ? 'text-secondary' : 'text-muted'}`}>
                   {t('groups.memberLabel', { count: g.memberCount })}
                   {' · '}
