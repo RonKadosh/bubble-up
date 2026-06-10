@@ -23,9 +23,12 @@ class UniversityEmailRegistryTest {
     }
 
     @Test
-    void rejectsAcIlDomainThatIsNotRegistered() {
-        // A made-up institution that ends in .ac.il but isn't in the registry.
-        assertThat(registry.isAcademicEmail("user@unknown-college.ac.il")).isFalse();
+    void acceptsUnknownAcIlDomainAsGenericAcademicInstitution() {
+        Optional<UniversityEmailRegistry.Match> match = registry.lookup("user@unknown-college.ac.il");
+        assertThat(match).isPresent();
+        assertThat(match.get().key()).isEqualTo("unknown-college");
+        assertThat(match.get().kind()).isEqualTo(MemberKind.UNKNOWN);
+        assertThat(match.get().matchedDomain()).isEqualTo("unknown-college.ac.il");
     }
 
     @Test

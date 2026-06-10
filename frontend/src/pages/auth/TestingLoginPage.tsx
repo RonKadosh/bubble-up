@@ -92,10 +92,14 @@ export default function TestingLoginPage() {
           <div className="w-full max-w-md ring-iridescent p-[2px] rounded-[2.5rem] shadow-themed">
             <div className="bg-surface rounded-[2.5rem] p-6 tablet:p-8 desktop:p-10">
               <h1 className="text-3xl font-bold text-base">
-                {isRegister ? t('login.headingRegister') : t('login.headingSignIn')}
+                {isRegister
+                  ? t('testingLogin.headingRegister', { defaultValue: 'Testing register' })
+                  : t('testingLogin.headingSignIn', { defaultValue: 'Testing login' })}
               </h1>
               <p className="text-sm text-muted mt-2 mb-8">
-                {isRegister ? t('login.subRegister') : t('login.subSignIn')}
+                {isRegister
+                  ? t('testingLogin.subRegister', { defaultValue: 'Developer-only password registration for the JWT testing flow.' })
+                  : t('testingLogin.subSignIn', { defaultValue: 'Developer-only password login that goes straight through JWT.' })}
               </p>
 
               <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -175,12 +179,16 @@ export default function TestingLoginPage() {
               </form>
 
               <div className="mt-6 text-center text-sm text-secondary">
-                {isRegister ? t('login.switchToSignInPrompt') : t('login.switchToRegisterPrompt')}{' '}
+                {isRegister
+                  ? t('testingLogin.switchToSignInPrompt', { defaultValue: 'Already have a testing account?' })
+                  : t('testingLogin.switchToRegisterPrompt', { defaultValue: 'Need a testing account?' })}{' '}
                 <button
                   onClick={() => { setIsRegister(!isRegister); setError('') }}
                   className="text-primary-600 font-medium hover:underline"
                 >
-                  {isRegister ? t('login.switchToSignInAction') : t('login.switchToRegisterAction')}
+                  {isRegister
+                    ? t('testingLogin.switchToSignInAction', { defaultValue: 'Sign in' })
+                    : t('testingLogin.switchToRegisterAction', { defaultValue: 'Create one' })}
                 </button>
               </div>
             </div>

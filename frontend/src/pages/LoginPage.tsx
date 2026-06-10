@@ -15,13 +15,17 @@ export default function LoginPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const accessToken = useAuthStore((s) => s.accessToken)
+  const emailVerified = useAuthStore((s) => s.user?.emailVerified ?? false)
   const [params] = useSearchParams()
   const [error, setError] = useState<string>('')
 
-  // If we already have a session in localStorage, skip straight to the app.
+  // Signed-in users continue wherever they left off: verified users go into
+  // the app; first-time academic Google signups continue to the Bubble.up
+  // verification screen until they click the email link.
   useEffect(() => {
-    if (accessToken) navigate('/dashboard', { replace: true })
-  }, [accessToken, navigate])
+    if (!accessToken) return
+    navigate(emailVerified ? '/dashboard' : '/auth/verify', { replace: true })
+  }, [accessToken, emailVerified, navigate])
 
   // /login?error=<CODE> happens when the OAuth callback redirected us here
   // (e.g. NOT_ACADEMIC_EMAIL after we rejected a non-.ac.il Google email).
@@ -72,8 +76,14 @@ export default function LoginPage() {
         <main className="relative z-20 min-h-screen flex items-start justify-center desktop:justify-end px-4 tablet:px-6 desktop:pe-4 pt-[14vh] tablet:pt-[12vh] desktop:pt-[14vh] pb-12 tablet:pb-24">
           <div className="w-full max-w-md ring-iridescent p-[2px] rounded-[2.5rem] shadow-themed">
           <div className="bg-surface rounded-[2.5rem] p-6 tablet:p-8 desktop:p-10">
-            <h1 className="text-3xl font-bold text-base">{t('login.headingSignIn')}</h1>
-            <p className="text-sm text-muted mt-2 mb-8">{t('login.subGoogleOnly')}</p>
+            <h1 className="text-3xl font-bold text-base">
+              {t('login.entryHeading', { defaultValue: 'Get started' })}
+            </h1>
+            <p className="text-sm text-muted mt-2 mb-8">
+              {t('login.entrySub', {
+                defaultValue: 'Continue with your Israeli academic Google account.',
+              })}
+            </p>
 
             {error && (
               <div className="bg-danger-soft text-danger text-sm px-4 py-2.5 rounded-2xl border border-line mb-4">
@@ -87,11 +97,14 @@ export default function LoginPage() {
               className="w-full bg-white text-[#1f1f1f] border border-line rounded-2xl py-3.5 px-4 flex items-center justify-center gap-3 font-medium text-sm hover:bg-neutral-50 transition shadow-bubble"
             >
               <GoogleGlyph />
-              {t('login.signInWithGoogle')}
+              {t('login.entryButton', { defaultValue: 'Continue with Google' })}
             </button>
 
             <p className="mt-6 text-xs text-muted text-center leading-relaxed">
-              {t('login.academicOnlyNote')}
+              {t('login.entryNote', {
+                defaultValue:
+                  "On your first sign-up, Bubble.up will send a verification link to that academic inbox before access is unlocked.",
+              })}
             </p>
           </div>
           </div>
@@ -107,6 +120,7 @@ export default function LoginPage() {
  */
 function errorMessage(code: string, t: (k: string) => string): string {
   switch (code) {
+    case 'SESSION_EXPIRED':         return t('login.errorSessionExpired')
     case 'NOT_ACADEMIC_EMAIL':       return t('login.errorNotAcademic')
     case 'OAUTH_EMAIL_UNVERIFIED':   return t('login.errorGoogleUnverified')
     case 'OAUTH_EMAIL_MISSING':      return t('login.errorGoogleNoEmail')

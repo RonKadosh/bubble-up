@@ -27,9 +27,13 @@ import java.util.stream.Collectors;
  *
  * <p>Lookup walks the email domain from most-specific to least-specific so
  * that arbitrary department sub-domains (e.g. {@code joe@cs.bgu.ac.il})
- * still resolve to BGU even though {@code cs.bgu.ac.il} isn't listed. The
- * fallthrough result is STAFF — when we matched only the bare uni domain we
- * don't know whether the sub-prefix is a student or a faculty.
+ * still resolve to BGU even though {@code cs.bgu.ac.il} isn't listed.
+ *
+ * <p>If no registry entry matches but the domain still ends in {@code .ac.il},
+ * we accept it as a generic academic institution with {@link MemberKind#UNKNOWN}.
+ * That keeps Bubble.up aligned with the real product rule ("Israeli academic
+ * accounts only") even when an institution uses a sub-domain variant we have
+ * not enumerated yet.
  */
 @Component
 public class UniversityEmailRegistry {
@@ -171,7 +175,7 @@ public class UniversityEmailRegistry {
      * <ul>
      *   <li>the email is malformed (no {@code @});</li>
      *   <li>the domain doesn't end in {@code .ac.il}; or</li>
-     *   <li>no registry entry matches even after walking down sub-domains.</li>
+     *   <li>the domain is just {@code ac.il} with no institution label.</li>
      * </ul>
      */
     public Optional<Match> lookup(String email) {
@@ -193,7 +197,7 @@ public class UniversityEmailRegistry {
             int dot = d.indexOf('.');
             d = d.substring(dot + 1);
         }
-        return Optional.empty();
+        return genericAcademicFallback(domain);
     }
 
     /**
@@ -214,5 +218,30 @@ public class UniversityEmailRegistry {
                 .map(Record::key)
                 .distinct()
                 .collect(Collectors.toUnmodifiableList());
+    }
+
+    private Optional<Match> genericAcademicFallback(String domain) {
+        String suffix = ".ac.il";
+        if (!domain.endsWith(suffix) || domain.length() <= suffix.length()) {
+            return Optional.empty();
+        }
+
+        String[] labels = domain.split("\\.");
+        if (labels.length < 3) {
+            return Optional.empty();
+        }
+
+        String institutionLabel = labels[labels.length - 3].trim();
+        if (institutionLabel.isBlank()) {
+            return Optional.empty();
+        }
+
+        String rootDomain = institutionLabel + suffix;
+        return Optional.of(new Match(
+                institutionLabel,
+                "Academic institution (" + rootDomain + ")",
+                MemberKind.UNKNOWN,
+                rootDomain
+        ));
     }
 }

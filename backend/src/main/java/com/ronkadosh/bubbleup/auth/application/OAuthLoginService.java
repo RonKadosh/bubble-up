@@ -12,6 +12,7 @@ import com.ronkadosh.bubbleup.common.error.AppException;
 import com.ronkadosh.bubbleup.common.error.ErrorCode;
 import com.ronkadosh.bubbleup.common.security.JwtService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,26 +27,28 @@ import java.util.Optional;
  *
  * <ol>
  *   <li>The Google ID token must carry an {@code email} claim that Google
- *       has verified ({@code email_verified=true}).</li>
- *   <li>If the email itself resolves to a registered Israeli academic
- *       institution (see {@link UniversityEmailRegistry}) the user is
- *       <b>fully signed in</b>: {@code emailVerified=true}, role inferred
- *       from the matched sub-domain.</li>
- *   <li>If the email is a non-{@code .ac.il} Google account (e.g. a
- *       personal Gmail) the user is created in a <b>pending</b> state:
- *       {@code emailVerified=false}, role defaults to STUDENT. They keep
- *       a session JWT but the frontend routes them to the
- *       {@code /auth/verify} page, where they enter their academic email
- *       and prove ownership via {@link EmailVerificationService}.</li>
+ *       itself verified ({@code email_verified=true}).</li>
+ *   <li>The email's domain must resolve to a registered Israeli academic
+ *       institution via {@link UniversityEmailRegistry}. Non-{@code .ac.il}
+ *       Google accounts are rejected with {@link ErrorCode#NOT_ACADEMIC_EMAIL}
+ *       — they cannot sign up through this flow at all.</li>
+ *   <li>Every first-time Google sign-up starts pending:
+ *       {@code emailVerified=false}. Bubble.up then emails a one-time
+ *       verification link to that same academic inbox via
+ *       {@link EmailVerificationService}.</li>
+ *   <li>Once the user clicks the Bubble.up email link, later Google sign-ins
+ *       reuse the stored verified state and go straight into the app.</li>
  * </ol>
  *
- * <p>Result: every user who can ever read app data has a verified
- * {@code .ac.il} address, but BGU / HUJI / Bar-Ilan students (who use
- * Microsoft 365 for student mail and so can't sign in to Google with
- * their academic address) still have a smooth path in.
+ * <p>Result: the main product flow still accepts only Israeli academic Google
+ * accounts, but Bubble.up keeps its own first-signup verification step by
+ * sending the link from the team mailbox through SES. Testing / QA can still
+ * use the password endpoints behind {@code /login/testing}; that path is
+ * handled separately.
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class OAuthLoginService {
 
     private final UserRepository userRepository;
@@ -73,18 +76,19 @@ public class OAuthLoginService {
         }
 
         String normalisedEmail = email.toLowerCase(Locale.ROOT).trim();
-        Optional<Match> academicMatch = universityRegistry.lookup(normalisedEmail);
+        Match academicMatch = universityRegistry.lookup(normalisedEmail)
+                .orElseThrow(() -> {
+                    log.info("OAuth academic-domain check failed for Google email domain={}",
+                            emailDomain(normalisedEmail));
+                    return new AppException(ErrorCode.NOT_ACADEMIC_EMAIL,
+                            "Sign-in requires an Israeli academic email address (.ac.il).");
+                });
 
         // 1) Stable sub lookup first — survives email changes on the Google side.
         Optional<User> existingBySub = userRepository.findByGoogleSub(googleSub);
         if (existingBySub.isPresent()) {
             User user = existingBySub.get();
             requireAccountActive(user);
-            // If their (still-stored) email turned out to be academic now,
-            // promote them. Otherwise leave verification state alone.
-            if (universityRegistry.isAcademicEmail(user.getEmail())) {
-                user.setEmailVerified(true);
-            }
             return issuePair(user);
         }
 
@@ -94,22 +98,20 @@ public class OAuthLoginService {
             User user = existingByEmail.get();
             requireAccountActive(user);
             user.setGoogleSub(googleSub);
-            if (academicMatch.isPresent()) {
-                user.setEmailVerified(true);
-            }
             return issuePair(user);
         }
 
-        // 3) Brand new user.
-        UserRole defaultRole = academicMatch
-                .filter(m -> m.kind() == MemberKind.STAFF)
-                .map(m -> UserRole.EXPERT)
-                .orElse(UserRole.STUDENT);
+        // 3) Brand new user. The academic Google address is accepted, but the
+        //    first app session still remains pending until the Bubble.up email
+        //    verification link is redeemed.
+        UserRole defaultRole = academicMatch.kind() == MemberKind.STAFF
+                ? UserRole.EXPERT
+                : UserRole.STUDENT;
 
         User user = User.builder()
                 .email(normalisedEmail)
                 .googleSub(googleSub)
-                .emailVerified(academicMatch.isPresent())   // academic Google email = trust Google
+                .emailVerified(false)
                 .role(defaultRole)
                 .displayName(safeName(displayName, normalisedEmail))
                 .build();
@@ -160,5 +162,10 @@ public class OAuthLoginService {
         }
         int at = email.indexOf('@');
         return at > 0 ? email.substring(0, at) : email;
+    }
+
+    private static String emailDomain(String email) {
+        int at = email.indexOf('@');
+        return at > 0 && at < email.length() - 1 ? email.substring(at + 1) : "(missing)";
     }
 }

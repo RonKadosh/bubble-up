@@ -97,6 +97,9 @@ public class AuthCommandService {
 
     private static AuthResponse buildAuthResponse(String accessToken, String refreshToken, User user) {
         UserIdentity identity = new UserIdentity(user.getId(), user.getDisplayName(), user.getAvatarFileId());
+        // Temporary password-based testing accounts should remain usable even
+        // while the main Google flow requires Bubble.up email verification.
+        boolean emailVerified = user.getGoogleSub() == null || user.isEmailVerified();
         return new AuthResponse(
                 accessToken,
                 refreshToken,
@@ -105,7 +108,7 @@ public class AuthCommandService {
                 user.getRole().name(),
                 user.getDisplayName(),
                 identity.avatarUrl(),
-                user.isEmailVerified()
+                emailVerified
         );
     }
 }

@@ -33,11 +33,15 @@ function RequireAuth({ children }: { children: JSX.Element }) {
   const accessToken = useAuthStore((s) => s.accessToken)
   const emailVerified = useAuthStore((s) => s.user?.emailVerified ?? false)
   if (!accessToken) return <Navigate to="/login" replace />
-  // Users who signed in with a non-.ac.il Google account are sent to the
-  // verification page until they prove ownership of an academic mailbox.
-  // The verification page itself is mounted outside this guard.
   if (!emailVerified) return <Navigate to="/auth/verify" replace />
   return children
+}
+
+function LandingRedirect() {
+  const accessToken = useAuthStore((s) => s.accessToken)
+  const emailVerified = useAuthStore((s) => s.user?.emailVerified ?? false)
+  if (!accessToken) return <Navigate to="/login" replace />
+  return <Navigate to={emailVerified ? '/dashboard' : '/auth/verify'} replace />
 }
 
 /**
@@ -83,16 +87,20 @@ export default function App() {
   }, [lang])
 
   useEffect(() => {
-    if (useAuthStore.getState().accessToken) connectWs()
+    const { accessToken, user } = useAuthStore.getState()
+    if (accessToken && user?.emailVerified) connectWs()
     return useAuthStore.subscribe((state, prev) => {
-      if (state.accessToken && !prev.accessToken) connectWs()
-      if (!state.accessToken && prev.accessToken) disconnectWs()
+      const wasConnected = Boolean(prev.accessToken && prev.user?.emailVerified)
+      const shouldConnect = Boolean(state.accessToken && state.user?.emailVerified)
+      if (shouldConnect && !wasConnected) connectWs()
+      if (!shouldConnect && wasConnected) disconnectWs()
     })
   }, [])
 
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/" element={<LandingRedirect />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/login/testing" element={<TestingLoginPage />} />
         {/* OAuth landing pages — public on purpose: /auth/callback reads
@@ -131,7 +139,7 @@ export default function App() {
           <Route path="/admin/experts" element={<Navigate to="/admin/expert-requests" replace />} />
           <Route path="/admin/:tab" element={<RequireAdmin><AdminLayoutPage /></RequireAdmin>} />
         </Route>
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<LandingRedirect />} />
       </Routes>
     </BrowserRouter>
   )

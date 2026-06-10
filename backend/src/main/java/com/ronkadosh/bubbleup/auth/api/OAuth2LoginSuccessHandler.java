@@ -79,15 +79,23 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     }
 
     /**
-     * Redirect to {@code <frontend>/auth/callback#accessToken=...&refreshToken=...}.
-     * The URL fragment is invisible to the server side (browsers strip fragments
-     * from {@code Referer}, redirect logs, etc.), so the tokens don't bleed
-     * into request logs we don't control.
+     * Redirect to {@code <frontend>/auth/callback#...} with the issued JWT pair
+     * plus the small user summary the SPA needs to hydrate auth state.
+     *
+     * <p>The URL fragment is invisible to the server side (browsers strip
+     * fragments from {@code Referer}, redirect logs, etc.), so these values do
+     * not bleed into request logs we do not control.</p>
      */
     private String buildSuccessRedirect(AuthResponse tokens) {
         return frontendOrigin() + "/auth/callback#"
                 + "accessToken=" + URLEncoder.encode(tokens.accessToken(), StandardCharsets.UTF_8)
-                + "&refreshToken=" + URLEncoder.encode(tokens.refreshToken(), StandardCharsets.UTF_8);
+                + "&refreshToken=" + URLEncoder.encode(tokens.refreshToken(), StandardCharsets.UTF_8)
+                + "&userId=" + URLEncoder.encode(tokens.userId().toString(), StandardCharsets.UTF_8)
+                + "&email=" + URLEncoder.encode(tokens.email(), StandardCharsets.UTF_8)
+                + "&role=" + URLEncoder.encode(tokens.role(), StandardCharsets.UTF_8)
+                + "&displayName=" + URLEncoder.encode(tokens.displayName(), StandardCharsets.UTF_8)
+                + "&avatarUrl=" + URLEncoder.encode(tokens.avatarUrl() == null ? "" : tokens.avatarUrl(), StandardCharsets.UTF_8)
+                + "&emailVerified=" + URLEncoder.encode(Boolean.toString(tokens.emailVerified()), StandardCharsets.UTF_8);
     }
 
     /**
