@@ -83,10 +83,10 @@ jobs:
         id: ssm
         env:
           APP_LOADTEST_ENABLED: ${{ vars.APP_LOADTEST_ENABLED || 'false' }}
-          APP_LOADTEST_USERS: ${{ vars.APP_LOADTEST_USERS || '1000' }}
-          APP_LOADTEST_COURSES: ${{ vars.APP_LOADTEST_COURSES || '100' }}
-          APP_LOADTEST_GROUPS_PER_COURSE: ${{ vars.APP_LOADTEST_GROUPS_PER_COURSE || '5' }}
-          APP_LOADTEST_AVG_MESSAGES_PER_GROUP: ${{ vars.APP_LOADTEST_AVG_MESSAGES_PER_GROUP || '10' }}
+          APP_LOADTEST_USERS: ${{ vars.APP_LOADTEST_USERS || '10000' }}
+          APP_LOADTEST_COURSES: ${{ vars.APP_LOADTEST_COURSES || '500' }}
+          APP_LOADTEST_GROUPS_PER_COURSE: ${{ vars.APP_LOADTEST_GROUPS_PER_COURSE || '10' }}
+          APP_LOADTEST_AVG_MESSAGES_PER_GROUP: ${{ vars.APP_LOADTEST_AVG_MESSAGES_PER_GROUP || '20' }}
           APP_LOADTEST_BUILD_MATCH_CACHE: ${{ vars.APP_LOADTEST_BUILD_MATCH_CACHE || 'false' }}
           IMAGE_TAG: ${{ steps.tag.outputs.tag }}
           CADDY_DOMAIN: ${{ vars.CADDY_DOMAIN }}
