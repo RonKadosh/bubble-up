@@ -585,20 +585,6 @@ export default function GroupsPage() {
 
   return (
     <div className="flex flex-1 overflow-hidden relative">
-      <GroupSidebar
-        groups={groups}
-        selectedId={selectedId}
-        meId={me?.id ?? null}
-        unreadByGroup={unreadByGroup}
-        liveGroupIds={liveGroupIds}
-        onSelect={setSelectedId}
-        onCreate={handleCreate}
-        mobileOpen={mobileSidebarOpen}
-        onMobileClose={() => setMobileSidebarOpen(false)}
-        initialCreate={initialCreate}
-        onInitialCreateConsumed={() => navigate('/groups', { replace: true, state: null })}
-      />
-
       <main className="flex-1 flex flex-col bg-base overflow-hidden min-w-0">
         {error && (
           <div className="bg-danger-soft border-b border-line text-danger text-sm px-4 py-2 flex justify-between">
@@ -647,7 +633,7 @@ export default function GroupsPage() {
               liveSession={liveSession}
               onScheduleRoom={() => setScheduleRoomOpen(true)}
               onJoinLive={handleJoinLive}
-              onOpenSidebar={() => setMobileSidebarOpen(true)}
+              onOpenSidebar={() => { setBubbleInfoOpen(false); setMobileSidebarOpen(true) }}
               onOpenInfo={() => setBubbleInfoOpen((v) => !v)}
             />
 
@@ -783,6 +769,23 @@ export default function GroupsPage() {
           </>
         )}
       </main>
+
+      {/* My Bubbles list — placed at the end (opposite the app's icon rail) so the
+          hub's Home/group content starts flush with the rail, matching every other
+          page's header alignment. On phone/tablet it's still a start-anchored drawer. */}
+      <GroupSidebar
+        groups={groups}
+        selectedId={selectedId}
+        meId={me?.id ?? null}
+        unreadByGroup={unreadByGroup}
+        liveGroupIds={liveGroupIds}
+        onSelect={setSelectedId}
+        onCreate={handleCreate}
+        mobileOpen={mobileSidebarOpen}
+        onMobileClose={() => setMobileSidebarOpen(false)}
+        initialCreate={initialCreate}
+        onInitialCreateConsumed={() => navigate('/groups', { replace: true, state: null })}
+      />
 
       {scheduleRoomOpen && selected && (
         <ScheduleRoomModal

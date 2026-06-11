@@ -47,21 +47,6 @@ public class GroupController {
     private final GroupQueryService queries;
     private final CurrentUserProvider currentUserProvider;
 
-    @GetMapping
-    public ApiResponse<List<GroupResponse>> listAll(
-            @RequestParam(required = false) UUID offeringId,
-            @RequestParam(required = false) UUID courseId,
-            @RequestParam(required = false) UUID departmentId,
-            @RequestParam(required = false) UUID universityId,
-            @RequestParam(required = false) UUID termId
-    ) {
-        if (offeringId == null && courseId == null && departmentId == null
-                && universityId == null && termId == null) {
-            return ApiResponse.success(queries.getAllGroups());
-        }
-        return ApiResponse.success(queries.getGroupsFiltered(offeringId, courseId, departmentId, universityId, termId));
-    }
-
     /** Groups the caller is currently a member of. Backs the "My Bubbles" hub sidebar. */
     @GetMapping("/me")
     public ApiResponse<List<GroupResponse>> listMine() {
@@ -84,20 +69,6 @@ public class GroupController {
         CurrentUser me = currentUserProvider.get();
         return ApiResponse.success(queries.getGroupsByCourse(
                 me.id(), me.role(), courseId, q, visibility, joinedOnly));
-    }
-
-    /**
-     * Home-scope feed for the caller. Requires affiliation set on the user profile.
-     */
-    @GetMapping("/relevant")
-    public ApiResponse<List<GroupResponse>> listRelevant(
-            @RequestParam(name = "includeOtherDepartments", defaultValue = "false") boolean includeOtherDepartments,
-            @RequestParam(name = "includeOtherUniversities", defaultValue = "false") boolean includeOtherUniversities,
-            @RequestParam(name = "termId", required = false) UUID termIdOverride
-    ) {
-        CurrentUser me = currentUserProvider.get();
-        return ApiResponse.success(queries.getRelevant(
-                me.id(), includeOtherDepartments, includeOtherUniversities, termIdOverride));
     }
 
     /**
