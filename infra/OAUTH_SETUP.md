@@ -33,7 +33,8 @@ After that, everything else (IAM permissions, code, env wiring) is handled by Te
      - `http://localhost:3000` (dev frontend)
      - `https://bubbleup.100-50-61-243.nip.io` (prod)
    - **Authorized redirect URIs**:
-     - `http://localhost:8080/login/oauth2/code/google` (dev backend)
+     - `http://localhost:3000/login/oauth2/code/google` (dev via frontend proxy / docker-compose)
+     - `http://localhost:8080/login/oauth2/code/google` (dev when hitting backend directly)
      - `https://bubbleup.100-50-61-243.nip.io/login/oauth2/code/google` (prod, through Caddy)
    - **Create** → you'll get a **Client ID** (`<random>.apps.googleusercontent.com`) and **Client secret** (`GOCSPX-<random>`). **Copy both — the secret is only shown once**.
 
@@ -124,7 +125,7 @@ In prod, the EC2 instance role is auto-extended with `ses:SendEmail` permission 
 
 | Symptom | Probable cause |
 |---|---|
-| Google sign-in returns "redirect_uri_mismatch" | The `Authorized redirect URIs` in Google Cloud Console doesn't exactly match. Trailing slashes matter. Re-check both http://localhost:8080/login/oauth2/code/google AND the prod URL. |
+| Google sign-in returns "redirect_uri_mismatch" | The `Authorized redirect URIs` in Google Cloud Console doesn't exactly match. Trailing slashes matter. Re-check `http://localhost:3000/login/oauth2/code/google` for docker-compose/frontend-proxy dev, `http://localhost:8080/login/oauth2/code/google` for direct-backend dev, and the prod URL. |
 | Sign-in works but the app says "not a recognized academic email" | The Google email isn't a `.ac.il` address. You'll then be prompted for a secondary academic email — the verification link goes via SES. |
 | Verification email never arrives | (a) SES sandbox + recipient not verified, OR (b) wrong `MAIL_FROM_ADDRESS`. Look in SES → "Sending statistics" for bounces. |
 | Prod EC2 logs `AccessDenied: ses:SendEmail` | `terraform apply` wasn't run after the SES policy was added. Re-apply. |

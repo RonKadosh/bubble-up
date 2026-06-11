@@ -21,6 +21,7 @@ public enum ErrorCode {
     REFRESH_TOKEN_REUSED(ErrorCategory.UNAUTHORIZED, HttpStatus.UNAUTHORIZED),
     ACCOUNT_SUSPENDED(ErrorCategory.FORBIDDEN, HttpStatus.FORBIDDEN),
     ACCOUNT_BANNED(ErrorCategory.FORBIDDEN, HttpStatus.FORBIDDEN),
+    EMAIL_VERIFICATION_REQUIRED(ErrorCategory.FORBIDDEN, HttpStatus.FORBIDDEN),
 
     // OAuth2 / Google sign-in
     /** Google's ID token didn't carry an email claim (rare; user denied scope). */

@@ -9,10 +9,10 @@ export interface AuthUser {
   /** Cache-busted absolute path from the server, or null when no avatar set. */
   avatarUrl: string | null
   /**
-   * True once the user has proved ownership of an Israeli academic email
-   * (either directly via a .ac.il Google account, or via a SES-sent
-   * verification link). The router uses this to push unverified users to
-   * /auth/verify before any other page.
+   * True once Bubble.up's first-signup verification email has been redeemed.
+   * Main-product Google users stay pending until they click the link from
+   * the team mailbox; the temporary password testing route is treated as
+   * verified separately by the backend response.
    */
   emailVerified: boolean
 }
@@ -41,8 +41,8 @@ export const useAuthStore = create<AuthState>()(
       },
       clearAuth: () => set({ accessToken: null, refreshToken: null, user: null }),
     }),
-    // Bumped v3 -> v4: AuthUser gained `emailVerified`. Existing v3 users get
-    // re-prompted to sign in via Google (no migration in dev's create-drop world).
-    { name: 'bubbleup-auth-v4' }
+    // Bumped v5 -> v6: restore Bubble.up's own first-signup email verification
+    // step, so older persisted auth states should be discarded.
+    { name: 'bubbleup-auth-v6' }
   )
 )

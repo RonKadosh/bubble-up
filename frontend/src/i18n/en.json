@@ -134,7 +134,7 @@
     "headingRegister": "Join the bubbles",
     "subSignIn": "Sign in to drift back into your Bubbles.",
     "subRegister": "Create an account to start floating with your study crews.",
-    "subGoogleOnly": "Sign in with Google to continue.",
+    "subGoogleOnly": "Start with your Israeli academic Google account to continue.",
     "email": "Email",
     "emailPlaceholder": "you@example.com",
     "password": "Password",
@@ -154,17 +154,18 @@
     "displayNamePlaceholder": "Your name",
     "displayNameRequired": "Display name is required.",
     "signInWithGoogle": "Continue with Google",
-    "academicOnlyNote": "Bubble.up is for Israeli academic communities. If you use a personal Google account, we'll ask you to verify your .ac.il email.",
+    "academicOnlyNote": "Bubble.up uses Israeli academic Google sign-in and a first-signup verification email from the team mailbox.",
     "errorInvalidCredentials": "Email or password is incorrect.",
     "errorEmailExists": "That email is already registered.",
     "errorRegisterGeneric": "Registration failed.",
     "errorSignInGeneric": "Sign-in failed.",
-    "errorNotAcademic": "Please use an Israeli academic email, or verify your .ac.il email after signing in.",
+    "errorNotAcademic": "Please sign in with an Israeli academic Google account (.ac.il). Bubble.up will then send its own verification link to that inbox.",
     "errorGoogleUnverified": "Google could not confirm this email address. Try another Google account.",
     "errorGoogleNoEmail": "Google did not share an email address for this account.",
     "errorBanned": "This account is currently banned.",
     "errorSuspended": "This account is currently suspended.",
-    "errorOAuthCancelled": "Google sign-in was cancelled or could not be completed."
+    "errorOAuthCancelled": "Google sign-in was cancelled or could not be completed.",
+    "errorSessionExpired": "Your sign-up session expired. Please start again with Google."
   },
   "oauth": {
     "signingYouIn": "Signing you in",
@@ -173,11 +174,21 @@
     "tryAgain": "We could not finish Google sign-in. Please try again.",
     "backToSignIn": "Back to sign in"
   },
+  "testingLogin": {
+    "headingSignIn": "Testing login",
+    "headingRegister": "Testing register",
+    "subSignIn": "Developer-only password login that goes straight through JWT.",
+    "subRegister": "Developer-only password registration for the JWT testing flow.",
+    "switchToRegisterPrompt": "Need a testing account?",
+    "switchToRegisterAction": "Create one",
+    "switchToSignInPrompt": "Already have a testing account?",
+    "switchToSignInAction": "Sign in"
+  },
   "verifyEmail": {
     "headingEnter": "Verify your academic email",
-    "subEnter": "Enter your .ac.il email and we'll send you a verification link.",
+    "subEnter": "Open the Bubble.up email and click the verification link to finish your first sign-up.",
     "emailPlaceholder": "you@university.ac.il",
-    "sendLink": "Send verification link",
+    "sendLink": "Resend verification link",
     "sending": "Sending...",
     "sentHeading": "Check your inbox",
     "sentBody": "We sent a verification link to {{email}}.",
@@ -185,7 +196,7 @@
     "verifyingHeading": "Verifying your email",
     "verifyingSub": "Checking the link now.",
     "successHeading": "Email verified",
-    "successSub": "You're all set. Taking you to Bubble.up.",
+    "successSub": "Your academic email is verified. Taking you to Bubble.up.",
     "errorHeading": "Could not verify email",
     "tryAgain": "Try again",
     "errorExpired": "This verification link expired. Request a new one.",
@@ -194,6 +205,7 @@
     "errorAlreadyVerified": "This email is already verified.",
     "errorRateLimited": "Too many verification emails were requested. Please try again later.",
     "errorMailDown": "Email sending is not configured right now. Please try again later.",
+    "errorRestartSignUp": "Your sign-up session expired. Please start again with Google.",
     "errorGeneric": "Email verification failed. Please try again."
   },
   "academy": {

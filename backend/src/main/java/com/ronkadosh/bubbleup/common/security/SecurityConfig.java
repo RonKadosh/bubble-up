@@ -33,6 +33,7 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtFilter;
+    private final EmailVerificationGateFilter emailVerificationGateFilter;
     private final CorsProperties corsProperties;
     private final OAuth2LoginSuccessHandler oauthSuccessHandler;
     private final OAuth2LoginFailureHandler oauthFailureHandler;
@@ -45,11 +46,13 @@ public class SecurityConfig {
     private final ObjectProvider<ClientRegistrationRepository> clientRegistrations;
 
     public SecurityConfig(JwtAuthenticationFilter jwtFilter,
+                          EmailVerificationGateFilter emailVerificationGateFilter,
                           CorsProperties corsProperties,
                           OAuth2LoginSuccessHandler oauthSuccessHandler,
                           OAuth2LoginFailureHandler oauthFailureHandler,
                           ObjectProvider<ClientRegistrationRepository> clientRegistrations) {
         this.jwtFilter = jwtFilter;
+        this.emailVerificationGateFilter = emailVerificationGateFilter;
         this.corsProperties = corsProperties;
         this.oauthSuccessHandler = oauthSuccessHandler;
         this.oauthFailureHandler = oauthFailureHandler;
@@ -81,6 +84,7 @@ public class SecurityConfig {
                 .exceptionHandling(eh -> eh
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(emailVerificationGateFilter, JwtAuthenticationFilter.class)
                 .addFilterAfter(new RequestContextFilter(), JwtAuthenticationFilter.class);
 
         // Only wire OAuth2 login when a ClientRegistrationRepository exists —
