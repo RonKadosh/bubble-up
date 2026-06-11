@@ -116,6 +116,10 @@
     "noAffiliation": "—"
   },
   "login": {
+    "entryHeading": "בואו נתחיל",
+    "entrySub": "המשיכו עם חשבון Google האקדמי הישראלי שלכם.",
+    "entryButton": "להמשיך עם Google",
+    "entryNote": "בהרשמה הראשונה Bubble.up ישלח קישור אימות לכתובת האקדמית הזו לפני שהגישה תיפתח.",    
     "headingSignIn": "ברוכים השבים",
     "headingRegister": "להצטרף לבועות",
     "subSignIn": "התחבר/י כדי לחזור לבועות שלך.",
@@ -140,18 +144,18 @@
     "displayNamePlaceholder": "השם שלך",
     "displayNameRequired": "שם התצוגה חובה.",
     "signInWithGoogle": "להמשיך עם Google",
-    "academicOnlyNote": "Bubble.up מיועדת לקהילות אקדמיות בישראל. אם נכנסת עם חשבון Google אישי, נבקש ממך לאמת אימייל .ac.il.",
+    "academicOnlyNote": "Bubble.up מיועדת לקהילות אקדמיות בישראל. בהרשמה הראשונה נשלח קישור אימות לכתובת האקדמית שאיתה התחברתם.",
     "errorInvalidCredentials": "האימייל או הסיסמה שגויים.",
     "errorEmailExists": "אימייל זה כבר רשום.",
     "errorRegisterGeneric": "ההרשמה נכשלה.",
     "errorSignInGeneric": "ההתחברות נכשלה.",
-    "errorNotAcademic": "יש להשתמש באימייל אקדמי ישראלי, או לאמת אימייל .ac.il לאחר ההתחברות.",
+    "errorNotAcademic": "יש להתחבר עם חשבון Google אקדמי ישראלי (.ac.il). לאחר מכן Bubble.up ישלח קישור אימות לכתובת הזו.",
     "errorGoogleUnverified": "Google לא הצליחה לאמת את כתובת האימייל הזו. נסה/י חשבון Google אחר.",
     "errorGoogleNoEmail": "Google לא שיתפה כתובת אימייל עבור החשבון הזה.",
     "errorBanned": "החשבון הזה חסום כרגע.",
     "errorSuspended": "החשבון הזה מושעה כרגע.",
     "errorOAuthCancelled": "ההתחברות עם Google בוטלה או לא הושלמה.",
-    "errorSessionExpired": "Your sign-in session expired. Please start again with Google."
+    "errorSessionExpired": "פג תוקף ההתחברות שלכם. התחילו שוב עם Google."
   },
   "oauth": {
     "signingYouIn": "מחברים אותך",
@@ -162,7 +166,7 @@
   },
   "verifyEmail": {
     "headingEnter": "אימות האימייל האקדמי",
-    "subEnter": "הזינו את כתובת ה-.ac.il שלכם ונשלח קישור אימות.",
+    "subEnter": "פתחו את המייל של Bubble.up ולחצו על קישור האימות כדי להשלים את ההרשמה הראשונה.",
     "emailPlaceholder": "you@university.ac.il",
     "sendLink": "שליחת קישור אימות",
     "sending": "שולח...",
