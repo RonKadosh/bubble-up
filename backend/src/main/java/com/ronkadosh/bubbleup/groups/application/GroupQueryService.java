@@ -11,7 +11,9 @@ import com.ronkadosh.bubbleup.catalog.internal.dto.TermRef;
 import com.ronkadosh.bubbleup.common.context.UserRole;
 import com.ronkadosh.bubbleup.common.error.AppException;
 import com.ronkadosh.bubbleup.common.error.ErrorCode;
+import com.ronkadosh.bubbleup.common.file.FileStorageService;
 import com.ronkadosh.bubbleup.enrollment.internal.EnrollmentInternalService;
+import com.ronkadosh.bubbleup.groups.api.dto.GroupCandidateResponse;
 import com.ronkadosh.bubbleup.groups.api.dto.GroupMemberResponse;
 import com.ronkadosh.bubbleup.groups.api.dto.GroupResponse;
 import com.ronkadosh.bubbleup.groups.model.GroupMember;
@@ -32,7 +34,7 @@ import java.time.Instant;
 import java.time.YearMonth;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -50,97 +52,8 @@ public class GroupQueryService {
     private final AuthInternalService authInternalService;
     private final CalendarInternalService calendarInternalService;
     private final EnrollmentInternalService enrollmentInternalService;
+    private final FileStorageService fileStorageService;
 
-    @Transactional(readOnly = true)
-    public List<GroupResponse> getAllGroups() {
-        return groupRepository.findAll().stream()
-                .filter(g -> g.getStatus() == GroupStatus.ACTIVE)
-                .map(this::toResponse)
-                .toList();
-    }
-
-    /**
-     * Filtered list. Precedence (most-specific first):
-     * <ol>
-     *   <li>{@code offeringId} — exact match.</li>
-     *   <li>{@code courseId} + optional {@code termId} — narrows to one or all offerings of the course.</li>
-     *   <li>{@code departmentId} + optional {@code termId} — expands via catalog.</li>
-     *   <li>{@code universityId} + optional {@code termId} — expands via catalog.</li>
-     *   <li>All-null delegates to {@link #getAllGroups()}.</li>
-     * </ol>
-     */
-    @Transactional(readOnly = true)
-    public List<GroupResponse> getGroupsFiltered(UUID offeringId, UUID courseId, UUID departmentId,
-                                                 UUID universityId, UUID termId) {
-        if (offeringId != null) {
-            return mapToResponses(groupRepository.findAllByOfferingIdAndStatus(offeringId, GroupStatus.ACTIVE));
-        }
-        if (courseId != null) {
-            List<UUID> offeringIds = resolveOfferingIdsForCourse(courseId, termId);
-            return mapToResponses(byOfferingIds(offeringIds));
-        }
-        if (departmentId != null) {
-            if (termId != null) {
-                return mapToResponses(byOfferingIds(
-                        catalogInternalService.offeringIdsForDepartmentAndTerm(departmentId, termId)));
-            }
-            return mapToResponses(byOfferingIdsForCourses(
-                    catalogInternalService.courseIdsForDepartment(departmentId)));
-        }
-        if (universityId != null) {
-            if (termId != null) {
-                return mapToResponses(byOfferingIds(
-                        catalogInternalService.offeringIdsForUniversityAndTerm(universityId, termId)));
-            }
-            return mapToResponses(byOfferingIdsForCourses(
-                    catalogInternalService.courseIdsForUniversity(universityId)));
-        }
-        return getAllGroups();
-    }
-
-    /**
-     * Home-scope feed: bubbles in the caller's university + department + current term.
-     * Throws {@link ErrorCode#USER_AFFILIATION_REQUIRED} when affiliation is missing.
-     *
-     * <p>Widening flags let the same endpoint serve "show me other departments" /
-     * "show me other universities" without a second route.
-     */
-    @Transactional(readOnly = true)
-    public List<GroupResponse> getRelevant(UUID userId,
-                                           boolean includeOtherDepartments,
-                                           boolean includeOtherUniversities,
-                                           UUID termIdOverride) {
-        UserProfile profile = authInternalService.getProfile(userId)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-        if (!profile.hasAffiliation()) {
-            throw new AppException(ErrorCode.USER_AFFILIATION_REQUIRED);
-        }
-        UUID universityId = profile.universityId();
-        UUID departmentId = profile.departmentId();
-        UUID termId = termIdOverride != null
-                ? termIdOverride
-                : catalogInternalService.currentTermFor(universityId).map(TermRef::id).orElse(null);
-
-        if (includeOtherUniversities) {
-            // Cross-uni view: term-scope only (any uni). When no term resolves we
-            // gracefully return every public-ish group.
-            if (termId == null) return getAllGroups();
-            return mapToResponses(byOfferingIds(allOfferingIdsForTerm(termId)));
-        }
-
-        if (includeOtherDepartments) {
-            return mapToResponses(filterByUniversityAndTerm(universityId, termId));
-        }
-
-        // Default: my-uni + my-dept (+ current term if known).
-        if (termId == null) {
-            // Graceful degradation: no current term — show all bubbles in my dept across terms.
-            return mapToResponses(byOfferingIdsForCourses(
-                    catalogInternalService.courseIdsForDepartment(departmentId)));
-        }
-        return mapToResponses(byOfferingIds(
-                catalogInternalService.offeringIdsForDepartmentAndTerm(departmentId, termId)));
-    }
 
     /** Groups the caller is currently a member of. */
     @Transactional(readOnly = true)
@@ -242,6 +155,29 @@ public class GroupQueryService {
         return toResponse(group);
     }
 
+    /**
+     * Read the cover-image bytes + the content type they were uploaded as. Throws
+     * {@code GROUP_IMAGE_NOT_FOUND} when the Bubble has no image set. Public stream
+     * (served unauthenticated) — mirrors the user-avatar path in
+     * {@code UserProfileQueryService.getAvatar}.
+     */
+    @Transactional(readOnly = true)
+    public ImageStream getImage(UUID groupId) {
+        StudyGroup group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new AppException(ErrorCode.GROUP_IMAGE_NOT_FOUND));
+        if (group.getImageFileId() == null) {
+            throw new AppException(ErrorCode.GROUP_IMAGE_NOT_FOUND);
+        }
+        byte[] bytes = fileStorageService.download(group.getImageFileId());
+        String contentType = group.getImageContentType() != null
+                ? group.getImageContentType()
+                : "image/jpeg";
+        return new ImageStream(bytes, contentType);
+    }
+
+    /** Tuple returned by {@link #getImage(UUID)}. */
+    public record ImageStream(byte[] bytes, String contentType) {}
+
     @Transactional(readOnly = true)
     public List<GroupMemberResponse> getMembers(UUID groupId, UUID requesterId) {
         if (!groupRepository.existsById(groupId)) {
@@ -260,6 +196,76 @@ public class GroupQueryService {
             out.add(GroupMemberResponse.from(m, identities.get(m.getUserId())));
         }
         return out;
+    }
+
+    /**
+     * Owner-only search for users the owner can add to this Bubble: students
+     * enrolled in the Bubble's offering who aren't already members. Backs the
+     * offering-scoped member search that replaced the paste-a-UUID box. Optional
+     * {@code q} filters on display name (case-insensitive contains); results are
+     * name-sorted and capped at {@code CANDIDATE_LIMIT}.
+     */
+    @Transactional(readOnly = true)
+    public List<GroupCandidateResponse> getAddableCandidates(UUID groupId, UUID requesterId, String q) {
+        StudyGroup group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new AppException(ErrorCode.GROUP_NOT_FOUND));
+        requireOwner(groupId, requesterId);
+
+        Set<UUID> memberIds = new HashSet<>();
+        for (GroupMember m : memberRepository.findAllByGroupId(groupId)) memberIds.add(m.getUserId());
+
+        List<UUID> enrolled = enrollmentInternalService.findUserIdsEnrolledInOffering(group.getOfferingId());
+        List<UUID> candidateIds = enrolled.stream()
+                .filter(id -> !memberIds.contains(id))
+                .toList();
+        if (candidateIds.isEmpty()) return List.of();
+
+        Map<UUID, UserIdentity> identities = authInternalService.getIdentitiesByIds(candidateIds);
+        String needle = q == null ? "" : q.trim().toLowerCase(Locale.ROOT);
+        return candidateIds.stream()
+                .map(identities::get)
+                .filter(java.util.Objects::nonNull)
+                .filter(idn -> needle.isEmpty()
+                        || (idn.displayName() != null && idn.displayName().toLowerCase(Locale.ROOT).contains(needle)))
+                .sorted(java.util.Comparator.comparing(
+                        idn -> idn.displayName() == null ? "" : idn.displayName(),
+                        String.CASE_INSENSITIVE_ORDER))
+                .limit(CANDIDATE_LIMIT)
+                .map(idn -> new GroupCandidateResponse(idn.userId(), idn.displayName(), idn.avatarUrl()))
+                .toList();
+    }
+
+    private static final int CANDIDATE_LIMIT = 20;
+
+    /**
+     * Bubbles the caller can invite {@code targetUserId} into: bubbles the caller
+     * owns that are ACTIVE, not full, share the target's enrolled offering, and
+     * don't already contain the target. Backs the "Invite to Bubble" action on the
+     * user card. Empty (not an error) when there's nowhere to invite them.
+     */
+    @Transactional(readOnly = true)
+    public List<GroupResponse> getInvitableGroupsForUser(UUID requesterId, UUID targetUserId) {
+        if (requesterId.equals(targetUserId)) return List.of();
+        return memberRepository.findAllByUserId(requesterId).stream()
+                .filter(m -> m.getRole() == MembershipRole.OWNER)
+                .map(m -> groupRepository.findById(m.getGroupId()).orElse(null))
+                .filter(java.util.Objects::nonNull)
+                .filter(g -> g.getStatus() == GroupStatus.ACTIVE)
+                .filter(g -> memberRepository.countByGroupId(g.getId()) < g.getMaxMembers())
+                .filter(g -> !memberRepository.existsByGroupIdAndUserId(g.getId(), targetUserId))
+                .filter(g -> enrollmentInternalService.isEnrolledInOffering(targetUserId, g.getOfferingId()))
+                .map(this::toResponse)
+                .toList();
+    }
+
+    /** Owner-gate mirroring {@code GroupCommandService.requireOwner}. */
+    private void requireOwner(UUID groupId, UUID userId) {
+        MembershipRole role = memberRepository.findByGroupIdAndUserId(groupId, userId)
+                .map(GroupMember::getRole)
+                .orElseThrow(() -> new AppException(ErrorCode.NOT_GROUP_OWNER));
+        if (role != MembershipRole.OWNER) {
+            throw new AppException(ErrorCode.NOT_GROUP_OWNER);
+        }
     }
 
     /**
@@ -288,45 +294,32 @@ public class GroupQueryService {
         return YearMonth.now(ZoneOffset.UTC).plusMonths(1).atDay(1).atStartOfDay(ZoneOffset.UTC).toInstant();
     }
 
-    private List<UUID> resolveOfferingIdsForCourse(UUID courseId, UUID termId) {
-        if (termId != null) {
-            return catalogInternalService.offeringIdForCourseAndTerm(courseId, termId)
-                    .map(List::of)
-                    .orElse(List.of());
-        }
-        // Any offering of this course (across all terms).
-        return catalogInternalService.offeringIdsForCourses(List.of(courseId));
-    }
-
-    private List<UUID> allOfferingIdsForTerm(UUID termId) {
-        // No direct lookup; in practice multi-uni "term-only" is rare. Approximated
-        // as offerings whose term matches — derived by scanning offerings.
-        return catalogInternalService.offeringIdsForTerm(termId);
-    }
-
-    private List<StudyGroup> filterByUniversityAndTerm(UUID universityId, UUID termId) {
-        if (termId == null) {
-            return byOfferingIdsForCourses(catalogInternalService.courseIdsForUniversity(universityId));
-        }
-        return byOfferingIds(catalogInternalService.offeringIdsForUniversityAndTerm(universityId, termId));
-    }
-
-    private List<StudyGroup> byOfferingIds(Collection<UUID> offeringIds) {
-        if (offeringIds.isEmpty()) return List.of();
-        return groupRepository.findAllByOfferingIdInAndStatus(offeringIds, GroupStatus.ACTIVE);
-    }
-
-    private List<StudyGroup> byOfferingIdsForCourses(List<UUID> courseIds) {
-        if (courseIds.isEmpty()) return List.of();
-        return byOfferingIds(catalogInternalService.offeringIdsForCourses(courseIds));
-    }
-
+    /**
+     * Maps a list of groups to responses in a constant number of queries (two), instead of
+     * the per-group owner + member-count lookups that made the list endpoints O(N) round-trips.
+     * Owners and counts are fetched batched and joined in memory.
+     */
     private List<GroupResponse> mapToResponses(List<StudyGroup> groups) {
+        if (groups.isEmpty()) return List.of();
+        List<UUID> ids = groups.stream().map(StudyGroup::getId).toList();
+
+        Map<UUID, Long> countByGroup = new HashMap<>();
+        for (Object[] row : memberRepository.countByGroupIdIn(ids)) {
+            countByGroup.put((UUID) row[0], (Long) row[1]);
+        }
+        Map<UUID, UUID> ownerByGroup = new HashMap<>();
+        for (GroupMember owner : memberRepository.findAllByGroupIdInAndRole(ids, MembershipRole.OWNER)) {
+            ownerByGroup.putIfAbsent(owner.getGroupId(), owner.getUserId());
+        }
+
         List<GroupResponse> out = new ArrayList<>(groups.size());
-        for (StudyGroup g : groups) out.add(toResponse(g));
+        for (StudyGroup g : groups) {
+            out.add(GroupResponse.from(g, ownerByGroup.get(g.getId()), countByGroup.getOrDefault(g.getId(), 0L)));
+        }
         return out;
     }
 
+    /** Single-group mapping (one extra round-trip is fine for a by-id read). */
     private GroupResponse toResponse(StudyGroup group) {
         UUID ownerId = memberRepository.findAllByGroupIdAndRole(group.getId(), MembershipRole.OWNER).stream()
                 .findFirst()

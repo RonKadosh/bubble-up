@@ -109,6 +109,11 @@ public enum ErrorCode {
     AVATAR_TOO_LARGE(ErrorCategory.VALIDATION, HttpStatus.PAYLOAD_TOO_LARGE),
     AVATAR_NOT_FOUND(ErrorCategory.NOT_FOUND, HttpStatus.NOT_FOUND),
 
+    // Group cover image
+    GROUP_IMAGE_TYPE_NOT_ALLOWED(ErrorCategory.VALIDATION, HttpStatus.BAD_REQUEST),
+    GROUP_IMAGE_TOO_LARGE(ErrorCategory.VALIDATION, HttpStatus.PAYLOAD_TOO_LARGE),
+    GROUP_IMAGE_NOT_FOUND(ErrorCategory.NOT_FOUND, HttpStatus.NOT_FOUND),
+
     // Matching / Quiz
     QUIZ_QUESTION_NOT_FOUND(ErrorCategory.NOT_FOUND, HttpStatus.NOT_FOUND),
     QUIZ_ANSWER_INVALID(ErrorCategory.VALIDATION, HttpStatus.BAD_REQUEST),

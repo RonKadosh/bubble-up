@@ -72,6 +72,8 @@ public class SecurityConfig {
                         // Avatar stream is public so <img src=...> works without an Authorization header.
                         // The privacy boundary is on /users/{id}/profile (co-member gated).
                         .requestMatchers(HttpMethod.GET, ApiPaths.USERS_BASE + "/*/avatar").permitAll()
+                        // Bubble cover-image stream is public for the same reason as avatars.
+                        .requestMatchers(HttpMethod.GET, ApiPaths.GROUPS_BASE + "/*/image").permitAll()
                         // OAuth2 endpoints (Spring Security auto-publishes these).
                         .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
                         .anyRequest().authenticated()

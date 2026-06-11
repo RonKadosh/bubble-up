@@ -97,7 +97,7 @@ export default function ExpertProfileEditPage() {
             <Button type="button" variant="ghost" size="sm" onClick={() => navigate('/expert')}>
               {t('expert.profileEdit.cancel')}
             </Button>
-            <Button type="submit" size="sm" disabled={submitting}>
+            <Button variant="deep" type="submit" size="sm" disabled={submitting}>
               {submitting ? t('expert.profileEdit.saving') : t('expert.profileEdit.save')}
             </Button>
           </div>

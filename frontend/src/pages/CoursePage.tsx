@@ -211,7 +211,7 @@ function GatedCard({ enrolling, onEnroll }: { enrolling: boolean; onEnroll: () =
         <p className="mt-2 text-sm text-secondary leading-relaxed max-w-[48ch]">
           {t('course.gated.body')}
         </p>
-        <Button size="lg" className="mt-6" onClick={onEnroll} disabled={enrolling}>
+        <Button variant="deep" size="lg" className="mt-6" onClick={onEnroll} disabled={enrolling}>
           {enrolling ? t('course.gated.enrolling') : t('course.gated.enroll')}
         </Button>
       </div>
@@ -374,7 +374,7 @@ function GroupRow({
           {t('course.groups.open')}
         </Button>
       ) : (
-        <Button size="xs" onClick={onJoin} className="shrink-0">
+        <Button variant="deep" size="xs" onClick={onJoin} className="shrink-0">
           {t('course.groups.join')}
         </Button>
       )}

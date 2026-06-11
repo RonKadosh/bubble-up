@@ -7,6 +7,7 @@ import { BubbleRoom, getRoom } from '../api/room'
 import { subscribeToRoomPresence } from '../api/ws'
 import { errorCode } from '../api/errors'
 import { RoomHeader } from './room/RoomHeader'
+import { RoomGateError, RoomGateLoading } from './room/RoomGate'
 import { RoomBentoShell } from './room/RoomBentoShell'
 import { WhiteboardPanel } from './room/WhiteboardPanel'
 import { RoomChatPanel } from './room/RoomChatPanel'
@@ -62,18 +63,11 @@ export default function BubbleRoomPage() {
   if (!roomId) return <Navigate to="/groups" replace />
 
   if (loadError) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full p-8 gap-3">
-        <p className="text-base">{loadError}</p>
-        <a href="/groups" className="text-sm text-link underline">{t('room.backToBubbles')}</a>
-      </div>
-    )
+    return <RoomGateError message={loadError} backTo="/groups" backLabel={t('room.backToBubbles')} />
   }
 
   if (!room) {
-    return (
-      <div className="flex items-center justify-center h-full text-muted text-sm">{t('common.loading')}</div>
-    )
+    return <RoomGateLoading label={t('common.loading')} />
   }
 
   // EXPERT_SESSION rooms have their own page (`/sessions/:sessionId`) — anyone

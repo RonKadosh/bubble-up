@@ -41,6 +41,10 @@ import {
 import { subscribeToRoom, subscribeToRoomPins, subscribeToRoomPolls } from '../../api/ws'
 import { Button, IconButton } from '../../components/Button'
 import {
+  CapIcon, UserPlusIcon, UserMinusIcon, ClockIcon, CalendarIcon, VideoIcon,
+  PollIcon, FileIcon, FolderIcon, LinkIcon, PinIcon, ReplyIcon, PlusIcon, SendIcon, CrownIcon,
+} from '../../components/Icons'
+import {
   BUBBLE_EMOJIS,
   BUBBLE_EMOJI_BY_SHORTCODE,
   BUBBLE_EMOJI_REGEX,
@@ -502,7 +506,7 @@ export function ChatPanel({ groupId, room, meId, isMember, onError, onUnreadChan
       <div
         ref={scrollerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto p-5 flex flex-col gap-3"
+        className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 tablet:p-5 flex flex-col gap-3"
       >
         {loadingOlder && (
           <p className="text-center text-xs text-muted">{t('groups.chat.loadingOlder')}</p>
@@ -525,6 +529,7 @@ export function ChatPanel({ groupId, room, meId, isMember, onError, onUnreadChan
             <ChatMessageRow
               message={m}
               meId={meId}
+              groupId={groupId}
               eventCache={eventCache}
               onNeedEvent={resolveEvent}
               pollCache={pollCache}
@@ -565,7 +570,7 @@ export function ChatPanel({ groupId, room, meId, isMember, onError, onUnreadChan
             aria-label={t('groups.chat.menu.openAria')}
             title={t('groups.chat.menu.openTitle')}
           >
-            ＋
+            <PlusIcon className="w-5 h-5" />
           </IconButton>
           {showComposerMenu && (
             <ComposerMenuPopover
@@ -629,10 +634,10 @@ export function ChatPanel({ groupId, room, meId, isMember, onError, onUnreadChan
         </div>
         <button
           type="submit"
-          className="bg-brand-gradient-strong text-on-brand rounded-full w-12 h-12 shrink-0 flex items-center justify-center shadow-themed bubble-pop rtl:rotate-180"
+          className="bg-brand-gradient-deep text-white rounded-full w-12 h-12 shrink-0 flex items-center justify-center shadow-themed bubble-pop"
           aria-label={t('groups.chat.sendAria')}
         >
-          ➤
+          <SendIcon className="w-5 h-5 rtl:-scale-x-100" />
         </button>
       </form>
       {showLinkPicker && (
@@ -667,6 +672,9 @@ export function ChatPanel({ groupId, room, meId, isMember, onError, onUnreadChan
 interface ChatMessageRowProps {
   message: ChatMessage
   meId: string | null
+  /** The Bubble this chat belongs to ("" in an expert-session chat). Threaded into
+   *  session/room link cards so entering a session remembers the originating Bubble. */
+  groupId: string
   eventCache: Map<string, CalendarEvent | 'unavailable'>
   onNeedEvent: (id: string) => void
   pollCache: Map<string, Poll | 'unavailable'>
@@ -693,22 +701,25 @@ interface ChatMessageRowProps {
 }
 
 function ChatMessageRow({
-  message: m, meId, eventCache, onNeedEvent, pollCache, onNeedPoll, onVotePoll, onClosePoll,
+  message: m, meId, groupId, eventCache, onNeedEvent, pollCache, onNeedPoll, onVotePoll, onClosePoll,
   fileCache, onNeedFile, onOpenFile,
   quotedParent, highlighted, onReply, onJumpTo, onTogglePin, isExpertSession,
 }: ChatMessageRowProps) {
   const { t } = useTranslation()
   const openUserCard = useUserCardStore((s) => s.open)
+  // Tap-to-reveal the reply/pin actions + the full timestamp. On desktop hover
+  // also reveals them; on touch (no hover) tapping the message body is the gesture.
+  const [showActions, setShowActions] = useState(false)
   if (m.messageType === 'SYSTEM_JOIN' || m.messageType === 'SYSTEM_LEAVE') {
+    const join = m.messageType === 'SYSTEM_JOIN'
     const phrase = isExpertSession
-      ? (m.messageType === 'SYSTEM_JOIN' ? t('expertRoom.chat.joined') : t('expertRoom.chat.left'))
-      : (m.messageType === 'SYSTEM_JOIN' ? t('dashboard.kind.joinedBubble') : t('dashboard.kind.leftBubble'))
-    const emoji = isExpertSession
-      ? (m.messageType === 'SYSTEM_JOIN' ? '🎓' : '👋')
-      : (m.messageType === 'SYSTEM_JOIN' ? '🫧' : '👋')
+      ? (join ? t('expertRoom.chat.joined') : t('expertRoom.chat.left'))
+      : (join ? t('dashboard.kind.joinedBubble') : t('dashboard.kind.leftBubble'))
+    const RowIcon = isExpertSession && join ? CapIcon : join ? UserPlusIcon : UserMinusIcon
     return (
-      <p data-msgid={m.id} className="text-center text-xs text-muted italic">
-        {emoji} <span className="font-mono" dir="ltr">{m.content || m.subjectUserId?.slice(0, 8) || '?'}</span>{' '}{phrase}
+      <p data-msgid={m.id} className="flex items-center justify-center gap-1.5 text-center text-xs text-muted italic">
+        <RowIcon className="w-3.5 h-3.5 shrink-0" />
+        <span className="font-mono" dir="ltr">{m.content || m.subjectUserId?.slice(0, 8) || '?'}</span>{' '}{phrase}
       </p>
     )
   }
@@ -725,9 +736,27 @@ function ChatMessageRow({
 
   if (m.messageType === 'SYSTEM_ROOM_EXTENDED') {
     return (
-      <p data-msgid={m.id} className="text-center text-xs text-muted italic">
-        🕐 {m.content || 'Session extended.'}
+      <p data-msgid={m.id} className="flex items-center justify-center gap-1.5 text-center text-xs text-muted italic">
+        <ClockIcon className="w-3.5 h-3.5 shrink-0" /> {m.content || 'Session extended.'}
       </p>
+    )
+  }
+
+  if (m.messageType === 'SYSTEM_OWNERSHIP_TRANSFER') {
+    return (
+      <p data-msgid={m.id} className="flex items-center justify-center gap-1.5 text-center text-xs text-muted italic">
+        <CrownIcon className="w-3.5 h-3.5 shrink-0 text-amber-500" /> {m.content}
+      </p>
+    )
+  }
+
+  if (m.messageType === 'SYSTEM_GROUP_ROOM_OPEN' && m.linkTargetType === 'ROOM' && m.linkTargetId) {
+    return (
+      <GroupRoomLiveCard
+        messageId={m.id}
+        roomId={m.linkTargetId}
+        content={m.content || t('groups.chat.roomLiveFallback')}
+      />
     )
   }
 
@@ -735,14 +764,15 @@ function ChatMessageRow({
       && m.linkTargetType === 'EXPERT_SESSION' && m.linkTargetId) {
     return (
       <div data-msgid={m.id} className="flex flex-col items-center gap-1 my-1">
-        <p className="text-center text-xs text-muted italic">
-          🎓 {m.content || t('expertRoom.systemOpenFallback')}
+        <p className="flex items-center justify-center gap-1.5 text-center text-xs text-muted italic">
+          <CapIcon className="w-3.5 h-3.5 shrink-0" /> {m.content || t('expertRoom.systemOpenFallback')}
         </p>
         <div className="w-full max-w-[20rem]">
           <ExpertSessionLinkCard
             sessionId={m.linkTargetId}
             caption=""
             mine={false}
+            fromGroupId={groupId}
           />
         </div>
       </div>
@@ -753,31 +783,31 @@ function ChatMessageRow({
   const highlightRing = highlighted ? 'ring-2 ring-primary-400 ring-offset-1' : ''
   const pinBorder = m.pinned ? 'border-s-4 border-amber-400' : ''
   const actions = (
-    <div className="opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-0.5 text-xs">
+    <div className={`${showActions ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity flex flex-col gap-0.5 text-xs self-center`}>
       <button
         type="button"
         onClick={onReply}
         aria-label={t('groups.chat.reply.button')}
         title={t('groups.chat.reply.button')}
-        className="text-muted hover:text-primary-600 px-1.5 py-0.5 rounded-md"
+        className="text-muted hover:text-primary-600 px-1.5 py-0.5 rounded-md inline-flex items-center justify-center"
       >
-        ↩
+        <ReplyIcon className="w-4 h-4 rtl:-scale-x-100" />
       </button>
       <button
         type="button"
         onClick={onTogglePin}
         aria-label={m.pinned ? t('groups.chat.pin.unpin') : t('groups.chat.pin.button')}
         title={m.pinned ? t('groups.chat.pin.unpin') : t('groups.chat.pin.button')}
-        className={`px-1.5 py-0.5 rounded-md ${m.pinned ? 'text-amber-500' : 'text-muted hover:text-amber-500'}`}
+        className={`px-1.5 py-0.5 rounded-md inline-flex items-center justify-center ${m.pinned ? 'text-amber-500' : 'text-muted hover:text-amber-500'}`}
       >
-        📌
+        <PinIcon className="w-4 h-4" />
       </button>
     </div>
   )
   return (
     <div
       data-msgid={m.id}
-      className={`group flex items-end gap-2 ${mine ? 'justify-end' : 'justify-start'}`}
+      className={`group flex items-end gap-2 min-w-0 ${mine ? 'justify-end' : 'justify-start'}`}
     >
       {mine && actions}
       {!mine && m.senderId && (
@@ -795,19 +825,23 @@ function ChatMessageRow({
           />
         </button>
       )}
-      <div className={`max-w-[85%] tablet:max-w-[60%] px-4 py-2.5 shadow-themed text-sm transition-shadow ${highlightRing} ${pinBorder} ${
+      <div
+        onClick={(e) => {
+          // Tapping the bubble toggles the action menu — but let inner buttons/links
+          // (link cards, poll votes, the quoted-jump, the timestamp) do their own thing.
+          if ((e.target as HTMLElement).closest('button, a')) return
+          setShowActions((v) => !v)
+        }}
+        className={`min-w-0 max-w-[75%] tablet:max-w-[60%] px-4 py-2.5 shadow-themed text-sm transition-shadow cursor-pointer ${highlightRing} ${pinBorder} ${
         mine
           ? 'bg-brand-gradient-strong text-on-brand rounded-[1.5rem] rounded-br-[3px]'
           : 'bg-surface border border-line text-base rounded-[1.5rem] rounded-bl-[3px]'
       }`}>
         {!mine && m.senderId && (
-          <button
-            type="button"
-            onClick={() => openUserCard(m.senderId!)}
-            className="text-xs font-semibold text-primary-600 hover:underline mb-1 block truncate text-start"
-          >
+          // Sender name is a plain label — only the avatar opens the profile card.
+          <span className="text-xs font-semibold text-primary-600 mb-1 block truncate text-start">
             {m.senderDisplayName ?? `${m.senderId.slice(0, 8)}…`}
-          </button>
+          </span>
         )}
         {m.replyToMessageId && (
           <QuotedPreview
@@ -824,6 +858,7 @@ function ChatMessageRow({
             mine={mine}
             cache={eventCache}
             onNeedEvent={onNeedEvent}
+            fromGroupId={groupId}
           />
         ) : m.messageType === 'LINK' && m.linkTargetType === 'POLL' && m.linkTargetId ? (
           <PollCard
@@ -849,6 +884,7 @@ function ChatMessageRow({
             sessionId={m.linkTargetId}
             caption={m.content}
             mine={mine}
+            fromGroupId={groupId}
           />
         ) : (
           <p className="leading-snug whitespace-pre-wrap break-words">{renderBubbleContent(m.content)}</p>
@@ -864,7 +900,7 @@ function ChatMessageRow({
           <span
             aria-hidden="true"
             dir="ltr"
-            className="pointer-events-none absolute top-full end-0 mt-1 z-50 whitespace-nowrap rounded-md bg-gray-900 text-white px-2 py-1 text-[11px] font-normal shadow-themed opacity-0 group-hover/ts:opacity-100 group-focus/ts:opacity-100 transition-opacity"
+            className={`pointer-events-none absolute top-full end-0 mt-1 z-50 whitespace-nowrap rounded-md bg-gray-900 text-white px-2 py-1 text-[11px] font-normal shadow-themed group-hover/ts:opacity-100 group-focus/ts:opacity-100 transition-opacity ${showActions ? 'opacity-100' : 'opacity-0'}`}
           >
             {formatDateTime(m.sentAt)}
           </span>
@@ -889,8 +925,9 @@ interface QuotedPreviewProps {
 function QuotedPreview({ parent, parentId, mine, onClick }: QuotedPreviewProps) {
   const { t } = useTranslation()
   const border = mine ? 'border-white/40 bg-white/15' : 'border-primary-300 bg-surface-muted'
-  const senderLabel = parent?.senderId
-    ? parent.senderId.slice(0, 8) + '…'
+  const senderLabel = parent
+    ? (parent.senderDisplayName
+        ?? (parent.senderId ? `${parent.senderId.slice(0, 8)}…` : t('groups.chat.reply.unknownAuthor')))
     : t('groups.chat.reply.unknownAuthor')
   const snippet = parent
     ? snippetOf(parent)
@@ -902,9 +939,19 @@ function QuotedPreview({ parent, parentId, mine, onClick }: QuotedPreviewProps) 
       className={`w-full text-start border-s-4 rounded-md px-2 py-1 mb-1.5 text-xs transition-colors hover:opacity-90 ${border}`}
       title={t('groups.chat.reply.jumpTitle')}
     >
-      <div className={`font-mono text-[10px] ${mine ? 'text-on-brand/80' : 'text-primary-700'}`} dir="ltr">{senderLabel}</div>
+      <div className={`font-semibold text-[10px] truncate ${mine ? 'text-on-brand/80' : 'text-primary-700'}`}>{senderLabel}</div>
       <div className={`truncate ${mine ? 'text-on-brand/85' : 'text-secondary'}`}>{snippet}</div>
     </button>
+  )
+}
+
+/** Small inline glyph + text, used by the reply/pin snippet previews. */
+function snippetWith(Icon: typeof LinkIcon, label: ReactNode): ReactNode {
+  return (
+    <span className="inline-flex items-center gap-1 align-middle">
+      <Icon className="w-3 h-3 shrink-0" />
+      {label}
+    </span>
   )
 }
 
@@ -912,12 +959,14 @@ function snippetOf(m: ChatMessage): ReactNode {
   if (m.messageType === 'LINK') {
     const caption = (m.content || '').replace(/\s+/g, ' ').trim()
     const captionNodes = caption ? renderBubbleContent(caption) : null
-    if (m.linkTargetType === 'CALENDAR_EVENT') return <>📅 {captionNodes ?? 'calendar event'}</>
-    if (m.linkTargetType === 'POLL') return <>📊 {captionNodes ?? 'poll'}</>
-    return <>🔗 {captionNodes ?? 'link'}</>
+    if (m.linkTargetType === 'CALENDAR_EVENT') return snippetWith(CalendarIcon, captionNodes ?? 'calendar event')
+    if (m.linkTargetType === 'POLL') return snippetWith(PollIcon, captionNodes ?? 'poll')
+    if (m.linkTargetType === 'FILE') return snippetWith(FileIcon, captionNodes ?? 'file')
+    if (m.linkTargetType === 'EXPERT_SESSION') return snippetWith(CapIcon, captionNodes ?? 'expert session')
+    return snippetWith(LinkIcon, captionNodes ?? 'link')
   }
-  if (m.messageType === 'SYSTEM_JOIN') return '🫧 joined the Bubble'
-  if (m.messageType === 'SYSTEM_LEAVE') return '👋 left the Bubble'
+  if (m.messageType === 'SYSTEM_JOIN') return snippetWith(UserPlusIcon, 'joined the Bubble')
+  if (m.messageType === 'SYSTEM_LEAVE') return snippetWith(UserMinusIcon, 'left the Bubble')
   const text = (m.content || '').replace(/\s+/g, ' ').trim()
   return renderBubbleContent(text)
 }
@@ -948,7 +997,7 @@ function PinnedStrip({ pinned, onJumpTo, onShowAll }: PinnedStripProps) {
   if (!top) return null
   return (
     <div className="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-700 px-4 py-2 flex items-center gap-3 text-xs">
-      <span aria-hidden>📌</span>
+      <PinIcon className="w-3.5 h-3.5 shrink-0 text-amber-500" aria-hidden />
       <button
         type="button"
         onClick={() => onJumpTo(top.id)}
@@ -985,9 +1034,9 @@ interface PinnedListModalProps {
 function PinnedListModal({ pinned, onJumpTo, onUnpin, onCancel }: PinnedListModalProps) {
   const { t } = useTranslation()
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3 tablet:p-4" onClick={onCancel}>
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3 tablet:p-4 animate-fade-in" onClick={onCancel}>
       <div
-        className="bg-surface rounded-3xl shadow-bubble w-full max-w-[32rem] max-h-[80vh] flex flex-col border border-line"
+        className="bg-surface rounded-3xl shadow-bubble animate-pop-in w-full max-w-[32rem] max-h-[80vh] flex flex-col border border-line"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-4 py-3 border-b border-line flex items-center justify-between">
@@ -1031,14 +1080,13 @@ function ReplyPreviewBar({ parent, meId, onCancel }: ReplyPreviewBarProps) {
   const { t } = useTranslation()
   const authorLabel = parent.senderId === meId
     ? t('common.you')
-    : parent.senderId
-      ? parent.senderId.slice(0, 8) + '…'
-      : t('groups.chat.reply.unknownAuthor')
+    : parent.senderDisplayName
+      ?? (parent.senderId ? `${parent.senderId.slice(0, 8)}…` : t('groups.chat.reply.unknownAuthor'))
   return (
     <div className="bg-surface-muted border-t border-line px-5 py-2 flex items-center gap-3 text-xs">
-      <span className="text-muted">↩</span>
+      <ReplyIcon className="w-4 h-4 shrink-0 text-muted rtl:-scale-x-100" />
       <div className="flex-1 min-w-0">
-        <div className="font-semibold text-primary-700" dir="ltr">
+        <div className="font-semibold text-primary-700 truncate">
           {t('groups.chat.reply.replyingTo', { name: authorLabel })}
         </div>
         <div className="truncate text-secondary">{snippetOf(parent)}</div>
@@ -1068,9 +1116,12 @@ interface CalendarLinkCardProps {
   cache: Map<string, CalendarEvent | 'unavailable'>
   /** Asks the panel to fetch this event id if it isn't already cached or in-flight. */
   onNeedEvent: (id: string) => void
+  /** The Bubble this card lives in — remembered when entering an expert session so
+   *  the session room can juggle back to it. "" in an expert-session chat. */
+  fromGroupId: string
 }
 
-function CalendarLinkCard({ eventId, caption, mine, cache, onNeedEvent }: CalendarLinkCardProps) {
+function CalendarLinkCard({ eventId, caption, mine, cache, onNeedEvent, fromGroupId }: CalendarLinkCardProps) {
   const navigate = useNavigate()
   useEffect(() => { onNeedEvent(eventId) }, [eventId, onNeedEvent])
 
@@ -1084,8 +1135,8 @@ function CalendarLinkCard({ eventId, caption, mine, cache, onNeedEvent }: Calend
 
   if (unavailable) {
     return (
-      <div className={`rounded-lg p-2 text-xs ${mine ? 'text-on-brand/80' : 'text-muted'}`}>
-        🔗 Link unavailable
+      <div className={`rounded-lg p-2 text-xs inline-flex items-center gap-1.5 ${mine ? 'text-on-brand/80' : 'text-muted'}`}>
+        <LinkIcon className="w-3.5 h-3.5 shrink-0" /> Link unavailable
       </div>
     )
   }
@@ -1102,7 +1153,7 @@ function CalendarLinkCard({ eventId, caption, mine, cache, onNeedEvent }: Calend
     try {
       const room = await getRoomForEvent(eventId)
       if (room.scope === 'EXPERT_SESSION' && room.expertSessionId) {
-        navigate(`/sessions/${room.expertSessionId}`)
+        navigate(`/sessions/${room.expertSessionId}`, { state: fromGroupId ? { fromGroupId } : undefined })
       } else {
         navigate(`/rooms/${room.id}`)
       }
@@ -1114,7 +1165,7 @@ function CalendarLinkCard({ eventId, caption, mine, cache, onNeedEvent }: Calend
   return (
     <div className={`rounded-lg p-2 flex flex-col gap-1 ${containerCls}`}>
       <div className="flex items-center gap-2 text-xs">
-        <span className={mine ? 'text-on-brand/85' : 'text-muted'}>📅</span>
+        <CalendarIcon className={`w-3.5 h-3.5 shrink-0 ${mine ? 'text-on-brand/85' : 'text-muted'}`} />
         <span className={`px-1.5 py-0.5 rounded-md text-[10px] ${TYPE_COLORS[event.eventType]}`}>
           {event.eventType.replace('_', ' ')}
         </span>
@@ -1140,16 +1191,17 @@ function CalendarLinkCard({ eventId, caption, mine, cache, onNeedEvent }: Calend
           ? 'bg-white/15 text-on-brand/60 cursor-not-allowed'
           : 'bg-line/60 text-muted cursor-not-allowed'
 
+        const videoBtn = `${baseCls} inline-flex items-center gap-1`
         if (now > endsAtMs) {
-          return <button type="button" disabled className={`${baseCls} ${disabledCls}`}>🎥 Ended</button>
+          return <button type="button" disabled className={`${videoBtn} ${disabledCls}`}><VideoIcon className="w-3 h-3" /> Ended</button>
         }
         if (now < opensAt) {
           const mins = Math.max(1, Math.ceil((opensAt - now) / 60_000))
-          return <button type="button" disabled className={`${baseCls} ${disabledCls}`}>🎥 Opens in {mins} min</button>
+          return <button type="button" disabled className={`${videoBtn} ${disabledCls}`}><VideoIcon className="w-3 h-3" /> Opens in {mins} min</button>
         }
         return (
-          <button type="button" onClick={handleEnterRoom} className={`${baseCls} ${enabledCls}`}>
-            🎥 Enter Room
+          <button type="button" onClick={handleEnterRoom} className={`${videoBtn} ${enabledCls}`}>
+            <VideoIcon className="w-3 h-3" /> Enter Room
           </button>
         )
       })()}
@@ -1167,9 +1219,12 @@ interface ExpertSessionLinkCardProps {
   sessionId: string
   caption: string
   mine: boolean
+  /** The Bubble this card lives in — passed to the session room so it can juggle
+   *  back to this Bubble. "" in an expert-session chat (no originating Bubble). */
+  fromGroupId: string
 }
 
-function ExpertSessionLinkCard({ sessionId, caption, mine }: ExpertSessionLinkCardProps) {
+function ExpertSessionLinkCard({ sessionId, caption, mine, fromGroupId }: ExpertSessionLinkCardProps) {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const [session, setSession] = useState<ExpertSession | null>(null)
@@ -1189,8 +1244,8 @@ function ExpertSessionLinkCard({ sessionId, caption, mine }: ExpertSessionLinkCa
 
   if (unavailable) {
     return (
-      <div className={`rounded-lg p-2 text-xs ${mine ? 'text-on-brand/80' : 'text-muted'}`}>
-        🔗 {t('expertRoom.linkCard.unavailable')}
+      <div className={`rounded-lg p-2 text-xs inline-flex items-center gap-1.5 ${mine ? 'text-on-brand/80' : 'text-muted'}`}>
+        <LinkIcon className="w-3.5 h-3.5 shrink-0" /> {t('expertRoom.linkCard.unavailable')}
       </div>
     )
   }
@@ -1210,7 +1265,7 @@ function ExpertSessionLinkCard({ sessionId, caption, mine }: ExpertSessionLinkCa
   return (
     <div className={`rounded-lg p-2 flex flex-col gap-1 ${containerCls}`}>
       <div className="flex items-center gap-2 text-xs">
-        <span className={mine ? 'text-on-brand/85' : 'text-muted'}>🎓</span>
+        <CapIcon className={`w-3.5 h-3.5 shrink-0 ${mine ? 'text-on-brand/85' : 'text-muted'}`} />
         <span className={`px-1.5 py-0.5 rounded-md text-[10px] ${TYPE_COLORS.EXPERT_SESSION}`}>
           EXPERT SESSION
         </span>
@@ -1226,10 +1281,10 @@ function ExpertSessionLinkCard({ sessionId, caption, mine }: ExpertSessionLinkCa
       )}
       <button
         type="button"
-        onClick={(e) => { e.stopPropagation(); navigate(`/sessions/${session.id}`) }}
-        className={`${baseCls} ${enabledCls}`}
+        onClick={(e) => { e.stopPropagation(); navigate(`/sessions/${session.id}`, { state: fromGroupId ? { fromGroupId } : undefined }) }}
+        className={`${baseCls} inline-flex items-center gap-1 ${enabledCls}`}
       >
-        🎓 {t('expertRoom.linkCard.enterButton')}
+        <CapIcon className="w-3 h-3" /> {t('expertRoom.linkCard.enterButton')}
       </button>
     </div>
   )
@@ -1265,8 +1320,8 @@ function FileLinkCard({ fileId, caption, mine, cache, onNeedFile, onOpen }: File
 
   if (unavailable) {
     return (
-      <div className={`rounded-lg p-2 text-xs ${mine ? 'text-on-brand/80' : 'text-muted'}`}>
-        🔗 File unavailable
+      <div className={`rounded-lg p-2 text-xs inline-flex items-center gap-1.5 ${mine ? 'text-on-brand/80' : 'text-muted'}`}>
+        <LinkIcon className="w-3.5 h-3.5 shrink-0" /> File unavailable
       </div>
     )
   }
@@ -1345,8 +1400,8 @@ function RoomEndSoonCard({ messageId, roomId, content }: RoomEndSoonCardProps) {
       data-msgid={messageId}
       className="self-center max-w-md w-full bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-2xl px-4 py-3 flex flex-col gap-2 shadow-themed"
     >
-      <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
-        🕐 {content}
+      <p className="flex items-center gap-1.5 text-sm font-medium text-amber-900 dark:text-amber-100">
+        <ClockIcon className="w-4 h-4 shrink-0" /> {content}
       </p>
       {error && <p className="text-xs text-rose-600">{error}</p>}
       {extended ? (
@@ -1363,6 +1418,45 @@ function RoomEndSoonCard({ messageId, roomId, content }: RoomEndSoonCardProps) {
           {extending ? 'Extending…' : 'Extend +15 min'}
         </button>
       )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Private: SYSTEM_GROUP_ROOM_OPEN renderer — the "your Bubble is live" card.
+// Posted by the lifecycle scheduler when a GROUP room opens for joining. Mirrors
+// the expert-session-open card but routes into the group's Bubble Room.
+// ---------------------------------------------------------------------------
+
+interface GroupRoomLiveCardProps {
+  messageId: string
+  roomId: string
+  content: string
+}
+
+function GroupRoomLiveCard({ messageId, roomId, content }: GroupRoomLiveCardProps) {
+  const { t } = useTranslation()
+  const navigate = useNavigate()
+  return (
+    <div data-msgid={messageId} className="flex flex-col items-center gap-1 my-1">
+      <p className="flex items-center justify-center gap-1.5 text-center text-xs text-muted italic">
+        <VideoIcon className="w-3.5 h-3.5 shrink-0 text-bubble-green" /> {content}
+      </p>
+      <div className="w-full max-w-[20rem] rounded-lg p-2 flex flex-col gap-1 border border-line bg-surface-muted">
+        <div className="flex items-center gap-2 text-xs">
+          <VideoIcon className="w-3.5 h-3.5 shrink-0 text-bubble-green" />
+          <span className="px-1.5 py-0.5 rounded-md text-[10px] bg-bubble-green-soft text-bubble-green font-semibold">
+            {t('groups.chat.roomLiveBadge')}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => navigate(`/rooms/${roomId}`)}
+          className="mt-1 self-start text-[10px] px-2 py-1 rounded-md font-semibold inline-flex items-center gap-1 bg-primary-500 text-white hover:bg-primary-600"
+        >
+          <VideoIcon className="w-3 h-3" /> {t('groups.chat.roomLiveEnter')}
+        </button>
+      </div>
     </div>
   )
 }
@@ -1400,9 +1494,9 @@ function LinkPickerModal({ groupId, onPick, onCancel }: LinkPickerModalProps) {
     (tab === 'calendar' && !!selectedEventId) || (tab === 'file' && !!selectedFileId)
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3 tablet:p-4" onClick={onCancel}>
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3 tablet:p-4 animate-fade-in" onClick={onCancel}>
       <div
-        className="bg-surface rounded-3xl shadow-bubble w-full max-w-[28rem] max-h-[80vh] flex flex-col border border-line"
+        className="bg-surface rounded-3xl shadow-bubble animate-pop-in w-full max-w-[28rem] max-h-[80vh] flex flex-col border border-line"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-4 py-3 border-b border-line flex items-center justify-between">
@@ -1452,7 +1546,7 @@ function LinkPickerModal({ groupId, onPick, onCancel }: LinkPickerModalProps) {
             <Button variant="ghost" size="sm" onClick={onCancel}>
               {t('common.cancel')}
             </Button>
-            <Button size="sm" disabled={!canShare} onClick={handleShare}>
+            <Button variant="deep" size="sm" disabled={!canShare} onClick={handleShare}>
               {t('common.share')}
             </Button>
           </div>
@@ -1613,7 +1707,7 @@ function FilePickerList({ groupId, selectedId, onSelect }: FilePickerListProps) 
             onClick={() => { setCurrentFolderId(folder.id); onSelect('') /* clear selection while navigating */ }}
             className="text-start border border-line rounded-2xl p-2.5 flex items-center gap-2 hover:bg-surface-muted bubble-pop"
           >
-            <span className="text-lg" aria-hidden>📁</span>
+            <FolderIcon className="w-5 h-5 shrink-0 text-muted" aria-hidden />
             <span className="text-sm truncate">{folder.name}</span>
           </button>
         ))}
@@ -1781,7 +1875,7 @@ function BubbleEmojiPopover({ onPick, onClose }: BubbleEmojiPopoverProps) {
       ref={ref}
       role="dialog"
       aria-label={t('groups.chat.emoji.pickerTitle')}
-      className="absolute bottom-full mb-2 start-0 z-30 bg-surface border border-line rounded-2xl shadow-bubble p-2 flex gap-1"
+      className="absolute bottom-full mb-2 start-0 z-30 bg-surface border border-line rounded-2xl shadow-bubble p-2 flex flex-wrap gap-1 max-w-[14rem] tablet:max-w-none tablet:flex-nowrap"
     >
       {BUBBLE_EMOJIS.map((def) => (
         <button
@@ -1851,7 +1945,7 @@ function ComposerMenuPopover({ onShareLink, onCreatePoll, onClose }: ComposerMen
         onClick={onShareLink}
         className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-surface-muted text-sm text-start bubble-pop"
       >
-        <span aria-hidden>🔗</span>
+        <LinkIcon className="w-4 h-4 shrink-0 text-muted" aria-hidden />
         <span>{t('groups.chat.menu.share')}</span>
       </button>
       <button
@@ -1860,7 +1954,7 @@ function ComposerMenuPopover({ onShareLink, onCreatePoll, onClose }: ComposerMen
         onClick={onCreatePoll}
         className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-surface-muted text-sm text-start bubble-pop"
       >
-        <span aria-hidden>📊</span>
+        <PollIcon className="w-4 h-4 shrink-0 text-muted" aria-hidden />
         <span>{t('groups.chat.menu.poll')}</span>
       </button>
     </div>
@@ -1942,7 +2036,7 @@ function PollCard({ pollId, mine, meId, cache, onNeed, onVote, onClose }: PollCa
   return (
     <div className={`rounded-lg p-3 flex flex-col gap-2 ${containerCls}`}>
       <div className="flex items-center gap-2">
-        <span aria-hidden>📊</span>
+        <PollIcon className={`w-4 h-4 shrink-0 ${mine ? 'text-on-brand/85' : 'text-muted'}`} aria-hidden />
         <div className={`text-sm font-semibold ${mine ? 'text-on-brand' : 'text-base'}`}>{poll.question}</div>
       </div>
       {poll.allowMultiple && (
@@ -2059,9 +2153,9 @@ function PollComposerModal({ onCreate, onCancel }: PollComposerModalProps) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3 tablet:p-4" onClick={onCancel}>
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3 tablet:p-4 animate-fade-in" onClick={onCancel}>
       <div
-        className="bg-surface rounded-3xl shadow-bubble w-full max-w-[32rem] max-h-[80vh] flex flex-col border border-line"
+        className="bg-surface rounded-3xl shadow-bubble animate-pop-in w-full max-w-[32rem] max-h-[80vh] flex flex-col border border-line"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-4 py-3 border-b border-line flex items-center justify-between">
@@ -2121,7 +2215,7 @@ function PollComposerModal({ onCreate, onCancel }: PollComposerModalProps) {
           <Button variant="ghost" size="sm" onClick={onCancel}>
             {t('common.cancel')}
           </Button>
-          <Button size="sm" disabled={!valid} onClick={submit}>
+          <Button variant="deep" size="sm" disabled={!valid} onClick={submit}>
             {t('groups.chat.poll.create')}
           </Button>
         </div>

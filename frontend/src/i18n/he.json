@@ -113,13 +113,23 @@
     "errorAvatarTooLarge": "התמונה חייבת להיות עד 5 מ\"ב.",
     "errorAvatarGeneric": "העלאת התמונה נכשלה.",
     "noBio": "—",
-    "noAffiliation": "—"
+    "noAffiliation": "—",
+    "invite": {
+      "button": "הזמנה לבועה",
+      "title": "הזמנה לאחת מהבועות שלך",
+      "none": "אין בועה מתאימה שלך — המשתמש חייב להיות רשום לקורס ולא חבר כבר.",
+      "add": "הזמנה",
+      "invited": "הוזמן ✓",
+      "loadError": "טעינת הבועות שלך נכשלה.",
+      "error": "הזמנת המשתמש נכשלה.",
+      "full": "הבועה מלאה.",
+      "already": "כבר חבר/ה.",
+      "notEnrolled": "לא רשום/ה לקורס של הבועה."
+    }
   },
   "login": {
-    "entryHeading": "בואו נתחיל",
-    "entrySub": "המשיכו עם חשבון Google האקדמי הישראלי שלכם.",
-    "entryButton": "להמשיך עם Google",
-    "entryNote": "בהרשמה הראשונה Bubble.up ישלח קישור אימות לכתובת האקדמית הזו לפני שהגישה תיפתח.",    
+    "tabSignIn": "התחברות",
+    "tabRegister": "יצירת חשבון",
     "headingSignIn": "ברוכים השבים",
     "headingRegister": "להצטרף לבועות",
     "subSignIn": "התחבר/י כדי לחזור לבועות שלך.",
@@ -193,9 +203,16 @@
     "subtitle": "עיון במחלקות ובקורסים באוניברסיטה שלך.",
     "browseHeading": "עיון והרשמה",
     "enrolledBadge": "רשום/ה",
+    "search": {
+      "coursePlaceholder": "חיפוש קורס…",
+      "deptPlaceholder": "סינון מחלקות",
+      "resultsAcross": "קורסים מוצעים מכל המחלקות",
+      "noResults": "לא נמצאו קורסים תואמים.",
+      "minChars": "יש להקליד לפחות 2 תווים",
+      "capped": "מוצגות 50 התוצאות הראשונות — צמצמו את החיפוש"
+    },
     "term": {
       "label": "סמסטר",
-      "all": "כל הסמסטרים",
       "current": "הסמסטר הנוכחי"
     },
     "column": {
@@ -206,6 +223,7 @@
     "empty": {
       "departments": "אין מחלקות להצגה.",
       "courses": "בחר/י מחלקה כדי לראות את הקורסים שלה.",
+      "coursesInTerm": "אין קורסים המוצעים בסמסטר שנבחר.",
       "detail": "בחר/י קורס כדי לראות פרטים."
     },
     "myCourses": {
@@ -373,6 +391,9 @@
       "notEnrolled": "אינך רשום/ה לקורס של הבועה הזו. הירשמו לקורס כדי להצטרף.",
       "loadError": "לא הצלחנו לטעון את פרטי הבועה."
     },
+    "event": {
+      "loadError": "לא הצלחנו לפתוח את האירוע."
+    },
     "linkedEvent": "אירוע מקושר"
   },
   "groups": {
@@ -390,6 +411,8 @@
       "universityLabel": "אוניברסיטה",
       "selectDepartment": "בחר/י מחלקה",
       "selectCourse": "בחר/י קורס",
+      "loadingCourses": "טוען את הקורסים שלך…",
+      "noEnrolledCourses": "אינך רשום/ה לאף קורס בסמסטר זה. הירשם/י לקורס כדי לפתוח בועה.",
       "maxGroupSize": "מספר חברים מרבי (4–10)",
       "maxGroupSizeIncrease": "הגדלת מספר החברים המרבי",
       "maxGroupSizeDecrease": "הקטנת מספר החברים המרבי",
@@ -420,6 +443,10 @@
       "thanks": "תודה על המשוב."
     },
     "liveNow": "משודר עכשיו",
+    "toast": {
+      "added": "{{name}} נוסף/ה לבועה",
+      "removed": "{{name}} הוסר/ה מהבועה"
+    },
     "tabs": {
       "chat": "צ׳אט",
       "calendar": "יומן",
@@ -431,7 +458,22 @@
     "info": {
       "title": "פרטי הבועה",
       "openStripAria": "פתיחת פרטי הבועה",
-      "leaveBubble": "לעזוב את הבועה"
+      "leaveBubble": "לעזוב את הבועה",
+      "changeImage": "שינוי תמונת הבועה",
+      "removeImage": "הסרת התמונה",
+      "imageUploading": "מעלה תמונה…",
+      "manageTitle": "ניהול הבועה",
+      "manage": {
+        "editName": "עריכת שם הבועה",
+        "editDesc": "עריכת התיאור",
+        "visibility": "נראוּת",
+        "removeMember": "הסרת חבר",
+        "transfer": "העברת בעלות",
+        "noOthers": "אין עדיין חברים אחרים.",
+        "popConfirm": "לפוצץ את הבועה? פעולה זו מוחקת לצמיתות את הצ׳אט, היומן, הקבצים והחדר עבור כולם.",
+        "popNotEmpty": "יש להסיר תחילה את כל שאר החברים — ניתן לפוצץ רק בועה ריקה.",
+        "popConfirmButton": "כן, לפוצץ"
+      }
     },
     "members": {
       "empty": "אין עדיין חברים.",
@@ -441,6 +483,10 @@
       "makeOwner": "הפוך לבעלים",
       "remove": "הסר",
       "addPlaceholder": "מזהה משתמש להוספה",
+      "addLabel": "הוספת חבר",
+      "searchPlaceholder": "חיפוש סטודנטים לפי שם…",
+      "noMatches": "אין סטודנטים התואמים לשם הזה.",
+      "noCandidates": "כל הרשומים כבר בבועה הזו.",
       "addButton": "+ הוספה",
       "fullHint": "הבועה מלאה (מקסימום {{max}}). יש להסיר חבר לפני הוספת חבר נוסף.",
       "onlineNow": "מחובר עכשיו",
@@ -463,6 +509,9 @@
       "startOfChat": "— תחילת השיחה —",
       "noMessages": "אין עדיין הודעות.",
       "loadingOlder": "טוען הודעות קודמות…",
+      "roomLiveFallback": "הבועה שלך באוויר — קפצו לחדר.",
+      "roomLiveBadge": "בועה באוויר",
+      "roomLiveEnter": "כניסה לחדר",
       "linkUnavailable": "🔗 הקישור לא זמין",
       "loadingLink": "טוען קישור…",
       "sendAria": "שלח",
@@ -549,9 +598,16 @@
       "noUpcoming": "אין אירועים קרובים.",
       "moreEvents_one": "אירוע נוסף אחד — הגדל לכל האירועים",
       "moreEvents_other": "עוד {{count}} אירועים — הגדל לכל האירועים",
+      "moreOnDay": "עוד {{count}}+",
       "today": "היום",
       "prevMonth": "החודש הקודם",
-      "nextMonth": "החודש הבא"
+      "nextMonth": "החודש הבא",
+      "upcoming": "קרובים",
+      "addAria": "הוספת אירוע",
+      "detailsTitle": "אירוע",
+      "startedBadge": "התחיל",
+      "noDescription": "אין תיאור.",
+      "emptyDay": "אין אירועים ביום זה."
     },
     "files": {
       "uploadHint": "עד 25MB. ללא קבצי הפעלה.",
@@ -585,6 +641,7 @@
       "loadList": "טעינת הבועות נכשלה.",
       "create": "יצירת הבועה נכשלה.",
       "loadCatalog": "טעינת קטלוג הקורסים נכשלה.",
+      "loadEnrollments": "טעינת הקורסים שאליהם נרשמת נכשלה.",
       "join": "ההצטרפות לבועה נכשלה.",
       "full": "הבועה מלאה.",
       "notEnrolled": "אינך רשום/ה לקורס של הבועה הזו.",
@@ -595,6 +652,7 @@
       "addMissingUser": "אין משתמש עם המזהה הזה.",
       "addAlreadyMember": "המשתמש כבר חבר.",
       "addGeneric": "הוספת החבר נכשלה.",
+      "loadCandidates": "טעינת הסטודנטים להוספה נכשלה.",
       "removeGeneric": "הסרת החבר נכשלה.",
       "transferGeneric": "העברת הבעלות נכשלה.",
       "loadChat": "טעינת הצ׳אט נכשלה.",
@@ -615,6 +673,10 @@
       "saveEvent": "שמירת האירוע נכשלה.",
       "deleteEvent": "מחיקת האירוע נכשלה.",
       "shareToChat": "שיתוף האירוע לצ׳אט נכשל.",
+      "updateGroup": "עדכון הבועה נכשל.",
+      "imageType": "התמונה חייבת להיות PNG, JPEG, WebP או GIF.",
+      "imageTooLarge": "התמונה חייבת להיות עד 5MB.",
+      "imageGeneric": "עדכון תמונת הבועה נכשל.",
       "loadFiles": "טעינת הקבצים נכשלה.",
       "fileTooLarge": "הקובץ עולה על 25MB.",
       "fileBlocked": "סוג קובץ זה אינו מורשה.",

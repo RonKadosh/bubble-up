@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next'
 import { useUserCardStore } from '../store/userCardStore'
 import { useAuthStore } from '../store/authStore'
 import { UserProfile, getUserProfile } from '../api/users'
-import { errorCode } from '../api/errors'
+import { Group, addMember, getInvitableGroups } from '../api/groups'
+import { describeError, errorCode } from '../api/errors'
 import { formatDate } from '../i18n/datetime'
 import { Avatar } from './Avatar'
 import { Button } from './Button'
@@ -28,6 +29,14 @@ export function UserProfileCard() {
   const [notVisible, setNotVisible] = useState(false)
   const [failed, setFailed] = useState(false)
 
+  // "Invite to Bubble": lazy-loaded list of the viewer's owned bubbles the target
+  // can be added to. Opened on demand so the card stays cheap for the common case.
+  const [inviteOpen, setInviteOpen] = useState(false)
+  const [invitable, setInvitable] = useState<Group[] | null>(null)
+  const [inviteLoading, setInviteLoading] = useState(false)
+  const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set())
+  const [inviteError, setInviteError] = useState('')
+
   useEffect(() => {
     if (!userId) return
     let cancelled = false
@@ -35,6 +44,10 @@ export function UserProfileCard() {
     setNotVisible(false)
     setFailed(false)
     setLoading(true)
+    setInviteOpen(false)
+    setInvitable(null)
+    setInvitedIds(new Set())
+    setInviteError('')
     getUserProfile(userId)
       .then((p) => { if (!cancelled) setProfile(p) })
       .catch((e) => {
@@ -59,17 +72,48 @@ export function UserProfileCard() {
     [profile?.createdAt, i18n.language],
   )
 
+  async function handleOpenInvite() {
+    if (!userId) return
+    setInviteOpen(true)
+    if (invitable !== null) return   // already loaded once
+    setInviteLoading(true)
+    setInviteError('')
+    try {
+      setInvitable(await getInvitableGroups(userId))
+    } catch (e) {
+      setInviteError(describeError(e, t, {}, 'profile.invite.loadError'))
+      setInvitable([])
+    } finally {
+      setInviteLoading(false)
+    }
+  }
+
+  async function handleInvite(groupId: string) {
+    if (!userId) return
+    setInviteError('')
+    try {
+      await addMember(groupId, userId)
+      setInvitedIds((s) => new Set(s).add(groupId))
+    } catch (e) {
+      setInviteError(describeError(e, t, {
+        GROUP_IS_FULL: 'profile.invite.full',
+        ALREADY_GROUP_MEMBER: 'profile.invite.already',
+        NOT_ENROLLED_IN_COURSE: 'profile.invite.notEnrolled',
+      }, 'profile.invite.error'))
+    }
+  }
+
   if (!userId) return null
 
   const isSelf = !!me && me.id === userId
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4" onClick={close}>
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4 animate-fade-in" onClick={close}>
       <div
         role="dialog"
         aria-modal="true"
         onClick={(e) => e.stopPropagation()}
-        className="bg-surface rounded-3xl shadow-bubble border border-line w-full max-w-sm overflow-hidden"
+        className="bg-surface rounded-3xl shadow-bubble animate-pop-in border border-line w-full max-w-sm overflow-hidden"
       >
         <div className="flex justify-end px-3 pt-3">
           <button
@@ -131,6 +175,44 @@ export function UserProfileCard() {
                 >
                   {t('common.edit')}
                 </Button>
+              )}
+
+              {/* Invite to one of my Bubbles — only for other users. */}
+              {!isSelf && (
+                <div className="mt-4 w-full">
+                  {!inviteOpen ? (
+                    <Button size="sm" onClick={handleOpenInvite}>
+                      {t('profile.invite.button')}
+                    </Button>
+                  ) : (
+                    <div className="w-full text-start border border-line rounded-2xl p-3">
+                      <p className="text-xs font-semibold text-secondary mb-2">{t('profile.invite.title')}</p>
+                      {inviteLoading && <p className="text-xs text-muted">{t('common.loading')}</p>}
+                      {!inviteLoading && invitable && invitable.length === 0 && (
+                        <p className="text-xs text-muted">{t('profile.invite.none')}</p>
+                      )}
+                      <ul className="flex flex-col gap-1.5 max-h-44 overflow-y-auto">
+                        {invitable?.map((g) => {
+                          const invited = invitedIds.has(g.id)
+                          return (
+                            <li key={g.id} className="flex items-center gap-2">
+                              <Avatar id={g.id} name={g.name} imageUrl={g.imageUrl} size="sm" />
+                              <span className="text-sm font-medium truncate flex-1">{g.name}</span>
+                              {invited ? (
+                                <span className="text-xs text-success font-semibold shrink-0">{t('profile.invite.invited')}</span>
+                              ) : (
+                                <Button variant="cell" size="xs" onClick={() => handleInvite(g.id)} className="shrink-0">
+                                  {t('profile.invite.add')}
+                                </Button>
+                              )}
+                            </li>
+                          )
+                        })}
+                      </ul>
+                      {inviteError && <p className="text-xs text-danger mt-2">{inviteError}</p>}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           )}

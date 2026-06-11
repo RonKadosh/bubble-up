@@ -32,11 +32,11 @@ export default function AdminModal({ title, onClose, children, footer, size = 'm
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 tablet:p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 tablet:p-4 animate-fade-in"
       onClick={onClose}
     >
       <div
-        className={`relative w-full ${SIZES[size]} max-h-[90vh] overflow-hidden rounded-3xl bg-surface border border-line shadow-bubble flex flex-col`}
+        className={`relative w-full ${SIZES[size]} max-h-[90vh] overflow-hidden rounded-3xl bg-surface border border-line shadow-bubble flex flex-col animate-pop-in`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-line">

@@ -2,6 +2,7 @@ package com.ronkadosh.bubbleup.groups.application;
 
 import com.ronkadosh.bubbleup.catalog.internal.CatalogInternalService;
 import com.ronkadosh.bubbleup.catalog.internal.dto.OfferingRef;
+import com.ronkadosh.bubbleup.common.api.ApiPaths;
 import com.ronkadosh.bubbleup.groups.internal.GroupInternalService;
 import com.ronkadosh.bubbleup.groups.internal.dto.GroupFileActivityItem;
 import com.ronkadosh.bubbleup.groups.internal.dto.GroupSummary;
@@ -168,6 +169,19 @@ public class GroupInternalServiceImpl implements GroupInternalService {
     @Transactional(readOnly = true)
     public Optional<String> getGroupName(UUID groupId) {
         return groupRepository.findById(groupId).map(StudyGroup::getName);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.Map<UUID, String> getGroupImageUrls(java.util.Collection<UUID> groupIds) {
+        if (groupIds == null || groupIds.isEmpty()) return java.util.Map.of();
+        java.util.Map<UUID, String> out = new java.util.HashMap<>();
+        for (StudyGroup g : groupRepository.findAllById(groupIds)) {
+            if (g.getImageFileId() != null) {
+                out.put(g.getId(), ApiPaths.GROUPS_BASE + "/" + g.getId() + "/image?v=" + g.getImageFileId());
+            }
+        }
+        return out;
     }
 
     public boolean usersShareAnyGroup(UUID viewer, UUID target) {

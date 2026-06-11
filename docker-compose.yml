@@ -53,6 +53,12 @@ services:
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
       # Default ON for docker-compose so first-run users see demo bubbles immediately.
       APP_DEMO_SEED_ENABLED: ${APP_DEMO_SEED_ENABLED:-true}
+      # Full-semester load-test dataset (LoadTestSeeder). OFF by default — enable for a
+      # load run with: APP_LOADTEST_ENABLED=true docker compose up
+      APP_LOADTEST_ENABLED: ${APP_LOADTEST_ENABLED:-false}
+      APP_LOADTEST_USERS: ${APP_LOADTEST_USERS:-10000}
+      APP_LOADTEST_COURSES: ${APP_LOADTEST_COURSES:-500}
+      APP_LOADTEST_BUILD_MATCH_CACHE: ${APP_LOADTEST_BUILD_MATCH_CACHE:-true}
       # Optional Help Center AI assistant (OpenAI). Defaults OFF; local catalog still works.
       APP_HELP_AI_ENABLED: ${APP_HELP_AI_ENABLED:-false}
       APP_HELP_AI_PROVIDER: ${APP_HELP_AI_PROVIDER:-openai}

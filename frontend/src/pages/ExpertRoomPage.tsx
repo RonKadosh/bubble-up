@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Navigate, useParams } from 'react-router-dom'
+import { Navigate, useLocation, useParams } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { useActiveRoomStore } from '../store/activeRoomStore'
 import { getRoomForEvent, type BubbleRoom } from '../api/room'
@@ -8,6 +8,7 @@ import { getExpertSession, type ExpertSession } from '../api/expert'
 import { subscribeToExpertSessionWriters, subscribeToRoomPresence } from '../api/ws'
 import { errorCode } from '../api/errors'
 import { ExpertRoomHeader } from './room/ExpertRoomHeader'
+import { RoomGateError, RoomGateLoading } from './room/RoomGate'
 import { RoomBentoShell } from './room/RoomBentoShell'
 import { WhiteboardPanel } from './room/WhiteboardPanel'
 import { ExpertRoomChatPanel } from './room/ExpertRoomChatPanel'
@@ -25,6 +26,11 @@ export default function ExpertRoomPage() {
   const { t } = useTranslation()
   const { sessionId } = useParams<{ sessionId: string }>()
   const meId = useAuthStore((s) => s.user?.id ?? null)
+  // The Bubble the user entered this session from (passed as nav state by the
+  // chat/calendar link cards and the feed CTA). Lets the header juggle back to
+  // that Bubble — mirrors the GROUP-room ↔ hub flow. Null on a direct link.
+  const location = useLocation()
+  const fromGroupId = (location.state as { fromGroupId?: string } | null)?.fromGroupId ?? null
 
   const [session, setSession] = useState<ExpertSession | null>(null)
   const [room, setRoom] = useState<BubbleRoom | null>(null)
@@ -101,30 +107,24 @@ export default function ExpertRoomPage() {
   }, [videoOpen, session?.id])
 
   // Register the active room so PersistentVideo mounts the Jitsi iframe and the
-  // global PiP / "return to room" pill knows where to point. We pass groupId=null
-  // since the session has no group context. Defer until videoOpen — before then
-  // PersistentVideo would render the "Video not configured" fallback because the
-  // backend hasn't issued a JWT yet.
+  // global PiP / "return to room" pill knows where to point. We pass the
+  // originating Bubble (if any) so the hub auto-selects it when the user juggles
+  // back via "Open Bubble". Defer until videoOpen — before then PersistentVideo
+  // would render the "Video not configured" fallback because the backend hasn't
+  // issued a JWT yet.
   useEffect(() => {
     if (!room || !videoOpen) return
-    useActiveRoomStore.getState().setActive(room.id, null)
-  }, [room?.id, videoOpen])
+    useActiveRoomStore.getState().setActive(room.id, fromGroupId)
+  }, [room?.id, videoOpen, fromGroupId])
 
   if (!sessionId) return <Navigate to="/experts" replace />
 
   if (loadError) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full p-8 gap-3">
-        <p className="text-base">{loadError}</p>
-        <a href="/experts" className="text-sm text-link underline">{t('expertRoom.backToDirectory')}</a>
-      </div>
-    )
+    return <RoomGateError message={loadError} backTo="/experts" backLabel={t('expertRoom.backToDirectory')} />
   }
 
   if (!session || !room) {
-    return (
-      <div className="flex items-center justify-center h-full text-muted text-sm">{t('expertRoom.loadingSession')}</div>
-    )
+    return <RoomGateLoading label={t('expertRoom.loadingSession')} />
   }
 
   // Video cell:
@@ -140,7 +140,7 @@ export default function ExpertRoomPage() {
 
   return (
     <RoomBentoShell
-      header={<ExpertRoomHeader session={session} room={room} inCall={inCall} />}
+      header={<ExpertRoomHeader session={session} room={room} inCall={inCall} fromGroupId={fromGroupId} />}
       errorBanner={transientError ? (
         <div className="px-4 py-2 text-xs bg-warning/15 text-warning border-b border-line">
           {transientError}

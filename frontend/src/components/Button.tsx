@@ -4,14 +4,16 @@
  * sizes set padding & text size.
  *
  * Pick a variant by intent, not appearance:
- *   - primary: the page's main CTA (gradient).
+ *   - deep: the commit action — join/enroll/save/send/create (navy gradient,
+ *     white text). At most one per surface; see design-doc §6.
+ *   - primary: non-commit main CTAs — open, browse, start-here (silver gradient).
  *   - secondary: alternative actions (surface + border).
  *   - ghost: low-weight inline actions (no fill).
  *   - danger: destructive (pop, remove).
  */
 import type { ButtonHTMLAttributes, AnchorHTMLAttributes, ReactNode } from 'react'
 
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'cell'
+export type ButtonVariant = 'primary' | 'deep' | 'secondary' | 'ghost' | 'danger' | 'cell'
 export type ButtonSize = 'xs' | 'sm' | 'md' | 'lg'
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {
@@ -23,6 +25,8 @@ const SIZE_CLASSES: Record<ButtonSize, string> = {
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary:   'bg-brand-gradient-strong text-on-brand shadow-themed',
+  /** The navy punch: the commit action of a surface (deep gradient, white text). */
+  deep:      'bg-brand-gradient-deep text-white shadow-themed',
   secondary: 'bg-surface text-base border border-line hover:border-line-strong',
   ghost:     'text-secondary hover:bg-surface-hover',
   danger:    'bg-danger-soft text-danger border border-line hover:brightness-95',

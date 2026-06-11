@@ -61,9 +61,11 @@ export function OnboardingGuide() {
   return (
     <div className="shrink-0 p-3 tablet:p-4 pb-0">
       <div className="ring-iridescent p-[1.5px] rounded-3xl shadow-themed">
-        <div className={`rounded-[calc(1.5rem-1.5px)] p-3 tablet:p-4 flex items-start gap-3 transition-colors ${done ? 'bg-bubble-green-soft' : 'bg-primary-50'}`}>
+        {/* Whisper tints (surface-mixed) instead of the old fixed light fills —
+            bg-primary-50 stayed bright in dark mode; these swap automatically. */}
+        <div className={`rounded-[calc(1.5rem-1.5px)] p-3 tablet:p-4 flex items-start gap-3 transition-colors ${done ? 'bg-tint-green' : 'bg-tint-blue'}`}>
           <span
-            className={`shrink-0 w-2.5 h-2.5 mt-1.5 rounded-full ${done ? 'bg-bubble-green' : 'bg-brand-gradient-strong'}`}
+            className={`shrink-0 w-2.5 h-2.5 mt-1.5 rounded-full ${done ? 'bg-success' : 'bg-brand-gradient-strong'}`}
             aria-hidden
           />
           <div className="flex-1 min-w-0">

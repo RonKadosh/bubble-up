@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ComponentType } from 'react'
 import { useNavigate, type NavigateFunction } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Card } from '../../components/Card'
 import { Button } from '../../components/Button'
-import { SparkleIcon } from '../../components/Icons'
+import { BubbleLogo, CapIcon, PeopleIcon, SettingsIcon, SparkleIcon } from '../../components/Icons'
 import { ReliabilityMeter } from '../../components/ReliabilityMeter'
 import { type GuideKey } from '../../components/OnboardingGuide'
 import { useOnboardingStore, ONBOARDING_LEVEL_COUNT } from '../../store/onboardingStore'
@@ -14,15 +14,34 @@ import { describeError } from '../../api/errors'
 
 type LevelKind = 'explain' | 'action' | 'matching' | 'bubble'
 
+type IconComp = ComponentType<{ className?: string }>
+
+/** Per-step accent: a whisper tint over the card, a soft icon-chip fill, and a
+ *  text tone for the reward/done lines — one hue per step so the journey reads
+ *  as a gentle color progression (brand → yellow → green → blue → magenta). */
+interface LevelAccent {
+  tint: string
+  chip: string
+  text: string
+}
+
 interface LevelDef {
   kind: LevelKind
   titleKey: string
   bodyKey: string
+  Icon: IconComp
+  accent: LevelAccent
   /** Whether the user may advance past this level (live, server-derived). */
   gate: (s: OnboardingStatus) => boolean
   /** Action levels link out to the page where the step is actually done. */
   cta?: { labelKey: string; go: (nav: NavigateFunction) => void }
 }
+
+const ACCENT_BRAND:   LevelAccent = { tint: '',                chip: 'bg-primary-soft text-primary-600',           text: 'text-primary-600' }
+const ACCENT_YELLOW:  LevelAccent = { tint: 'bg-tint-yellow',  chip: 'bg-warning-soft text-warning',               text: 'text-warning' }
+const ACCENT_GREEN:   LevelAccent = { tint: 'bg-tint-green',   chip: 'bg-bubble-green-soft text-accent-green',     text: 'text-accent-green' }
+const ACCENT_BLUE:    LevelAccent = { tint: 'bg-tint-blue',    chip: 'bg-primary-soft text-primary-600',           text: 'text-primary-600' }
+const ACCENT_MAGENTA: LevelAccent = { tint: 'bg-tint-magenta', chip: 'bg-bubble-magenta-soft text-accent-magenta', text: 'text-accent-magenta' }
 
 // The five onboarding levels. Action levels (2–4) link out (carrying guide
 // nav-state so the destination page shows its callout) and are hard-gated on the
@@ -32,12 +51,16 @@ const LEVELS: LevelDef[] = [
     kind: 'explain',
     titleKey: 'onboarding.wizard.welcome.title',
     bodyKey: 'onboarding.wizard.welcome.body',
+    Icon: BubbleLogo,
+    accent: ACCENT_BRAND,
     gate: () => true,
   },
   {
     kind: 'action',
     titleKey: 'onboarding.wizard.profile.title',
     bodyKey: 'onboarding.wizard.profile.body',
+    Icon: SettingsIcon,
+    accent: ACCENT_YELLOW,
     gate: (s) => s.studyBase.affiliationDone,
     cta: { labelKey: 'onboarding.wizard.profile.cta', go: (nav) => nav('/settings', { state: { guide: 'profile' satisfies GuideKey } }) },
   },
@@ -45,6 +68,8 @@ const LEVELS: LevelDef[] = [
     kind: 'action',
     titleKey: 'onboarding.wizard.enroll.title',
     bodyKey: 'onboarding.wizard.enroll.body',
+    Icon: CapIcon,
+    accent: ACCENT_GREEN,
     gate: (s) => s.studyBase.coursesDone,
     cta: { labelKey: 'onboarding.wizard.enroll.cta', go: (nav) => nav('/academy', { state: { guide: 'enroll' satisfies GuideKey } }) },
   },
@@ -52,15 +77,28 @@ const LEVELS: LevelDef[] = [
     kind: 'bubble',
     titleKey: 'onboarding.wizard.bubble.title',
     bodyKey: 'onboarding.wizard.bubble.body',
+    Icon: PeopleIcon,
+    accent: ACCENT_BLUE,
     gate: (s) => s.inBubble,
   },
   {
     kind: 'matching',
     titleKey: 'onboarding.wizard.matching.title',
     bodyKey: 'onboarding.wizard.matching.body',
+    Icon: SparkleIcon,
+    accent: ACCENT_MAGENTA,
     gate: (s) => s.reliability.answeredQuestions >= 1,
   },
 ]
+
+/** Celebration badge per unlocked feature — the same icon the sidebar uses for
+ *  that feature (not a generic sparkle), tinted with the step's accent. */
+const CELEBRATION_STYLE: Record<string, { Icon: IconComp; text: string }> = {
+  settings: { Icon: SettingsIcon, text: 'text-warning' },
+  academy:  { Icon: CapIcon,      text: 'text-accent-green' },
+  bubbles:  { Icon: BubbleLogo,   text: 'text-primary-600' },
+  allSet:   { Icon: SparkleIcon,  text: 'text-accent-magenta' },
+}
 
 /**
  * The gating "Getting started" wizard — the home page for a user who hasn't
@@ -102,23 +140,25 @@ export function OnboardingWizard() {
   function advance() {
     if (!gateOk) return
     if (isLast) {
-      // Final step → fill the bar to 100% + "You're all set!", let it linger, then
-      // complete (which unmounts into the dashboard).
+      // Final step → fill the bar to 100% + "You're all set!", let it linger briefly,
+      // then complete (which unmounts into the dashboard).
       setCelebration('allSet')
-      window.setTimeout(() => setWizardLevel(level + 1), 2600)
+      window.setTimeout(() => setWizardLevel(level + 1), 1600)
     } else {
       // Celebrate the feature this level just unlocked (none for the L1 intro).
       if (unlockKey) {
         setCelebration(unlockKey)
-        window.setTimeout(() => setCelebration(null), 2400)
+        window.setTimeout(() => setCelebration(null), 1500)
       }
       setWizardLevel(level + 1)
     }
   }
 
+  const StepIcon = def.Icon
+
   return (
     <div className="flex-1 overflow-y-auto p-4 tablet:p-8 flex items-start tablet:items-center justify-center">
-      <Card size="lg" className="w-full max-w-xl p-6 tablet:p-8 shadow-bubble">
+      <Card size="lg" className={`w-full max-w-xl p-6 tablet:p-8 shadow-bubble transition-colors duration-500 ${def.accent.tint}`}>
         {/* Workspace hook + endowed-progress bar */}
         <div className="flex items-start justify-between gap-3 mb-1.5">
           <div className="flex items-center gap-2 min-w-0">
@@ -127,7 +167,7 @@ export function OnboardingWizard() {
             <h2 className="text-sm font-bold text-base leading-tight">{t('onboarding.wizard.workspaceTitle')}</h2>
           </div>
           <span className="shrink-0 text-xs font-semibold text-base tabular-nums whitespace-nowrap">
-            {t('onboarding.wizard.percentComplete', { pct })}
+            {t('onboarding.wizard.percentComplete', { pct: displayPct })}
           </span>
         </div>
         {/* Grey → light-blue gradient, revealed left-to-right as the % climbs. */}
@@ -145,12 +185,17 @@ export function OnboardingWizard() {
           <p className="mt-2 text-xs text-muted">{t('onboarding.wizard.headStart', { pct })}</p>
         )}
         {unlockKey && (
-          <p className="mt-2 text-xs font-medium text-primary-600">
+          <p className={`mt-2 text-xs font-medium ${def.accent.text}`}>
             {t('onboarding.wizard.unlockReward', { feature: t(`onboarding.feature.${unlockKey}`) })}
           </p>
         )}
 
-        <h1 className="text-2xl font-bold text-base mt-5">{t(def.titleKey)}</h1>
+        <div className="mt-5 flex items-center gap-3">
+          <span className={`w-10 h-10 rounded-full grid place-items-center shrink-0 ${def.accent.chip}`} aria-hidden>
+            <StepIcon className="w-5 h-5" />
+          </span>
+          <h1 className="text-2xl font-bold text-base">{t(def.titleKey)}</h1>
+        </div>
         <p className="text-sm text-secondary mt-2 leading-relaxed whitespace-pre-line">{t(def.bodyKey)}</p>
 
         {/* Action level: link out to do it, then it unlocks on return. */}
@@ -195,29 +240,33 @@ export function OnboardingWizard() {
         </div>
       </Card>
 
-      {celebration && (
-        <div className="fixed inset-0 z-50 grid place-items-center pointer-events-none p-4 overflow-hidden">
-          {/* Bubbles floating up behind the badge. */}
-          {[0, 1, 2, 3, 4, 5].map((i) => (
-            <span
-              key={i}
-              className={`absolute w-3 h-3 rounded-full animate-bubble-rise ${
-                ['bg-bubble-magenta', 'bg-primary-400', 'bg-bubble-green'][i % 3]
-              }`}
-              style={{ left: `${40 + i * 4}%`, bottom: '40%', animationDelay: `${i * 0.1}s` }}
-              aria-hidden
-            />
-          ))}
-          <div className="relative flex items-center gap-3 rounded-3xl bg-surface border border-line shadow-bubble px-6 py-4 animate-celebrate-badge">
-            <SparkleIcon className="w-6 h-6 text-bubble-magenta" />
-            <p className="text-base font-bold text-base">
-              {celebration === 'allSet'
-                ? t('onboarding.wizard.allSet')
-                : t('onboarding.wizard.unlocked', { feature: t(`onboarding.feature.${celebration}`) })}
-            </p>
+      {celebration && (() => {
+        const celeb = CELEBRATION_STYLE[celebration] ?? CELEBRATION_STYLE.allSet
+        const CelebIcon = celeb.Icon
+        return (
+          <div className="fixed inset-0 z-50 grid place-items-center pointer-events-none p-4 overflow-hidden">
+            {/* Bubbles floating up behind the badge. */}
+            {[0, 1, 2, 3, 4, 5].map((i) => (
+              <span
+                key={i}
+                className={`absolute w-3 h-3 rounded-full animate-bubble-rise ${
+                  ['bg-bubble-magenta', 'bg-primary-400', 'bg-bubble-green'][i % 3]
+                }`}
+                style={{ left: `${40 + i * 4}%`, bottom: '40%', animationDelay: `${i * 0.1}s` }}
+                aria-hidden
+              />
+            ))}
+            <div className="relative flex items-center gap-3 rounded-3xl bg-surface border border-line shadow-bubble px-6 py-4 animate-celebrate-badge">
+              <CelebIcon className={`w-6 h-6 ${celeb.text}`} />
+              <p className="text-base font-bold text-base">
+                {celebration === 'allSet'
+                  ? t('onboarding.wizard.allSet')
+                  : t('onboarding.wizard.unlocked', { feature: t(`onboarding.feature.${celebration}`) })}
+              </p>
+            </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
     </div>
   )
 }

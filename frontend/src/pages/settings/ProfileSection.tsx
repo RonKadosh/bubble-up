@@ -318,7 +318,7 @@ export default function ProfileSection() {
                   />
                 </div>
                 <div className="flex gap-2 mt-2">
-                  <Button type="submit" size="sm" disabled={saving || !formDisplayName.trim()}>
+                  <Button variant="deep" type="submit" size="sm" disabled={saving || !formDisplayName.trim()}>
                     {saving ? t('profile.savingButton') : t('profile.saveButton')}
                   </Button>
                   <Button

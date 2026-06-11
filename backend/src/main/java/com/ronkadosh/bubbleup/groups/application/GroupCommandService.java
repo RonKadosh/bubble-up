@@ -144,6 +144,10 @@ public class GroupCommandService {
                 .userId(targetUserId)
                 .role(MembershipRole.MEMBER)
                 .build());
+        // Announce the new member in chat — same SYSTEM_JOIN row a self-join posts,
+        // so an owner adding someone isn't a silent change.
+        chatInternalService.postSystemMessage(
+                groupId, ChatMessageType.SYSTEM_JOIN, targetUserId, displayFor(targetUserId));
         eventPublisher.publishEvent(new UserBehaviorEvent(requesterId, BehaviorEventType.ADDED_MEMBER));
         eventPublisher.publishEvent(new GroupMembershipChangedEvent(groupId));
         return GroupMemberResponse.from(member, authInternalService.getIdentity(targetUserId).orElse(null));
@@ -204,6 +208,12 @@ public class GroupCommandService {
         newOwner.setRole(MembershipRole.OWNER);
         memberRepository.save(currentOwner);
         memberRepository.save(newOwner);
+        // Announce the handover in chat so members see who's now in charge.
+        chatInternalService.postSystemMessage(
+                groupId,
+                ChatMessageType.SYSTEM_OWNERSHIP_TRANSFER,
+                newOwnerId,
+                displayFor(currentOwnerId) + " transferred ownership to " + displayFor(newOwnerId));
     }
 
     @Transactional

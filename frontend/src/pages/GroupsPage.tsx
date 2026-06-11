@@ -23,6 +23,7 @@ import { useOnboardingStore, isOnboarded } from '../store/onboardingStore'
 import { useBentoLayoutStore, type BentoKey } from '../store/bentoLayoutStore'
 import { useViewportStore } from '../store/viewportStore'
 import { useActiveRoomStore } from '../store/activeRoomStore'
+import { useToastStore } from '../store/toastStore'
 import { BentoCell } from '../components/BentoCell'
 import { BubbleLoader } from '../components/BubbleLoader'
 import { GroupSidebar } from './groups/GroupSidebar'
@@ -452,7 +453,7 @@ export default function GroupsPage() {
     try {
       const room = await getRoomForEvent(liveSession.id)
       if (room.scope === 'EXPERT_SESSION' && room.expertSessionId) {
-        navigate(`/sessions/${room.expertSessionId}`)
+        navigate(`/sessions/${room.expertSessionId}`, { state: selectedId ? { fromGroupId: selectedId } : undefined })
       } else {
         navigate(`/rooms/${room.id}`)
       }
@@ -472,10 +473,14 @@ export default function GroupsPage() {
 
   async function handleAddMember(groupId: string, userId: string) {
     try {
-      await addMember(groupId, userId)
+      const member = await addMember(groupId, userId)
       await loadGroups()
       refreshMembers(groupId)
       refreshRooms()
+      const name = member.displayName ?? `${userId.slice(0, 8)}…`
+      useToastStore.getState().show(t('groups.toast.added', { name }), 'success', {
+        id: userId, name, imageUrl: member.avatarUrl,
+      })
     } catch (e) {
       setError(describeError(e, t,
         {
@@ -488,11 +493,17 @@ export default function GroupsPage() {
   }
 
   async function handleRemoveMember(groupId: string, userId: string) {
+    // Resolve the member before the row disappears from the cache (name + avatar for the toast).
+    const removed = (membersById[groupId] ?? []).find((m) => m.userId === userId)
+    const name = removed?.displayName ?? `${userId.slice(0, 8)}…`
     try {
       await removeMember(groupId, userId)
       await loadGroups()
       refreshMembers(groupId)
       refreshRooms()
+      useToastStore.getState().show(t('groups.toast.removed', { name }), 'success', {
+        id: userId, name, imageUrl: removed?.avatarUrl,
+      })
     } catch {
       setError(t('groups.error.removeGeneric'))
     }
@@ -574,20 +585,6 @@ export default function GroupsPage() {
 
   return (
     <div className="flex flex-1 overflow-hidden relative">
-      <GroupSidebar
-        groups={groups}
-        selectedId={selectedId}
-        meId={me?.id ?? null}
-        unreadByGroup={unreadByGroup}
-        liveGroupIds={liveGroupIds}
-        onSelect={setSelectedId}
-        onCreate={handleCreate}
-        mobileOpen={mobileSidebarOpen}
-        onMobileClose={() => setMobileSidebarOpen(false)}
-        initialCreate={initialCreate}
-        onInitialCreateConsumed={() => navigate('/groups', { replace: true, state: null })}
-      />
-
       <main className="flex-1 flex flex-col bg-base overflow-hidden min-w-0">
         {error && (
           <div className="bg-danger-soft border-b border-line text-danger text-sm px-4 py-2 flex justify-between">
@@ -606,22 +603,13 @@ export default function GroupsPage() {
           ) : onboarded ? (
             // Home: the cross-Bubble activity feed. Its "open this Bubble" CTAs
             // select in place (no navigation, since we're already in the hub).
-            <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-              <div className="desktop:hidden p-2 border-b border-line shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setMobileSidebarOpen(true)}
-                  className="bubble-pop rounded-full bg-brand-gradient-strong text-on-brand text-sm font-semibold px-5 py-2 shadow-themed"
-                >
-                  {t('groups.openBubbleList')}
-                </button>
-              </div>
-              <div className="flex-1 min-h-0">
-                <HubFeed
-                  onSelectGroup={setSelectedId}
-                  onOpenCreate={() => navigate('/groups', { state: { openCreate: true } })}
-                />
-              </div>
+            // The Bubble-list entry sits just below the feed header (HubFeed).
+            <div className="flex-1 min-h-0">
+              <HubFeed
+                onSelectGroup={setSelectedId}
+                onOpenCreate={() => navigate('/groups', { state: { openCreate: true } })}
+                onOpenBubbleList={() => setMobileSidebarOpen(true)}
+              />
             </div>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-muted text-sm gap-3 px-6 text-center">
@@ -645,8 +633,8 @@ export default function GroupsPage() {
               liveSession={liveSession}
               onScheduleRoom={() => setScheduleRoomOpen(true)}
               onJoinLive={handleJoinLive}
-              onOpenSidebar={() => setMobileSidebarOpen(true)}
-              onOpenInfo={() => setBubbleInfoOpen(true)}
+              onOpenSidebar={() => { setBubbleInfoOpen(false); setMobileSidebarOpen(true) }}
+              onOpenInfo={() => setBubbleInfoOpen((v) => !v)}
             />
 
             {/* Members strip is part of the desktop/tablet "group panel"; on phone
@@ -658,7 +646,7 @@ export default function GroupsPage() {
                 presence={presence}
                 me={me?.id ?? null}
                 isOwner={isOwner}
-                onOpenInfo={() => setBubbleInfoOpen(true)}
+                onOpenInfo={() => setBubbleInfoOpen((v) => !v)}
               />
             )}
 
@@ -677,6 +665,7 @@ export default function GroupsPage() {
               onTransfer={(uid) => handleTransfer(selected.id, uid)}
               onLeave={() => handleLeave(selected.id)}
               onDelete={() => handleDelete(selected.id)}
+              onUpdated={(g) => setGroups((prev) => prev.map((x) => (x.id === g.id ? g : x)))}
             />
 
             {isPhone ? (
@@ -781,6 +770,23 @@ export default function GroupsPage() {
         )}
       </main>
 
+      {/* My Bubbles list — placed at the end (opposite the app's icon rail) so the
+          hub's Home/group content starts flush with the rail, matching every other
+          page's header alignment. On phone/tablet it's still a start-anchored drawer. */}
+      <GroupSidebar
+        groups={groups}
+        selectedId={selectedId}
+        meId={me?.id ?? null}
+        unreadByGroup={unreadByGroup}
+        liveGroupIds={liveGroupIds}
+        onSelect={setSelectedId}
+        onCreate={handleCreate}
+        mobileOpen={mobileSidebarOpen}
+        onMobileClose={() => setMobileSidebarOpen(false)}
+        initialCreate={initialCreate}
+        onInitialCreateConsumed={() => navigate('/groups', { replace: true, state: null })}
+      />
+
       {scheduleRoomOpen && selected && (
         <ScheduleRoomModal
           groupId={selected.id}
@@ -792,8 +798,8 @@ export default function GroupsPage() {
       )}
 
       {preparingLive && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="flex flex-col items-center gap-5 rounded-3xl border border-line bg-surface px-10 py-8 shadow-bubble">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-fade-in">
+          <div className="flex flex-col items-center gap-5 rounded-3xl border border-line bg-surface px-10 py-8 shadow-bubble animate-pop-in">
             <BubbleLoader size={72} />
             <p className="text-sm font-medium text-base">{t('room.schedule.preparing')}</p>
           </div>

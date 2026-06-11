@@ -40,11 +40,11 @@ export function ConfirmDialog({
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 tablet:p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 tablet:p-4 animate-fade-in"
       onClick={onClose}
     >
       <div
-        className="bg-surface rounded-3xl shadow-bubble border border-line w-full max-w-[26rem] flex flex-col"
+        className="bg-surface rounded-3xl shadow-bubble animate-pop-in border border-line w-full max-w-[26rem] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-5 pt-5 pb-2">

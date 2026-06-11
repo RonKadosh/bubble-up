@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { createBookingRequest } from '../../api/expert'
 import { errorCode } from '../../api/errors'
-import { getGroups, type Group } from '../../api/groups'
+import { getMyGroups, type Group } from '../../api/groups'
 import { useAuthStore } from '../../store/authStore'
 import { Button } from '../../components/Button'
 
@@ -33,7 +33,7 @@ export function RequestBookingModal({ open, expertUserId, onClose, onSent }: Pro
   useEffect(() => {
     if (!open) return
     setLoadingGroups(true)
-    getGroups()
+    getMyGroups()
       .then((all) => {
         const owned = all.filter((g) => me?.id && g.ownerId === me.id)
         setGroups(owned)
@@ -77,11 +77,11 @@ export function RequestBookingModal({ open, expertUserId, onClose, onSent }: Pro
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 tablet:p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 tablet:p-4 animate-fade-in"
       onClick={onClose}
     >
       <div
-        className="bg-surface rounded-3xl shadow-bubble border border-line w-full max-w-lg max-h-[85vh] flex flex-col"
+        className="bg-surface rounded-3xl shadow-bubble animate-pop-in border border-line w-full max-w-lg max-h-[85vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-5 py-3 border-b border-line flex items-center justify-between shrink-0">
@@ -146,7 +146,7 @@ export function RequestBookingModal({ open, expertUserId, onClose, onSent }: Pro
               <Button type="button" variant="ghost" size="sm" onClick={onClose}>
                 {t('expert.booking.cancel')}
               </Button>
-              <Button type="submit" size="sm" disabled={submitting}>
+              <Button variant="deep" type="submit" size="sm" disabled={submitting}>
                 {submitting ? t('expert.booking.sending') : t('expert.booking.send')}
               </Button>
             </div>

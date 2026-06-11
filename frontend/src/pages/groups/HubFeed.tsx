@@ -3,8 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Feed, FeedCta, FeedItem, FeedItemKind, FeedSectionKey, getFeed } from '../../api/feed'
 import { Group, getGroup, joinGroup } from '../../api/groups'
+import { CalendarEvent, getEvent } from '../../api/calendar'
 import { listMyCurrentEnrollments } from '../../api/enrollment'
 import { describeError } from '../../api/errors'
+import { useAuthStore } from '../../store/authStore'
+import { useToastStore } from '../../store/toastStore'
+import { EventModal, EventViewModal } from './CalendarPanel'
 import { Avatar } from '../../components/Avatar'
 import { Card } from '../../components/Card'
 import { Button } from '../../components/Button'
@@ -42,9 +46,12 @@ function FeedLine({ icon: Icon, tone = 'text-muted', title = false, children }: 
   children: ReactNode
 }) {
   return (
-    <p className={`flex items-center gap-2 min-w-0 ${title ? 'font-semibold text-base' : 'text-sm text-secondary'}`}>
-      <Icon className={`shrink-0 ${title ? 'w-[1.05rem] h-[1.05rem]' : 'w-4 h-4'} ${tone}`} />
-      <span className="truncate">{children}</span>
+    <p className={`flex items-start gap-2 min-w-0 ${title ? 'font-semibold text-base' : 'text-sm text-secondary'}`}>
+      <Icon className={`shrink-0 mt-0.5 ${title ? 'w-[1.05rem] h-[1.05rem]' : 'w-4 h-4'} ${tone}`} />
+      {/* Wrap to two lines rather than hard-truncating: on phone a single line
+          clips the verb + Bubble name off membership/activity lines, losing the
+          whole message. Two lines keep meaning while still bounding card height. */}
+      <span className="line-clamp-2">{children}</span>
     </p>
   )
 }
@@ -65,6 +72,15 @@ const SECTION_META: Record<FeedSectionKey, { labelKey: string; emptyKey: string 
   DISCOVERY: { labelKey: 'dashboard.section.discovery', emptyKey: 'dashboard.empty.discovery' },
 }
 
+// Whisper tint per section — a flat wash, fainter than the matched-card
+// bubble-surface so Discovery stays the loudest. DISCOVERY itself is unmapped:
+// its plain cards stay white and its matched cards glow magenta.
+const SECTION_TINT: Partial<Record<FeedSectionKey, string>> = {
+  LIVE: 'bg-tint-yellow',
+  UPCOMING: 'bg-tint-green',
+  ACTIVITY: 'bg-tint-blue',
+}
+
 // ---------------------------------------------------------------------------
 // Per-kind renderers. Adding a new feed item kind = one entry here + one type
 // in the FeedItemKind union (and a backend FeedSource). The card shell, avatar,
@@ -75,6 +91,8 @@ interface Rendered {
   body: ReactNode
   /** When set (and the item carries a cta), a CTA button is shown with this label. */
   ctaLabel?: string
+  /** Trophy slot at the row end (the matched-Bubble % badge). */
+  badge?: ReactNode
 }
 
 const ITEM_RENDERERS: Record<FeedItemKind, (item: FeedItem, t: Translate) => Rendered> = {
@@ -154,6 +172,9 @@ const ITEM_RENDERERS: Record<FeedItemKind, (item: FeedItem, t: Translate) => Ren
   recommendation: (item, t) => {
     const trending = item.displayMode === 'TRENDING'
     const course = courseLabel(item)
+    // A trustworthy match % is the card's trophy — pulled out of the meta line
+    // into a glowing badge ("Spark in the Calm").
+    const matched = !trending && item.matchPercent != null
     return {
       body: (
         <>
@@ -165,12 +186,23 @@ const ITEM_RENDERERS: Record<FeedItemKind, (item: FeedItem, t: Translate) => Ren
           </p>
           <p className="font-semibold text-base truncate">{item.title}</p>
           {course && <p className="text-sm text-muted truncate">{t('dashboard.discovery.fromCourse', { course })}</p>}
-          <p className="text-sm text-muted truncate">{discoveryMeta(item, t)}</p>
+          <p className="text-sm text-muted truncate">{discoveryMeta(item, t, true, !matched)}</p>
         </>
       ),
+      badge: matched ? <MatchBadge percent={item.matchPercent!} t={t} /> : undefined,
       ctaLabel: t('dashboard.cta.viewBubble'),
     }
   },
+}
+
+/** The match-score trophy: a soft glowing pill, not secondary text. */
+function MatchBadge({ percent, t }: { percent: number; t: Translate }) {
+  return (
+    <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-bubble-magenta-soft border border-bubble-magenta/30 px-2.5 py-1 text-xs font-semibold text-accent-magenta">
+      <SparkleIcon className="w-3.5 h-3.5" />
+      {t('dashboard.discovery.matchPercent', { percent })}
+    </span>
+  )
 }
 
 // "CS101 · Operating Systems" when a code exists, else just the course name.
@@ -182,14 +214,21 @@ function courseLabel(item: FeedItem): string {
 export function HubFeed({
   onSelectGroup,
   onOpenCreate,
+  onOpenBubbleList,
 }: {
   onSelectGroup: (groupId: string) => void
   onOpenCreate: () => void
+  /** Phone/tablet only: opens the Bubble-list drawer. Rendered below the header. */
+  onOpenBubbleList?: () => void
 }) {
   const { t } = useTranslation()
+  const meId = useAuthStore((s) => s.user?.id ?? null)
+  const showToast = useToastStore((s) => s.show)
 
   const [feed, setFeed] = useState<Feed | null>(null)
   const [loading, setLoading] = useState(true)
+  /** The event opened from an UPCOMING card — view first, edit on demand. */
+  const [eventModal, setEventModal] = useState<{ mode: 'view' | 'edit'; event: CalendarEvent; groupId: string } | null>(null)
   /**
    * Current-term enrolment count. Lets the empty Discovery state tell apart
    * "you haven't enrolled in anything" (→ enroll) from "your courses just have
@@ -215,12 +254,39 @@ export function HubFeed({
     return () => { cancelled = true }
   }, [])
 
+  async function refreshFeed() {
+    try { setFeed(await getFeed()) } catch { /* keep the stale feed on a transient failure */ }
+  }
+
+  // Open the event detail modal for an UPCOMING card (resolve the event by id).
+  async function handleViewEvent(eventId: string, groupId?: string) {
+    if (!groupId) return
+    try {
+      const event = await getEvent(eventId)
+      setEventModal({ mode: 'view', event, groupId })
+    } catch {
+      showToast(t('dashboard.event.loadError'), 'error')
+    }
+  }
+
   const itemsByKey: Partial<Record<FeedSectionKey, FeedItem[]>> = {}
   for (const s of feed?.sections ?? []) itemsByKey[s.key] = s.items
 
   return (
     <>
       <PageShell title={t('dashboard.title')} subtitle={t('dashboard.subtitle')}>
+        {/* Bubble-list entry — phone/tablet only, sitting just below the header. */}
+        {onOpenBubbleList && (
+          <div className="desktop:hidden mb-4">
+            <button
+              type="button"
+              onClick={onOpenBubbleList}
+              className="bubble-pop rounded-full bg-brand-gradient-strong text-on-brand text-sm font-semibold px-5 py-2 shadow-themed"
+            >
+              {t('groups.openBubbleList')}
+            </button>
+          </div>
+        )}
         {loading ? (
           <FeedSkeleton />
         ) : (
@@ -238,6 +304,7 @@ export function HubFeed({
                   onPreview={setPreview}
                   onSelectGroup={onSelectGroup}
                   onOpenCreate={onOpenCreate}
+                  onViewEvent={handleViewEvent}
                 />
               </section>
             ))}
@@ -250,6 +317,35 @@ export function HubFeed({
           item={preview}
           onClose={() => setPreview(null)}
           onSelectGroup={onSelectGroup}
+        />
+      )}
+
+      {eventModal?.mode === 'view' && (
+        <EventViewModal
+          event={eventModal.event}
+          meId={meId}
+          isOwner={false}
+          isMember
+          groupId={eventModal.groupId}
+          chatRoomId={null}
+          onEdit={() => setEventModal({ ...eventModal, mode: 'edit' })}
+          onClose={() => setEventModal(null)}
+          onSaved={() => { setEventModal(null); refreshFeed() }}
+          onShared={() => setEventModal(null)}
+          onError={(msg) => showToast(msg, 'error')}
+        />
+      )}
+      {eventModal?.mode === 'edit' && (
+        <EventModal
+          groupId={eventModal.groupId}
+          meId={meId}
+          isOwner={false}
+          isMember
+          mode="edit"
+          initialEvent={eventModal.event}
+          onClose={() => setEventModal(null)}
+          onSaved={() => { setEventModal(null); refreshFeed() }}
+          onError={(msg) => showToast(msg, 'error')}
         />
       )}
     </>
@@ -266,6 +362,7 @@ function SectionItems({
   onPreview,
   onSelectGroup,
   onOpenCreate,
+  onViewEvent,
 }: {
   items: FeedItem[]
   emptyKey: string
@@ -274,6 +371,7 @@ function SectionItems({
   onPreview: (item: FeedItem) => void
   onSelectGroup: (groupId: string) => void
   onOpenCreate: () => void
+  onViewEvent: (eventId: string, groupId?: string) => void
 }) {
   const { t } = useTranslation()
   if (items.length === 0) {
@@ -294,8 +392,10 @@ function SectionItems({
         <FeedItemCard
           key={`${i}-${item.cta?.targetId ?? item.groupId ?? ''}`}
           item={item}
+          tint={SECTION_TINT[sectionKey]}
           onPreview={onPreview}
           onSelectGroup={onSelectGroup}
+          onViewEvent={onViewEvent}
         />
       ))}
     </div>
@@ -334,12 +434,17 @@ function DiscoveryEmpty({
 
 function FeedItemCard({
   item,
+  tint,
   onPreview,
   onSelectGroup,
+  onViewEvent,
 }: {
   item: FeedItem
+  /** Section whisper-tint class (see SECTION_TINT). Undefined = plain surface. */
+  tint?: string
   onPreview: (item: FeedItem) => void
   onSelectGroup: (groupId: string) => void
+  onViewEvent: (eventId: string, groupId?: string) => void
 }) {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -348,41 +453,67 @@ function FeedItemCard({
 
   // One activation path for both the whole-card click and the CTA button:
   //  - discovery recommendation → open the public preview (you're not a member yet)
+  //  - upcoming event           → open the event detail modal
   //  - live room/session        → jump straight into the call
   //  - anything else with a group → open that Bubble in the hub (in-place select)
   function activate() {
     if (item.kind === 'recommendation') { onPreview(item); return }
     const cta = item.cta
-    if (cta?.type === 'JOIN_SESSION' && cta.targetId) { navigate(`/sessions/${cta.targetId}`); return }
+    if (cta?.type === 'VIEW_EVENT' && cta.targetId) { onViewEvent(cta.targetId, item.groupId); return }
+    if (cta?.type === 'JOIN_SESSION' && cta.targetId) { navigate(`/sessions/${cta.targetId}`, { state: item.groupId ? { fromGroupId: item.groupId } : undefined }); return }
     if (cta?.type === 'JOIN_ROOM' && cta.targetId) { navigate(`/rooms/${cta.targetId}`); return }
     if (item.groupId) onSelectGroup(item.groupId)
   }
 
   const clickable = item.kind === 'recommendation' || !!item.groupId
 
+  // Matched recommendations are the one feed card allowed to glow: the soapy
+  // bubble-surface (same treatment as the admin Bubbles KPI) + a soft colored
+  // outer glow instead of the flat themed shadow.
+  const matched = item.kind === 'recommendation' && item.displayMode === 'MATCHED'
+
   return (
     <Card
       size="lg"
       interactive={clickable}
-      className={`p-4 ${clickable ? 'cursor-pointer text-start w-full' : ''}`}
+      className={`p-4 ${clickable ? 'cursor-pointer text-start w-full' : ''} ${
+        matched ? 'relative overflow-hidden bubble-surface glow-match' : tint ?? ''
+      }`}
       onClick={clickable ? activate : undefined}
     >
       <div className="flex items-center gap-3">
         {item.groupId && (
-          <Avatar id={item.groupId} name={item.groupName ?? '?'} size="md" ring />
+          <Avatar id={item.groupId} name={item.groupName ?? '?'} imageUrl={item.groupImageUrl} size="md" ring />
         )}
         <div className="flex-1 min-w-0">{rendered.body}</div>
+        {rendered.badge && <div className="shrink-0">{rendered.badge}</div>}
+        {/* Tablet+: CTA sits inline at the end of the row. */}
         {showCta && (
+          <div className="shrink-0 hidden tablet:block">
+            <Button
+              size="sm"
+              variant={isJoinCta(item.cta!) ? 'deep' : 'secondary'}
+              onClick={(e) => { e.stopPropagation(); activate() }}
+            >
+              {rendered.ctaLabel}
+            </Button>
+          </div>
+        )}
+      </div>
+      {/* Phone: the CTA stacks full-width below the content instead of beside it —
+          otherwise it crushes the text into a sliver of "…" on narrow widths. */}
+      {showCta && (
+        <div className="tablet:hidden mt-3">
           <Button
             size="sm"
-            variant={isJoinCta(item.cta!) ? 'primary' : 'secondary'}
-            className="shrink-0"
+            variant={isJoinCta(item.cta!) ? 'deep' : 'secondary'}
+            className="w-full"
             onClick={(e) => { e.stopPropagation(); activate() }}
           >
             {rendered.ctaLabel}
           </Button>
-        )}
-      </div>
+        </div>
+      )}
     </Card>
   )
 }
@@ -446,13 +577,13 @@ function PublicBubbleModal({
     : 'dashboard.discovery.recommended')
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3 tablet:p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3 tablet:p-4 animate-fade-in" onClick={onClose}>
       <div
-        className="bg-surface rounded-3xl shadow-bubble w-full max-w-[28rem] max-h-[85vh] flex flex-col border border-line"
+        className="bg-surface rounded-3xl shadow-bubble animate-pop-in w-full max-w-[28rem] max-h-[85vh] flex flex-col border border-line"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-4 py-3 border-b border-line flex items-center gap-3">
-          <Avatar id={groupId} name={item.groupName ?? item.title ?? '?'} size="md" ring />
+          <Avatar id={groupId} name={item.groupName ?? item.title ?? '?'} imageUrl={group?.imageUrl ?? item.groupImageUrl} size="md" ring />
           <div className="flex-1 min-w-0">
             <p className="text-xs text-bubble-magenta">{badge}</p>
             <h3 className="font-semibold truncate">{item.groupName ?? item.title}</h3>
@@ -499,7 +630,7 @@ function PublicBubbleModal({
             {t('common.cancel')}
           </Button>
           {!isPrivate && (
-            <Button type="button" size="sm" onClick={handleJoin} disabled={loading || joining}>
+            <Button variant="deep" type="button" size="sm" onClick={handleJoin} disabled={loading || joining}>
               {joining ? t('dashboard.publicBubble.joining') : t('dashboard.publicBubble.join')}
             </Button>
           )}
@@ -544,11 +675,12 @@ const TRENDING_REASON_KEYS: Record<string, string> = {
   TRENDING_UPCOMING: 'dashboard.discovery.trending.upcoming',
 }
 
-function discoveryMeta(item: FeedItem, t: Translate, includeMembers = true): string {
+function discoveryMeta(item: FeedItem, t: Translate, includeMembers = true, includePercent = true): string {
   const parts: string[] = []
   if (item.displayMode === 'MATCHED' && item.matchPercent != null) {
-    // Only MATCHED bubbles earn a trustworthy percent.
-    parts.push(t('dashboard.discovery.matchPercent', { percent: item.matchPercent }))
+    // Only MATCHED bubbles earn a trustworthy percent. The feed card opts out
+    // (includePercent=false) because it shows the % as a badge instead.
+    if (includePercent) parts.push(t('dashboard.discovery.matchPercent', { percent: item.matchPercent }))
   } else if (item.reasonLabels && item.reasonLabels.length > 0) {
     const reasons = item.reasonLabels
       .map((code) => TRENDING_REASON_KEYS[code])

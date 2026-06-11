@@ -14,6 +14,7 @@ import { sendLinkMessage } from '../../api/chat'
 import { describeError } from '../../api/errors'
 import { getRoomForEvent } from '../../api/room'
 import { Button, IconButton } from '../../components/Button'
+import { PlusIcon } from '../../components/Icons'
 import {
   TYPE_COLORS,
   buildMonthGrid,
@@ -55,29 +56,29 @@ export function CalendarPanel(props: CalendarPanelProps) {
 const AGENDA_DAYS = 30
 const AGENDA_MAX_VISIBLE = 5
 
-function AgendaView({ groupId, isMember, onError }: CalendarPanelProps) {
+function AgendaView({ groupId, meId, isOwner, isMember, chatRoomId, onError, onShared }: CalendarPanelProps) {
   const { t, i18n } = useTranslation()
   const [events, setEvents] = useState<CalendarEvent[]>([])
+  const [modalState, setModalState] = useState<ModalState | null>(null)
 
-  useEffect(() => {
+  async function reload() {
     if (!isMember) { setEvents([]); return }
-    let cancelled = false
     const now = Date.now()
     const fromIso = new Date(now).toISOString()
     const toIso = new Date(now + AGENDA_DAYS * 24 * 60 * 60 * 1000).toISOString()
-    listEvents('GROUP', groupId, fromIso, toIso)
-      .then((evts) => {
-        if (cancelled) return
-        setEvents([...evts].sort((a, b) => a.startsAt.localeCompare(b.startsAt)))
-      })
-      .catch((e) => {
-        if (cancelled) return
-        onError(describeError(e, t,
-          { NOT_GROUP_MEMBER: 'groups.error.notMember' },
-          'groups.error.loadEvents'))
-        setEvents([])
-      })
-    return () => { cancelled = true }
+    try {
+      const evts = await listEvents('GROUP', groupId, fromIso, toIso)
+      setEvents([...evts].sort((a, b) => a.startsAt.localeCompare(b.startsAt)))
+    } catch (e) {
+      onError(describeError(e, t,
+        { NOT_GROUP_MEMBER: 'groups.error.notMember' },
+        'groups.error.loadEvents'))
+      setEvents([])
+    }
+  }
+
+  useEffect(() => {
+    reload()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groupId, isMember])
 
@@ -89,39 +90,93 @@ function AgendaView({ groupId, isMember, onError }: CalendarPanelProps) {
   )
 
   return (
-    <div className="flex-1 flex flex-col overflow-y-auto p-3 gap-2">
-      {events.length === 0 ? (
-        <p className="text-sm text-muted">{t('groups.calendar.noUpcoming')}</p>
-      ) : (
-        <ul className="flex flex-col gap-2">
-          {visible.map((ev) => {
-            const start = new Date(ev.startsAt)
-            return (
-              <li key={ev.id} className="flex items-center gap-3 bg-surface border border-line rounded-2xl px-3 py-2">
-                <div className="flex flex-col items-center justify-center bg-surface-muted text-secondary rounded-xl px-2 py-1 min-w-[3rem] shrink-0">
-                  <span className="text-[10px] uppercase tracking-wide">{weekdayFmt.format(start)}</span>
-                  <span className="text-base font-bold leading-none">{start.getDate()}</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`text-[10px] px-2 py-0.5 rounded-md ${TYPE_COLORS[ev.eventType]}`}>
-                      {ev.eventType.replace('_', ' ')}
-                    </span>
-                    <span className="text-xs text-muted">{fmtRange(ev.startsAt, ev.endsAt)}</span>
-                  </div>
-                  {ev.description && (
-                    <p className="text-sm text-secondary mt-0.5 truncate">{ev.description}</p>
-                  )}
-                </div>
-              </li>
-            )
-          })}
-        </ul>
+    <div className="flex-1 flex flex-col overflow-hidden">
+      {/* Compact header: label + a '+' to open the new-event modal. */}
+      <div className="flex items-center justify-between px-3 py-2 border-b border-line shrink-0">
+        <span className="text-xs font-semibold text-muted uppercase tracking-wide">{t('groups.calendar.upcoming')}</span>
+        {isMember && (
+          <IconButton
+            variant="cell"
+            size="sm"
+            onClick={() => setModalState({ mode: 'create', initialDateStr: toLocalDateStr(new Date()) })}
+            aria-label={t('groups.calendar.addAria')}
+            title={t('groups.calendar.newEvent')}
+          >
+            <PlusIcon className="w-4 h-4" />
+          </IconButton>
+        )}
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2">
+        {events.length === 0 ? (
+          <p className="text-sm text-muted">{t('groups.calendar.noUpcoming')}</p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {visible.map((ev) => {
+              const start = new Date(ev.startsAt)
+              return (
+                <li key={ev.id}>
+                  <button
+                    type="button"
+                    onClick={() => setModalState({ mode: 'view', event: ev })}
+                    className="w-full text-start flex items-center gap-3 bg-surface border border-line rounded-2xl px-3 py-2 hover:bg-surface-muted transition"
+                  >
+                    <div className="flex flex-col items-center justify-center bg-surface-muted text-secondary rounded-xl px-2 py-1 min-w-[3rem] shrink-0">
+                      <span className="text-[10px] uppercase tracking-wide">{weekdayFmt.format(start)}</span>
+                      <span className="text-base font-bold leading-none">{start.getDate()}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`text-[10px] px-2 py-0.5 rounded-md ${TYPE_COLORS[ev.eventType]}`}>
+                          {ev.eventType.replace('_', ' ')}
+                        </span>
+                        <span className="text-xs text-muted">{fmtRange(ev.startsAt, ev.endsAt)}</span>
+                      </div>
+                      {ev.description && (
+                        <p className="text-sm text-secondary mt-0.5 truncate">{ev.description}</p>
+                      )}
+                    </div>
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        )}
+        {hiddenCount > 0 && (
+          <p className="text-xs text-muted text-center mt-1">
+            {t('groups.calendar.moreEvents', { count: hiddenCount })}
+          </p>
+        )}
+      </div>
+
+      {modalState?.mode === 'view' && (
+        <EventViewModal
+          event={modalState.event}
+          meId={meId}
+          isOwner={isOwner}
+          isMember={isMember}
+          groupId={groupId}
+          chatRoomId={chatRoomId}
+          onEdit={() => setModalState({ mode: 'edit', event: modalState.event })}
+          onClose={() => setModalState(null)}
+          onSaved={() => { setModalState(null); reload() }}
+          onShared={() => { setModalState(null); onShared() }}
+          onError={onError}
+        />
       )}
-      {hiddenCount > 0 && (
-        <p className="text-xs text-muted text-center mt-1">
-          {t('groups.calendar.moreEvents', { count: hiddenCount })}
-        </p>
+      {(modalState?.mode === 'create' || modalState?.mode === 'edit') && (
+        <EventModal
+          groupId={groupId}
+          meId={meId}
+          isOwner={isOwner}
+          isMember={isMember}
+          mode={modalState.mode}
+          initialEvent={modalState.mode === 'edit' ? modalState.event : undefined}
+          initialDateStr={modalState.mode === 'create' ? modalState.initialDateStr : undefined}
+          onClose={() => setModalState(null)}
+          onSaved={() => { setModalState(null); reload() }}
+          onError={onError}
+        />
       )}
     </div>
   )
@@ -132,7 +187,9 @@ function AgendaView({ groupId, isMember, onError }: CalendarPanelProps) {
 // ---------------------------------------------------------------------------
 
 type ModalState =
+  | { mode: 'day'; dateStr: string }
   | { mode: 'create'; initialDateStr: string }
+  | { mode: 'view'; event: CalendarEvent }
   | { mode: 'edit'; event: CalendarEvent }
 
 function MonthGridView({ groupId, meId, isOwner, isMember, chatRoomId, onError, onShared }: CalendarPanelProps) {
@@ -237,7 +294,7 @@ function MonthGridView({ groupId, meId, isOwner, isMember, chatRoomId, onError, 
             <button
               key={cell.dateStr}
               type="button"
-              onClick={() => setModalState({ mode: 'create', initialDateStr: cell.dateStr })}
+              onClick={() => setModalState({ mode: 'day', dateStr: cell.dateStr })}
               className={`bg-surface min-h-0 p-1.5 flex flex-col items-stretch text-start overflow-hidden hover:bg-surface-muted/60 transition-colors ${
                 cell.isCurrentMonth ? '' : 'text-muted bg-surface-muted/40'
               }`}
@@ -245,37 +302,69 @@ function MonthGridView({ groupId, meId, isOwner, isMember, chatRoomId, onError, 
               <span className={`text-xs font-semibold self-start mb-1 px-1.5 py-0.5 rounded-md ${
                 cell.isToday ? 'bg-primary-500 text-white' : ''
               }`}>{cell.date.getDate()}</span>
-              <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-0.5">
-                {dayEvents.map((ev) => (
+              {/* Show up to two event chips for a glance; a "+N more" line keeps the
+                  cell tidy instead of squashing many. The whole day opens the day agenda. */}
+              <div className="flex-1 min-h-0 overflow-hidden flex flex-col gap-0.5">
+                {dayEvents.slice(0, 2).map((ev) => (
                   <span
                     key={ev.id}
-                    onClick={(e) => { e.stopPropagation(); setModalState({ mode: 'edit', event: ev }) }}
+                    onClick={(e) => { e.stopPropagation(); setModalState({ mode: 'view', event: ev }) }}
                     className={`text-[10px] leading-tight px-1.5 py-0.5 rounded truncate cursor-pointer ${TYPE_COLORS[ev.eventType]}`}
                     title={`${fmtRange(ev.startsAt, ev.endsAt)}${ev.description ? ' — ' + ev.description : ''}`}
                   >
                     {ev.description?.trim() || ev.eventType.replace('_', ' ')}
                   </span>
                 ))}
+                {dayEvents.length > 2 && (
+                  <span className="text-[10px] text-muted ps-1 mt-0.5">
+                    {t('groups.calendar.moreOnDay', { count: dayEvents.length - 2 })}
+                  </span>
+                )}
               </div>
             </button>
           )
         })}
       </div>
 
-      {modalState && (
+      {modalState?.mode === 'day' && (
+        <DayAgendaModal
+          dateStr={modalState.dateStr}
+          events={eventsByDateStr[modalState.dateStr] ?? []}
+          isMember={isMember}
+          onCreate={(dateStr) => setModalState({ mode: 'create', initialDateStr: dateStr })}
+          onSelectEvent={(event) => setModalState({ mode: 'view', event })}
+          onClose={() => setModalState(null)}
+        />
+      )}
+
+      {modalState?.mode === 'view' && (
+        <EventViewModal
+          event={modalState.event}
+          meId={meId}
+          isOwner={isOwner}
+          isMember={isMember}
+          groupId={groupId}
+          chatRoomId={chatRoomId}
+          onEdit={() => setModalState({ mode: 'edit', event: modalState.event })}
+          onClose={() => setModalState(null)}
+          onSaved={() => { setModalState(null); reload() }}
+          onShared={() => { setModalState(null); onShared() }}
+          onError={onError}
+        />
+      )}
+
+      {(modalState?.mode === 'create' || modalState?.mode === 'edit') && (
         <EventModal
           groupId={groupId}
           meId={meId}
           isOwner={isOwner}
           isMember={isMember}
-          chatRoomId={chatRoomId}
           mode={modalState.mode}
           initialEvent={modalState.mode === 'edit' ? modalState.event : undefined}
           initialDateStr={modalState.mode === 'create' ? modalState.initialDateStr : undefined}
           onClose={() => setModalState(null)}
           onSaved={() => { setModalState(null); reload() }}
           onError={onError}
-          onShared={onShared}
         />
       )}
     </div>
@@ -291,23 +380,20 @@ interface EventModalProps {
   meId: string | null
   isOwner: boolean
   isMember: boolean
-  chatRoomId: string | null
   mode: 'create' | 'edit'
   initialEvent?: CalendarEvent
   initialDateStr?: string
   onClose: () => void
   onSaved: () => void
   onError: (msg: string) => void
-  onShared: () => void
 }
 
-function EventModal({
-  groupId, meId, isOwner, isMember, chatRoomId,
+export function EventModal({
+  groupId, meId, isOwner,
   mode, initialEvent, initialDateStr,
-  onClose, onSaved, onError, onShared,
+  onClose, onSaved, onError,
 }: EventModalProps) {
   const { t } = useTranslation()
-  const navigate = useNavigate()
 
   const initialState = useMemo(() => {
     if (mode === 'edit' && initialEvent) {
@@ -393,44 +479,11 @@ function EventModal({
     }
   }
 
-  async function handleShareToChat() {
-    if (mode !== 'edit' || !initialEvent || !chatRoomId) return
-    try {
-      await sendLinkMessage(chatRoomId, 'CALENDAR_EVENT', initialEvent.id)
-      onShared()
-      onClose()
-    } catch {
-      onError(t('groups.error.shareToChat'))
-    }
-  }
-
-  async function handleEnterRoom() {
-    if (mode !== 'edit' || !initialEvent) return
-    try {
-      const room = await getRoomForEvent(initialEvent.id)
-      if (room.scope === 'EXPERT_SESSION' && room.expertSessionId) {
-        navigate(`/sessions/${room.expertSessionId}`)
-      } else {
-        navigate(`/rooms/${room.id}`)
-      }
-    } catch (err) {
-      onError(describeError(err, t,
-        {
-          ROOM_NOT_FOUND: 'groups.error.roomNotFound',
-          ROOM_NOT_YET_OPEN: 'groups.error.roomNotYetOpen',
-          ROOM_ENDED: 'groups.error.roomEnded',
-          NOT_GROUP_MEMBER: 'groups.error.notMember',
-          JITSI_NOT_CONFIGURED: 'groups.error.jitsiNotConfigured',
-        },
-        'groups.error.openRoom'))
-    }
-  }
-
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3 tablet:p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3 tablet:p-4 animate-fade-in" onClick={onClose}>
       <form
         onSubmit={handleSubmit}
-        className="bg-surface rounded-3xl shadow-bubble w-full max-w-[28rem] max-h-[80vh] flex flex-col border border-line"
+        className="bg-surface rounded-3xl shadow-bubble animate-pop-in w-full max-w-[28rem] max-h-[80vh] flex flex-col border border-line"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-4 py-3 border-b border-line flex items-center justify-between">
@@ -493,36 +546,6 @@ function EventModal({
         </div>
 
         <div className="px-4 py-3 border-t border-line flex flex-wrap items-center gap-2 justify-end">
-          {isEdit && isMember && eventType === 'STUDY_SESSION' && initialEvent && (() => {
-            const now = Date.now()
-            const opensAt = new Date(initialEvent.startsAt).getTime() - 15 * 60_000
-            const endsAtMs = new Date(initialEvent.endsAt).getTime()
-            if (now > endsAtMs) {
-              return (
-                <Button type="button" size="sm" disabled title="This session has ended">
-                  Ended
-                </Button>
-              )
-            }
-            if (now < opensAt) {
-              const mins = Math.max(1, Math.ceil((opensAt - now) / 60_000))
-              return (
-                <Button type="button" size="sm" disabled title="Room opens 15 min before the session starts">
-                  Opens in {mins} min
-                </Button>
-              )
-            }
-            return (
-              <Button type="button" size="sm" onClick={handleEnterRoom}>
-                Enter Room
-              </Button>
-            )
-          })()}
-          {isEdit && isMember && chatRoomId && (
-            <Button type="button" variant="cell" size="sm" onClick={handleShareToChat}>
-              {t('groups.calendar.shareToChat')}
-            </Button>
-          )}
           {canMutate && !isStarted && (
             <Button type="button" variant="danger" size="sm" onClick={handleDelete}>
               {t('common.delete')}
@@ -533,12 +556,224 @@ function EventModal({
             {t('common.cancel')}
           </Button>
           {!isStarted && (
-            <Button type="submit" size="sm">
+            <Button variant="deep" type="submit" size="sm">
               {isEdit ? t('common.save') : t('common.create')}
             </Button>
           )}
         </div>
       </form>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// DayAgendaModal — a single day's events, scrollable. Opened by clicking a day
+// in the month grid so many same-day events are readable instead of squashed.
+// ---------------------------------------------------------------------------
+
+interface DayAgendaModalProps {
+  dateStr: string
+  events: CalendarEvent[]
+  isMember: boolean
+  onCreate: (dateStr: string) => void
+  onSelectEvent: (event: CalendarEvent) => void
+  onClose: () => void
+}
+
+function DayAgendaModal({ dateStr, events, isMember, onCreate, onSelectEvent, onClose }: DayAgendaModalProps) {
+  const { t, i18n } = useTranslation()
+  // dateStr is local 'YYYY-MM-DD' (from the grid) — build a local Date for the header.
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const heading = new Date(y, m - 1, d).toLocaleDateString(i18n.language, {
+    weekday: 'long', month: 'long', day: 'numeric',
+  })
+  const sorted = [...events].sort((a, b) => a.startsAt.localeCompare(b.startsAt))
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3 tablet:p-4 animate-fade-in" onClick={onClose}>
+      <div
+        className="bg-surface rounded-3xl shadow-bubble animate-pop-in w-full max-w-[26rem] max-h-[80vh] flex flex-col border border-line"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-4 py-3 border-b border-line flex items-center justify-between gap-2">
+          <h3 className="font-semibold truncate">{heading}</h3>
+          <div className="flex items-center gap-1 shrink-0">
+            {isMember && (
+              <IconButton
+                variant="cell"
+                size="sm"
+                onClick={() => onCreate(dateStr)}
+                aria-label={t('groups.calendar.addAria')}
+                title={t('groups.calendar.newEvent')}
+              >
+                <PlusIcon className="w-4 h-4" />
+              </IconButton>
+            )}
+            <button type="button" onClick={onClose} aria-label={t('common.close')} className="text-muted hover:text-secondary text-xl leading-none px-1">×</button>
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2">
+          {sorted.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 py-8 text-center">
+              <p className="text-sm text-muted">{t('groups.calendar.emptyDay')}</p>
+              {isMember && <Button size="sm" onClick={() => onCreate(dateStr)}>{t('groups.calendar.newEvent')}</Button>}
+            </div>
+          ) : (
+            sorted.map((ev) => (
+              <button
+                key={ev.id}
+                type="button"
+                onClick={() => onSelectEvent(ev)}
+                className="text-start bg-surface border border-line rounded-2xl px-3 py-2 hover:bg-surface-muted transition flex flex-col gap-1"
+              >
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className={`text-[10px] px-2 py-0.5 rounded-md ${TYPE_COLORS[ev.eventType]}`}>{ev.eventType.replace('_', ' ')}</span>
+                  <span className="text-xs text-muted">{fmtRange(ev.startsAt, ev.endsAt)}</span>
+                </div>
+                {ev.description && <p className="text-sm text-secondary truncate">{ev.description}</p>}
+              </button>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// EventViewModal — read-only event detail (profile-card style). Opened by
+// clicking an event; offers Edit (→ the form), plus Enter Room / Share / Delete.
+// ---------------------------------------------------------------------------
+
+interface EventViewModalProps {
+  event: CalendarEvent
+  meId: string | null
+  isOwner: boolean
+  isMember: boolean
+  groupId: string
+  chatRoomId: string | null
+  onEdit: () => void
+  onClose: () => void
+  /** After a delete — parent reloads + closes. */
+  onSaved: () => void
+  /** After a share — parent refreshes rooms + closes. */
+  onShared: () => void
+  onError: (msg: string) => void
+}
+
+export function EventViewModal({
+  event, meId, isOwner, isMember, groupId, chatRoomId,
+  onEdit, onClose, onSaved, onShared, onError,
+}: EventViewModalProps) {
+  const { t } = useTranslation()
+  const navigate = useNavigate()
+
+  const canMutate = meId === event.createdBy || isOwner
+  const isStarted = new Date(event.startsAt).getTime() <= Date.now()
+
+  async function handleDelete() {
+    if (!confirm(t('groups.calendar.confirmDelete'))) return
+    try {
+      await deleteEvent(event.id)
+      onSaved()
+    } catch (err) {
+      onError(describeError(err, t,
+        {
+          NOT_EVENT_AUTHOR_OR_OWNER: 'groups.error.notEventAuthorDelete',
+          EVENT_ALREADY_STARTED: 'groups.error.eventLocked',
+        },
+        'groups.error.deleteEvent'))
+    }
+  }
+
+  async function handleShareToChat() {
+    if (!chatRoomId) return
+    try {
+      await sendLinkMessage(chatRoomId, 'CALENDAR_EVENT', event.id)
+      onShared()
+    } catch {
+      onError(t('groups.error.shareToChat'))
+    }
+  }
+
+  async function handleEnterRoom() {
+    try {
+      const room = await getRoomForEvent(event.id)
+      if (room.scope === 'EXPERT_SESSION' && room.expertSessionId) {
+        navigate(`/sessions/${room.expertSessionId}`, { state: groupId ? { fromGroupId: groupId } : undefined })
+      } else {
+        navigate(`/rooms/${room.id}`)
+      }
+    } catch (err) {
+      onError(describeError(err, t,
+        {
+          ROOM_NOT_FOUND: 'groups.error.roomNotFound',
+          ROOM_NOT_YET_OPEN: 'groups.error.roomNotYetOpen',
+          ROOM_ENDED: 'groups.error.roomEnded',
+          NOT_GROUP_MEMBER: 'groups.error.notMember',
+          JITSI_NOT_CONFIGURED: 'groups.error.jitsiNotConfigured',
+        },
+        'groups.error.openRoom'))
+    }
+  }
+
+  // STUDY_SESSION room CTA — same open/ended/countdown logic as the chat card.
+  const roomCta = (() => {
+    if (!isMember || event.eventType !== 'STUDY_SESSION') return null
+    const now = Date.now()
+    const opensAt = new Date(event.startsAt).getTime() - 15 * 60_000
+    const endsAtMs = new Date(event.endsAt).getTime()
+    if (now > endsAtMs) {
+      return <Button type="button" size="sm" disabled title="This session has ended">Ended</Button>
+    }
+    if (now < opensAt) {
+      const mins = Math.max(1, Math.ceil((opensAt - now) / 60_000))
+      return <Button type="button" size="sm" disabled title="Room opens 15 min before the session starts">Opens in {mins} min</Button>
+    }
+    return <Button type="button" size="sm" onClick={handleEnterRoom}>Enter Room</Button>
+  })()
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3 tablet:p-4 animate-fade-in" onClick={onClose}>
+      <div
+        className="bg-surface rounded-3xl shadow-bubble animate-pop-in w-full max-w-[26rem] max-h-[80vh] flex flex-col border border-line"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-4 py-3 border-b border-line flex items-center justify-between">
+          <h3 className="font-semibold">{t('groups.calendar.detailsTitle')}</h3>
+          <button type="button" onClick={onClose} aria-label={t('common.close')} className="text-muted hover:text-secondary text-xl leading-none">×</button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className={`text-xs px-2 py-0.5 rounded-md ${TYPE_COLORS[event.eventType]}`}>{event.eventType.replace('_', ' ')}</span>
+            {isStarted && (
+              <span className="text-[10px] px-2 py-0.5 rounded-md bg-surface-muted text-muted">{t('groups.calendar.startedBadge')}</span>
+            )}
+          </div>
+          <p className="text-sm font-medium text-base">{fmtRange(event.startsAt, event.endsAt)}</p>
+          {event.description ? (
+            <p className="text-sm text-secondary whitespace-pre-wrap break-words">{event.description}</p>
+          ) : (
+            <p className="text-sm text-muted italic">{t('groups.calendar.noDescription')}</p>
+          )}
+        </div>
+
+        <div className="px-4 py-3 border-t border-line flex flex-wrap items-center gap-2">
+          {roomCta}
+          {isMember && chatRoomId && (
+            <Button type="button" variant="cell" size="sm" onClick={handleShareToChat}>{t('groups.calendar.shareToChat')}</Button>
+          )}
+          <div className="flex-1" />
+          {canMutate && !isStarted && (
+            <Button type="button" variant="danger" size="sm" onClick={handleDelete}>{t('common.delete')}</Button>
+          )}
+          {canMutate && !isStarted && (
+            <Button type="button" size="sm" onClick={onEdit}>{t('common.edit')}</Button>
+          )}
+          <Button type="button" variant="ghost" size="sm" onClick={onClose}>{t('common.close')}</Button>
+        </div>
+      </div>
     </div>
   )
 }

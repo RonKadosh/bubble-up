@@ -146,7 +146,7 @@ export default function ExpertOnboardingPage() {
 
             {error && <div className="text-sm text-warning">{error}</div>}
 
-            <Button
+            <Button variant="deep"
               type="submit"
               size="sm"
               disabled={submitting || !headline.trim()}

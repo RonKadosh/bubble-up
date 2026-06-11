@@ -9,7 +9,7 @@ import {
   type ExpertSession,
 } from '../api/expert'
 import { errorCode } from '../api/errors'
-import { getGroups, type Group } from '../api/groups'
+import { getMyGroups, type Group } from '../api/groups'
 import { useAuthStore } from '../store/authStore'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
@@ -42,7 +42,7 @@ export default function ExpertDirectoryPage() {
       const [d, s, g] = await Promise.all([
         getExpertDirectory(),
         listOpenSessions(),
-        getGroups().catch(() => [] as Group[]),
+        getMyGroups().catch(() => [] as Group[]),
       ])
       setExperts(d)
       setSessions(s)
@@ -227,7 +227,7 @@ function OpenSessionCard({ session, ownedGroups, onEnrolled }: OpenSessionCardPr
                 ))}
               </div>
             ) : (
-              <Button
+              <Button variant="deep"
                 size="sm"
                 onClick={() => { setError(null); setInfo(null); setPickerOpen(true) }}
               >

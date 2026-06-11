@@ -13,6 +13,7 @@ import { PersistentVideo } from './PersistentVideo'
 import { QuizPrompt } from './QuizPrompt'
 import { OnboardingGuide } from './OnboardingGuide'
 import { UserProfileCard } from './UserProfileCard'
+import { Toaster } from './Toaster'
 import {
   BubbleLogo,
   BulbIcon,
@@ -111,48 +112,6 @@ function NavRow({ to, onClick, Icon, label, variant = 'default', ariaLabel, lock
 }
 
 /**
- * Mobile bottom-tab item — a stacked icon + label cell on the brand-gradient
- * footer. Mirrors `NavRow`'s locked/active states but laid out for a horizontal
- * bar instead of the vertical rail.
- */
-function MobileTab({ to, Icon, label, locked = false, lockedLabel }: NavRowProps) {
-  const base = 'relative flex flex-col items-center justify-center gap-0.5 flex-1 min-w-0 py-1 bubble-pop'
-
-  if (locked) {
-    return (
-      <div aria-label={lockedLabel ?? label} aria-disabled="true" className={`${base} text-on-brand/40 cursor-not-allowed`}>
-        <span className="relative grid place-items-center w-12 h-7 rounded-full">
-          <Icon className="w-5 h-5" />
-          <span className="absolute -top-0.5 end-2 grid place-items-center w-3.5 h-3.5 rounded-full bg-surface text-secondary shadow-sm">
-            <LockIcon className="w-2 h-2" />
-          </span>
-        </span>
-        <span className="text-[0.62rem] font-medium leading-none truncate max-w-full">{label}</span>
-      </div>
-    )
-  }
-
-  return (
-    <NavLink to={to!} aria-label={label} className={`${base} text-on-brand/80`}>
-      {({ isActive }) => (
-        <>
-          <span
-            className={`grid place-items-center w-12 h-7 rounded-full transition-colors ${
-              isActive ? 'bg-white/30 text-on-brand backdrop-blur-sm' : ''
-            }`}
-          >
-            <Icon className="w-5 h-5" />
-          </span>
-          <span className={`text-[0.62rem] leading-none truncate max-w-full ${isActive ? 'font-semibold text-on-brand' : 'font-medium'}`}>
-            {label}
-          </span>
-        </>
-      )}
-    </NavLink>
-  )
-}
-
-/**
  * Row in the mobile account rolldown — a full-width icon + label on a surface
  * panel. Used for the utility actions (settings / help / report / logout) that
  * live in the rail's footer on desktop.
@@ -247,7 +206,7 @@ export default function Layout() {
           className="flex items-center gap-2 px-1 py-1 rounded-full text-on-brand bubble-pop"
         >
           <BubbleLogo className="w-6 h-6" />
-          <span className="font-semibold tracking-tight">Bubble.up</span>
+          <span className="font-heading font-semibold tracking-tight">Bubble.up</span>
         </NavLink>
         <button
           type="button"
@@ -269,7 +228,7 @@ export default function Layout() {
             onClick={() => setMenuOpen(false)}
             className="absolute inset-0 bg-black/30 backdrop-blur-sm"
           />
-          <div className="absolute inset-x-2 top-2 origin-top rounded-[1.5rem] bg-surface border border-line shadow-themed p-2 animate-rolldown">
+          <div className="absolute inset-x-2 top-2 origin-top max-h-[calc(100dvh-1rem)] overflow-y-auto rounded-[1.5rem] bg-surface border border-line shadow-themed p-2 animate-rolldown">
             <div className="flex items-center justify-between px-2 pb-1.5">
               <span className="text-xs font-semibold uppercase tracking-wide text-secondary">{t('nav.menu')}</span>
               <button
@@ -282,7 +241,20 @@ export default function Layout() {
               </button>
             </div>
             <div className="flex flex-col gap-1">
-              <MobileMenuRow to="/settings" Icon={SettingsIcon} label={t('nav.settings')} {...lockProps('settings')} />
+              {/* Primary destinations — moved here from the old bottom tab bar so
+                  the phone has a single nav surface (this rolldown + the Home logo). */}
+              <MobileMenuRow to="/dashboard" onClick={() => setMenuOpen(false)} Icon={BubbleLogo} label={t('nav.home')} />
+              <MobileMenuRow to="/academy" onClick={() => setMenuOpen(false)} Icon={CapIcon} label={t('nav.academy')} {...lockProps('academy')} />
+              <MobileMenuRow to="/experts" onClick={() => setMenuOpen(false)} Icon={BulbIcon} label={t('nav.experts')} {...lockProps('experts')} />
+              {(me?.role === 'EXPERT' || me?.role === 'ADMIN') && (
+                <MobileMenuRow to="/expert" onClick={() => setMenuOpen(false)} Icon={CapIcon} label={t('expert.hubNav')} />
+              )}
+              {me?.role === 'ADMIN' && (
+                <MobileMenuRow to="/admin" onClick={() => setMenuOpen(false)} Icon={ShieldIcon} label="Admin" />
+              )}
+              <div className="my-1 mx-1 h-px bg-line" role="separator" />
+              {/* Utility actions. */}
+              <MobileMenuRow to="/settings" onClick={() => setMenuOpen(false)} Icon={SettingsIcon} label={t('nav.settings')} {...lockProps('settings')} />
               <MobileMenuRow onClick={() => { setMenuOpen(false); handleHelp() }} Icon={HelpIcon} label={t('nav.help')} />
               <MobileMenuRow to="/report" onClick={() => setMenuOpen(false)} Icon={ReportIcon} label={t('nav.report')} />
               <MobileMenuRow onClick={() => { setMenuOpen(false); handleLogout() }} Icon={LogoutIcon} label={t('nav.logout')} variant="danger" />
@@ -331,22 +303,10 @@ export default function Layout() {
         <Outlet />
       </main>
 
-      {/* Mobile bottom nav — the main destinations. Phone only. */}
-      <nav className="tablet:hidden relative z-20 flex items-stretch gap-1 px-2 py-1 bg-brand-gradient-vertical text-on-brand shadow-bubble rounded-[1.5rem] shrink-0">
-        <MobileTab to="/dashboard" Icon={BubbleLogo} label={t('nav.home')} />
-        <MobileTab to="/academy" Icon={CapIcon} label={t('nav.academy')} {...lockProps('academy')} />
-        <MobileTab to="/experts" Icon={BulbIcon} label={t('nav.experts')} {...lockProps('experts')} />
-        {(me?.role === 'EXPERT' || me?.role === 'ADMIN') && (
-          <MobileTab to="/expert" Icon={CapIcon} label={t('expert.hubNav')} />
-        )}
-        {me?.role === 'ADMIN' && (
-          <MobileTab to="/admin" Icon={ShieldIcon} label="Admin" />
-        )}
-      </nav>
-
       <PersistentVideo />
       <QuizPrompt />
       <UserProfileCard />
+      <Toaster />
     </div>
   )
 }

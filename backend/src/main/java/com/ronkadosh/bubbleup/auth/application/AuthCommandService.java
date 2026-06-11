@@ -41,6 +41,11 @@ public class AuthCommandService {
                 .passwordHash(passwordEncoder.encode(request.password()))
                 .role(UserRole.STUDENT)
                 .displayName(displayName)
+                // Legacy password/testing accounts have no academic-email proof path,
+                // so trust them as verified — matching the dev-only /login/testing flow
+                // (TestingLoginPage already assumes this). Without it, the silent
+                // token-refresh re-reads emailVerified=false and bounces to /auth/verify.
+                .emailVerified(true)
                 .build();
         userRepository.save(user);
         return issuePair(user);

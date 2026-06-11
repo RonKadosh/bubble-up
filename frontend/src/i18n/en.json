@@ -113,19 +113,24 @@
     "errorAvatarTooLarge": "Avatar must be under 5 MB.",
     "errorAvatarGeneric": "Couldn't upload avatar.",
     "noBio": "—",
-    "noAffiliation": "—"
+    "noAffiliation": "—",
+    "invite": {
+      "button": "Invite to Bubble",
+      "title": "Invite to one of your Bubbles",
+      "none": "No Bubble of yours fits — they must be enrolled in the course and not already a member.",
+      "add": "Invite",
+      "invited": "Invited ✓",
+      "loadError": "Couldn't load your Bubbles.",
+      "error": "Couldn't invite this user.",
+      "full": "That Bubble is full.",
+      "already": "Already a member.",
+      "notEnrolled": "Not enrolled in that Bubble's course."
+    }
   },
   "login": {
-    "entryHeading": "Get started",
-    "entrySub": "Continue with your Israeli academic Google account.",
-    "entryButton": "Continue with Google",
-    "entryNote": "On your first sign-up, Bubble.up will send a verification link to that academic inbox before access is unlocked.",
-    "pendingHeading": "One more step",
-    "pendingSub": "Google sign-in is done. Continue to academic email verification to unlock Bubble.up.",
-    "pendingButton": "Continue verification",
-    "pendingSecondaryButton": "Start again with Google",
-    "pendingNote": "Verification is the final step before your account can enter Bubble.up.",
-    "headingSignIn": "Sign up or sign in",
+    "tabSignIn": "Sign in",
+    "tabRegister": "Create account",
+    "headingSignIn": "Welcome back",
     "headingRegister": "Join the bubbles",
     "subSignIn": "Sign in to drift back into your Bubbles.",
     "subRegister": "Create an account to start floating with your study crews.",
@@ -208,9 +213,16 @@
     "subtitle": "Browse departments and courses at your university.",
     "browseHeading": "Browse & enroll",
     "enrolledBadge": "ENROLLED",
+    "search": {
+      "coursePlaceholder": "Search any course…",
+      "deptPlaceholder": "Filter departments",
+      "resultsAcross": "Offered courses across all departments",
+      "noResults": "No courses match.",
+      "minChars": "Type at least 2 characters",
+      "capped": "Showing the first 50 — refine your search"
+    },
     "term": {
       "label": "Term",
-      "all": "All terms",
       "current": "Current term"
     },
     "column": {
@@ -221,6 +233,7 @@
     "empty": {
       "departments": "No departments to show.",
       "courses": "Pick a department to see its courses.",
+      "coursesInTerm": "No courses offered in the selected term.",
       "detail": "Pick a course to see its details."
     },
     "myCourses": {
@@ -388,6 +401,9 @@
       "notEnrolled": "You're not enrolled in this Bubble's course. Enroll in the course to join.",
       "loadError": "Couldn't load this Bubble's details."
     },
+    "event": {
+      "loadError": "Couldn't open that event."
+    },
     "linkedEvent": "Linked event"
   },
   "groups": {
@@ -405,6 +421,8 @@
       "universityLabel": "University",
       "selectDepartment": "Select a department",
       "selectCourse": "Select a course",
+      "loadingCourses": "Loading your courses…",
+      "noEnrolledCourses": "You're not enrolled in any course this term. Enroll in a course to start a Bubble.",
       "maxGroupSize": "Max members (4–10)",
       "maxGroupSizeIncrease": "Increase max members",
       "maxGroupSizeDecrease": "Decrease max members",
@@ -435,6 +453,10 @@
       "thanks": "Thanks for the feedback."
     },
     "liveNow": "Live now",
+    "toast": {
+      "added": "Added {{name}} to the Bubble",
+      "removed": "Removed {{name}} from the Bubble"
+    },
     "tabs": {
       "chat": "Chat",
       "calendar": "Calendar",
@@ -446,7 +468,22 @@
     "info": {
       "title": "Bubble Info",
       "openStripAria": "Open Bubble Info",
-      "leaveBubble": "Leave Bubble"
+      "leaveBubble": "Leave Bubble",
+      "changeImage": "Change Bubble image",
+      "removeImage": "Remove image",
+      "imageUploading": "Uploading image…",
+      "manageTitle": "Manage Bubble",
+      "manage": {
+        "editName": "Edit Bubble name",
+        "editDesc": "Edit description",
+        "visibility": "Visibility",
+        "removeMember": "Remove a member",
+        "transfer": "Transfer ownership",
+        "noOthers": "No other members yet.",
+        "popConfirm": "Pop this Bubble? This permanently deletes its chat, calendar, files, and room for everyone.",
+        "popNotEmpty": "Remove all other members first — only an empty Bubble can be popped.",
+        "popConfirmButton": "Yes, pop it"
+      }
     },
     "members": {
       "empty": "No members yet.",
@@ -456,6 +493,10 @@
       "makeOwner": "Make owner",
       "remove": "Remove",
       "addPlaceholder": "User UUID to add",
+      "addLabel": "Add a member",
+      "searchPlaceholder": "Search students by name…",
+      "noMatches": "No students match that name.",
+      "noCandidates": "Everyone enrolled is already in this Bubble.",
       "addButton": "+ Add",
       "fullHint": "Bubble is full ({{max}} max). Remove a member before adding another.",
       "onlineNow": "online now",
@@ -478,6 +519,9 @@
       "startOfChat": "— start of chat —",
       "noMessages": "No messages yet.",
       "loadingOlder": "Loading older messages…",
+      "roomLiveFallback": "Your Bubble is live — hop into the room.",
+      "roomLiveBadge": "BUBBLE LIVE",
+      "roomLiveEnter": "Enter Room",
       "linkUnavailable": "🔗 Link unavailable",
       "loadingLink": "Loading link…",
       "sendAria": "Send",
@@ -564,9 +608,16 @@
       "noUpcoming": "No upcoming events.",
       "moreEvents_one": "{{count}} more event — maximize to see all",
       "moreEvents_other": "{{count}} more events — maximize to see all",
+      "moreOnDay": "+{{count}} more",
       "today": "Today",
       "prevMonth": "Previous month",
-      "nextMonth": "Next month"
+      "nextMonth": "Next month",
+      "upcoming": "Upcoming",
+      "addAria": "Add event",
+      "detailsTitle": "Event",
+      "startedBadge": "Started",
+      "noDescription": "No description.",
+      "emptyDay": "Nothing scheduled this day."
     },
     "files": {
       "uploadHint": "Max 25 MB. No executables.",
@@ -600,6 +651,7 @@
       "loadList": "Failed to load Bubbles.",
       "create": "Failed to create Bubble.",
       "loadCatalog": "Failed to load the course catalog.",
+      "loadEnrollments": "Failed to load your enrolled courses.",
       "join": "Failed to join Bubble.",
       "full": "This Bubble is full.",
       "notEnrolled": "You're not enrolled in this Bubble's course.",
@@ -610,6 +662,7 @@
       "addMissingUser": "No user with that ID.",
       "addAlreadyMember": "User is already a member.",
       "addGeneric": "Failed to add member.",
+      "loadCandidates": "Couldn't load students to add.",
       "removeGeneric": "Failed to remove member.",
       "transferGeneric": "Failed to transfer ownership.",
       "loadChat": "Failed to load chat.",
@@ -630,6 +683,10 @@
       "saveEvent": "Failed to save event.",
       "deleteEvent": "Failed to delete event.",
       "shareToChat": "Failed to share event to chat.",
+      "updateGroup": "Failed to update Bubble.",
+      "imageType": "Image must be PNG, JPEG, WebP, or GIF.",
+      "imageTooLarge": "Image must be under 5 MB.",
+      "imageGeneric": "Couldn't update the Bubble image.",
       "loadFiles": "Failed to load files.",
       "fileTooLarge": "File exceeds 25 MB limit.",
       "fileBlocked": "That file type isn't allowed.",

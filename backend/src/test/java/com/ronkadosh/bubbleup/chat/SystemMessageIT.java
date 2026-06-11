@@ -80,9 +80,9 @@ class SystemMessageIT extends IntegrationTest {
     }
 
     @Test
-    void owner_add_member_does_not_emit_join() throws Exception {
-        // Owner-initiated add is not the same as a self-join; the plan intentionally
-        // skips system messages for add (and kick/transfer/rename/visibility-change).
+    void owner_add_member_emits_system_join() throws Exception {
+        // Owner-initiated add now announces the new member with the same SYSTEM_JOIN
+        // row a self-join posts, so adding someone isn't a silent change.
         AuthedUser owner = registerEnrolled();
         AuthedUser invitee = registerEnrolled();
         UUID groupId = createGroup(owner, "PRIVATE");
@@ -96,7 +96,10 @@ class SystemMessageIT extends IntegrationTest {
 
         mvc.perform(get("/api/chat/rooms/{id}/messages", defaultRoomId).with(bearer(owner)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.length()").value(0));
+                .andExpect(jsonPath("$.data.length()").value(1))
+                .andExpect(jsonPath("$.data[0].messageType").value("SYSTEM_JOIN"))
+                .andExpect(jsonPath("$.data[0].subjectUserId").value(invitee.id().toString()))
+                .andExpect(jsonPath("$.data[0].content").value(invitee.email()));
     }
 
     private UUID createGroup(AuthedUser owner, String visibility) throws Exception {

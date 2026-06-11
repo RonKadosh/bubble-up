@@ -18,6 +18,7 @@ import {
   LeafIcon,
   PaletteIcon,
   ScaleIcon,
+  SearchIcon,
   SigmaIcon,
   TrendIcon,
 } from '../components/Icons'
@@ -35,6 +36,7 @@ import {
   getOfferingsForCourse,
   getTerms,
   getUniversities,
+  searchCourses,
 } from '../api/catalog'
 import {
   Enrollment,
@@ -45,8 +47,6 @@ import {
 import { describeError } from '../api/errors'
 import { useOnboardingStore } from '../store/onboardingStore'
 import { useViewportStore } from '../store/viewportStore'
-
-const TERM_ALL = '__all__'
 
 /** Phone browse drill-down steps: Departments → Courses → Course detail. */
 type MobileStep = 'departments' | 'courses' | 'detail'
@@ -61,9 +61,16 @@ export default function AcademyPage() {
   const [terms, setTerms] = useState<Term[]>([])
   const [currentTerm, setCurrentTerm] = useState<Term | null>(null)
   const [selectedDeptId, setSelectedDeptId] = useState<string | null>(null)
-  const [selectedTermId, setSelectedTermId] = useState<string>(TERM_ALL)
+  // The active term scope — always a concrete term once terms load (null only before then).
+  const [selectedTermId, setSelectedTermId] = useState<string | null>(null)
   const [courses, setCourses] = useState<Course[]>([])
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null)
+  // Client-side filter over the already-loaded departments (zero network).
+  const [deptQuery, setDeptQuery] = useState('')
+  // Global course search: server-side, debounced, capped — see searchCourses.
+  const [courseQuery, setCourseQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<Course[]>([])
+  const [searchBusy, setSearchBusy] = useState(false)
   // Phone-only: which of the three browse panes is on screen (the drill-down).
   const [mobileStep, setMobileStep] = useState<MobileStep>('departments')
   const [course, setCourse] = useState<Course | null>(null)
@@ -91,6 +98,24 @@ export default function AcademyPage() {
     departments.forEach((d) => m.set(d.id, d))
     return m
   }, [departments])
+
+  const filteredDepartments = useMemo(() => {
+    const q = deptQuery.trim().toLowerCase()
+    if (!q) return departments
+    return departments.filter(
+      (d) => d.name.toLowerCase().includes(q) || d.shortCode.toLowerCase().includes(q)
+    )
+  }, [departments, deptQuery])
+
+  /** Course search is active once the query reaches 2 chars; below that we browse by department. */
+  const searching = courseQuery.trim().length >= 2
+
+  function deptCodesFor(c: Course): string {
+    return c.departmentIds
+      .map((id) => deptsById.get(id)?.shortCode)
+      .filter(Boolean)
+      .join(' · ')
+  }
 
   /** courseId → enrollment row for the current term. */
   const enrolledCourseIds = useMemo(() => {
@@ -132,7 +157,8 @@ export default function AcademyPage() {
         setDepartments(depts)
         setTerms(termList)
         setCurrentTerm(ct)
-        setSelectedTermId(ct?.id ?? TERM_ALL)
+        // Always scope to a concrete term: the current term, else the most recent seeded term.
+        setSelectedTermId(ct?.id ?? termList[termList.length - 1]?.id ?? null)
         setMyEnrollments(enrollments)
       } catch {
         if (!cancelled) setError(t('academy.error.load'))
@@ -144,7 +170,7 @@ export default function AcademyPage() {
   }, [t])
 
   useEffect(() => {
-    if (!selectedDeptId) {
+    if (!selectedDeptId || !selectedTermId) {
       setCourses([])
       setSelectedCourseId(null)
       return
@@ -154,8 +180,7 @@ export default function AcademyPage() {
     setError(null)
     ;(async () => {
       try {
-        const termArg = selectedTermId === TERM_ALL ? undefined : selectedTermId
-        const list = await getCoursesByDepartment(selectedDeptId, termArg)
+        const list = await getCoursesByDepartment(selectedDeptId, selectedTermId)
         if (cancelled) return
         setCourses(list)
         setSelectedCourseId(null)
@@ -167,6 +192,25 @@ export default function AcademyPage() {
     })()
     return () => { cancelled = true }
   }, [selectedDeptId, selectedTermId, t])
+
+  // Debounced global course search, scoped to the selected term (server-side, capped at 50).
+  useEffect(() => {
+    const q = courseQuery.trim()
+    if (q.length < 2 || !university || !selectedTermId) {
+      setSearchResults([])
+      setSearchBusy(false)
+      return
+    }
+    let cancelled = false
+    setSearchBusy(true)
+    const handle = setTimeout(() => {
+      searchCourses(university.id, q, selectedTermId)
+        .then((rows) => { if (!cancelled) setSearchResults(rows) })
+        .catch(() => { if (!cancelled) setSearchResults([]) })
+        .finally(() => { if (!cancelled) setSearchBusy(false) })
+    }, 250)
+    return () => { cancelled = true; clearTimeout(handle) }
+  }, [courseQuery, university, selectedTermId])
 
   useEffect(() => {
     if (!selectedCourseId) {
@@ -244,12 +288,11 @@ export default function AcademyPage() {
             </label>
             <select
               id="academy-term"
-              value={selectedTermId}
+              value={selectedTermId ?? ''}
               onChange={(e) => setSelectedTermId(e.target.value)}
               disabled={loadingShell || terms.length === 0}
               className="border border-line bg-surface rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:border-primary-400 disabled:opacity-50"
             >
-              <option value={TERM_ALL}>{t('academy.term.all')}</option>
               {terms.map((tm) => (
                 <option key={tm.id} value={tm.id}>
                   {tm.name} · {tm.academicYear}
@@ -284,52 +327,106 @@ export default function AcademyPage() {
           <SectionLabel className="mb-2">
             {t('academy.browseHeading')}
           </SectionLabel>
+
+          <div className="mb-3">
+            <div className="relative">
+              <SearchIcon className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
+              <input
+                value={courseQuery}
+                onChange={(e) => {
+                  const v = e.target.value
+                  setCourseQuery(v)
+                  if (v.trim().length >= 2) setMobileStep('courses')
+                }}
+                placeholder={t('academy.search.coursePlaceholder')}
+                disabled={loadingShell || departments.length === 0}
+                className="w-full ps-9 pe-3 py-2 text-sm rounded-xl border border-line bg-surface focus-bubble disabled:opacity-50"
+              />
+            </div>
+          </div>
+
           {(() => {
+            const renderCourseRow = (c: Course, withDept: boolean) => (
+              <li key={c.id}>
+                <RowButton
+                  selected={selectedCourseId === c.id}
+                  onClick={() => { setSelectedCourseId(c.id); setMobileStep('detail') }}
+                >
+                  <div className="text-xs font-mono text-muted">{c.code}</div>
+                  <div className="font-medium truncate">{c.name}</div>
+                  {withDept && deptCodesFor(c) && (
+                    <div className="text-[10px] text-muted truncate">{deptCodesFor(c)}</div>
+                  )}
+                  {enrolledCourseIds.has(c.id) && (
+                    <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-md bg-bubble-green-soft text-bubble-green">
+                      <span className="w-1.5 h-1.5 rounded-full bg-success" />
+                      {t('academy.enrolledBadge')}
+                    </span>
+                  )}
+                </RowButton>
+              </li>
+            )
+
             const departmentsBody = loadingShell ? (
               <PaneSkeleton />
             ) : departments.length === 0 ? (
               <PaneEmpty label={t('academy.empty.departments')} />
             ) : (
-              <ul className="flex flex-col gap-1">
-                {departments.map((d) => (
-                  <li key={d.id}>
-                    <RowButton
-                      selected={selectedDeptId === d.id}
-                      onClick={() => { setSelectedDeptId(d.id); setMobileStep('courses') }}
-                    >
-                      <div className="font-medium truncate">{d.name}</div>
-                      <div className="text-xs text-muted truncate">{d.shortCode}</div>
-                    </RowButton>
-                  </li>
-                ))}
-              </ul>
+              <div className="flex flex-col gap-2">
+                <div className="relative">
+                  <SearchIcon className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
+                  <input
+                    value={deptQuery}
+                    onChange={(e) => setDeptQuery(e.target.value)}
+                    placeholder={t('academy.search.deptPlaceholder')}
+                    className="w-full ps-9 pe-3 py-1.5 text-sm rounded-lg border border-line bg-surface focus-bubble"
+                  />
+                </div>
+                {filteredDepartments.length === 0 ? (
+                  <p className="px-1 py-2 text-xs text-muted">{t('academy.search.noResults')}</p>
+                ) : (
+                  <ul className="flex flex-col gap-1">
+                    {filteredDepartments.map((d) => (
+                      <li key={d.id}>
+                        <RowButton
+                          selected={selectedDeptId === d.id}
+                          onClick={() => { setSelectedDeptId(d.id); setMobileStep('courses') }}
+                        >
+                          <div className="font-medium truncate">{d.name}</div>
+                          <div className="text-xs text-muted truncate">{d.shortCode}</div>
+                        </RowButton>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             )
 
-            const coursesBody = !selectedDeptId ? (
+            const coursesBody = searching ? (
+              searchBusy ? (
+                <PaneSkeleton />
+              ) : searchResults.length === 0 ? (
+                <PaneEmpty label={t('academy.search.noResults')} />
+              ) : (
+                <div className="flex flex-col gap-1">
+                  <p className="px-1 pb-1 text-[11px] text-muted">{t('academy.search.resultsAcross')}</p>
+                  <ul className="flex flex-col gap-1">
+                    {searchResults.map((c) => renderCourseRow(c, true))}
+                  </ul>
+                  {searchResults.length >= 50 && (
+                    <p className="px-1 pt-1 text-[11px] text-muted">{t('academy.search.capped')}</p>
+                  )}
+                </div>
+              )
+            ) : !selectedDeptId ? (
               <PaneEmpty label={t('academy.empty.courses')} />
             ) : loadingCourses ? (
               <PaneSkeleton />
             ) : courses.length === 0 ? (
-              <PaneEmpty label={t('academy.empty.courses')} />
+              <PaneEmpty label={t('academy.empty.coursesInTerm')} />
             ) : (
               <ul className="flex flex-col gap-1">
-                {courses.map((c) => (
-                  <li key={c.id}>
-                    <RowButton
-                      selected={selectedCourseId === c.id}
-                      onClick={() => { setSelectedCourseId(c.id); setMobileStep('detail') }}
-                    >
-                      <div className="text-xs font-mono text-muted">{c.code}</div>
-                      <div className="font-medium truncate">{c.name}</div>
-                      {enrolledCourseIds.has(c.id) && (
-                        <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-md bg-bubble-green-soft text-bubble-green">
-                          <span className="w-1.5 h-1.5 rounded-full bg-success" />
-                          {t('academy.enrolledBadge')}
-                        </span>
-                      )}
-                    </RowButton>
-                  </li>
-                ))}
+                {courses.map((c) => renderCourseRow(c, false))}
               </ul>
             )
 
@@ -732,7 +829,7 @@ function CourseDetail({
             </Button>
           </>
         ) : hasCurrentOffering ? (
-          <Button size="sm" onClick={onEnroll} disabled={enrollBusy}>
+          <Button variant="deep" size="sm" onClick={onEnroll} disabled={enrollBusy}>
             {enrollBusy
               ? t('academy.detail.enrolling')
               : currentTerm

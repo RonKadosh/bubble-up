@@ -8,6 +8,8 @@ export type ChatMessageType =
   | 'SYSTEM_ROOM_END_SOON'
   | 'SYSTEM_ROOM_EXTENDED'
   | 'SYSTEM_EXPERT_SESSION_OPEN'
+  | 'SYSTEM_GROUP_ROOM_OPEN'
+  | 'SYSTEM_OWNERSHIP_TRANSFER'
 export type ChatLinkTargetType = 'CALENDAR_EVENT' | 'POLL' | 'ROOM' | 'FILE' | 'EXPERT_SESSION'
 
 export interface ChatRoom {

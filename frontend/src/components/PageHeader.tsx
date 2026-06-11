@@ -50,8 +50,8 @@ export function PageHeader({ title, subtitle, titleAfter, actions }: PageHeaderP
       <div className="min-w-0">
         <div className="flex items-center gap-2.5 mb-1">
           <span className="flex items-center gap-1" aria-hidden="true">
-            <span className="w-2.5 h-2.5 rounded-full bg-bubble-magenta shadow-sm" />
-            <span className="w-1.5 h-1.5 rounded-full bg-bubble-green" />
+            <span className="w-2.5 h-2.5 rounded-full bg-bubble-magenta shadow-sm animate-dot-bob" />
+            <span className="w-1.5 h-1.5 rounded-full bg-bubble-green animate-dot-bob-late" />
           </span>
           <h1 className="text-2xl tablet:text-3xl font-bold tracking-tight text-base">{title}</h1>
           {titleAfter}
@@ -94,8 +94,10 @@ export function PageShell({
 }: PageShellProps) {
   return (
     <div className="flex flex-col h-full overflow-hidden bg-base">
-      <header className="px-4 tablet:px-6 py-4 border-b border-line shrink-0 bg-surface">
+      <header className="relative px-4 tablet:px-6 py-4 border-b border-line shrink-0 bg-surface">
         <PageHeader title={title} subtitle={subtitle} titleAfter={titleAfter} actions={actions} />
+        {/* The signature iridescent hairline, laid over the plain border. */}
+        <div className="divider-iridescent absolute inset-x-0 -bottom-px opacity-70" aria-hidden="true" />
       </header>
       {tabs && (
         <nav className="px-4 tablet:px-6 py-3 border-b border-line flex items-center gap-2 overflow-x-auto no-scrollbar shrink-0">

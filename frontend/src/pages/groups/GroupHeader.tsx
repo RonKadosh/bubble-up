@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Group } from '../../api/groups'
 import { CalendarEvent } from '../../api/calendar'
+import { Avatar } from '../../components/Avatar'
 import { Button } from '../../components/Button'
 import { ChevronIcon, MenuIcon } from '../../components/Icons'
 import { useViewportStore } from '../../store/viewportStore'
@@ -67,11 +68,11 @@ export function GroupHeader({ group, isOwner, isMember, onJoin, liveSession, onS
       )}
       {!isMember && group.visibility === 'PUBLIC' && (
         group.memberCount >= group.maxMembers ? (
-          <Button size="sm" disabled title={t('groups.header.fullTitle')}>
+          <Button variant="deep" size="sm" disabled title={t('groups.header.fullTitle')}>
             {t('groups.header.full')}
           </Button>
         ) : (
-          <Button size="sm" onClick={onJoin}>
+          <Button variant="deep" size="sm" onClick={onJoin}>
             {t('groups.header.hopIn')}
           </Button>
         )
@@ -79,10 +80,10 @@ export function GroupHeader({ group, isOwner, isMember, onJoin, liveSession, onS
     </>
   )
 
-  // Phone: a single compact bar — hamburger, tappable title (opens Bubble Info,
-  // which carries the description / members / actions), and the live CTA. The
-  // full "group panel" (description, match feedback, members strip) is dropped
-  // here so the chat gets the screen.
+  // Phone: a single compact bar — hamburger (Bubble list), the group icon, and
+  // the live CTA. Tapping the icon opens the Bubble Info drawer, which carries
+  // the name, description, the "is this Bubble a fit?" feedback, members and
+  // actions. The full "group panel" is dropped here so the chat gets the screen.
   if (isPhone) {
     return (
       <header className="bg-surface border-b border-line px-2 py-2 flex items-center gap-1.5 shrink-0">
@@ -99,14 +100,17 @@ export function GroupHeader({ group, isOwner, isMember, onJoin, liveSession, onS
           onClick={onOpenInfo}
           aria-haspopup="dialog"
           aria-label={t('groups.info.openStripAria')}
-          className="flex-1 min-w-0 flex items-center gap-1.5 text-start px-1.5 py-1 rounded-full hover:bg-surface-hover transition"
+          title={t('groups.info.openStripAria')}
+          className="relative shrink-0 rounded-full bubble-pop"
         >
-          <h1 className="text-base font-semibold truncate">{group.name}</h1>
-          <span className="shrink-0 text-[0.7rem] px-1.5 py-0.5 rounded-md bg-surface-muted text-secondary tabular-nums">
-            {t('groups.capacity', { count: group.memberCount, max: group.maxMembers })}
+          <Avatar id={group.id} name={group.name} imageUrl={group.imageUrl} size="md" ring />
+          {/* Affordance hint: a small chevron badge so it reads as "tap to open Bubble Info"
+              on touch, where there's no hover cue. */}
+          <span className="absolute -bottom-0.5 -end-0.5 grid place-items-center w-4 h-4 rounded-full bg-surface border border-line text-secondary shadow-sm">
+            <ChevronIcon className="w-2.5 h-2.5 -rotate-90" />
           </span>
-          <ChevronIcon className="w-4 h-4 shrink-0 text-muted -rotate-90" aria-hidden />
         </button>
+        <div className="flex-1 min-w-0" />
         <div className="shrink-0 flex items-center">{actionCta}</div>
       </header>
     )
@@ -166,11 +170,11 @@ export function GroupHeader({ group, isOwner, isMember, onJoin, liveSession, onS
         )}
         {!isMember && group.visibility === 'PUBLIC' && (
           group.memberCount >= group.maxMembers ? (
-            <Button disabled title={t('groups.header.fullTitle')}>
+            <Button variant="deep" disabled title={t('groups.header.fullTitle')}>
               {t('groups.header.full')}
             </Button>
           ) : (
-            <Button onClick={onJoin}>
+            <Button variant="deep" onClick={onJoin}>
               {t('groups.header.hopIn')}
             </Button>
           )
