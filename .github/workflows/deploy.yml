@@ -82,11 +82,18 @@ jobs:
         if: steps.tag.outputs.deploy == 'true'
         id: ssm
         env:
+          APP_LOADTEST_ENABLED: ${{ vars.APP_LOADTEST_ENABLED || 'false' }}
+          APP_LOADTEST_USERS: ${{ vars.APP_LOADTEST_USERS || '1000' }}
+          APP_LOADTEST_COURSES: ${{ vars.APP_LOADTEST_COURSES || '100' }}
+          APP_LOADTEST_GROUPS_PER_COURSE: ${{ vars.APP_LOADTEST_GROUPS_PER_COURSE || '5' }}
+          APP_LOADTEST_AVG_MESSAGES_PER_GROUP: ${{ vars.APP_LOADTEST_AVG_MESSAGES_PER_GROUP || '10' }}
+          APP_LOADTEST_BUILD_MATCH_CACHE: ${{ vars.APP_LOADTEST_BUILD_MATCH_CACHE || 'false' }}
           IMAGE_TAG: ${{ steps.tag.outputs.tag }}
           CADDY_DOMAIN: ${{ vars.CADDY_DOMAIN }}
           INSTANCE_ID: ${{ vars.EC2_INSTANCE_ID }}
           COMPOSE_B64: ${{ steps.files.outputs.compose_b64 }}
           CADDY_B64: ${{ steps.files.outputs.caddy_b64 }}
+          
         run: |
           set -euo pipefail
 
@@ -132,6 +139,12 @@ jobs:
           # Keep existing rows across deploys (application.yml defaults to
           # create-drop, which would wipe the DB on every restart).
           SPRING_JPA_HIBERNATE_DDL_AUTO=update
+          APP_LOADTEST_ENABLED=__APP_LOADTEST_ENABLED__
+          APP_LOADTEST_USERS=__APP_LOADTEST_USERS__
+          APP_LOADTEST_COURSES=__APP_LOADTEST_COURSES__
+          APP_LOADTEST_GROUPS_PER_COURSE=__APP_LOADTEST_GROUPS_PER_COURSE__
+          APP_LOADTEST_AVG_MESSAGES_PER_GROUP=__APP_LOADTEST_AVG_MESSAGES_PER_GROUP__
+          APP_LOADTEST_BUILD_MATCH_CACHE=__APP_LOADTEST_BUILD_MATCH_CACHE__
           APP_JITSI_APP_ID=${APP_JITSI_APP_ID}
           APP_JITSI_KID=${APP_JITSI_KID}
           APP_JITSI_PRIVATE_KEY_PEM=${APP_JITSI_PRIVATE_KEY_PEM}
@@ -154,7 +167,13 @@ jobs:
           sed -i "s|__IMAGE_TAG__|$IMAGE_TAG|g" /tmp/remote.sh
           sed -i "s|__CADDY_DOMAIN__|$CADDY_DOMAIN|g" /tmp/remote.sh
           sed -i "s|__REGION__|${{ vars.AWS_REGION }}|g" /tmp/remote.sh
-
+          sed -i "s|__APP_LOADTEST_ENABLED__|$APP_LOADTEST_ENABLED|g" /tmp/remote.sh
+          sed -i "s|__APP_LOADTEST_USERS__|$APP_LOADTEST_USERS|g" /tmp/remote.sh
+          sed -i "s|__APP_LOADTEST_COURSES__|$APP_LOADTEST_COURSES|g" /tmp/remote.sh
+          sed -i "s|__APP_LOADTEST_GROUPS_PER_COURSE__|$APP_LOADTEST_GROUPS_PER_COURSE|g" /tmp/remote.sh
+          sed -i "s|__APP_LOADTEST_AVG_MESSAGES_PER_GROUP__|$APP_LOADTEST_AVG_MESSAGES_PER_GROUP|g" /tmp/remote.sh
+          sed -i "s|__APP_LOADTEST_BUILD_MATCH_CACHE__|$APP_LOADTEST_BUILD_MATCH_CACHE|g" /tmp/remote.sh
+          
           # Build SSM parameters JSON from the script
           jq -Rs '{commands: [.]}' /tmp/remote.sh > /tmp/params.json
 
