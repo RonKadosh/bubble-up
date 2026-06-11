@@ -47,6 +47,14 @@ spring:
 
 server:
   port: 8080
+  # Honor X-Forwarded-Proto/-Host/-For from the proxy chain (Caddy -> nginx ->
+  # backend). Without this, Spring builds OAuth's {baseUrl} from the raw socket
+  # (http://...) even when the original request was https, and Google rejects
+  # the redirect_uri. `framework` registers ForwardedHeaderFilter, which is the
+  # strategy Spring Security's OAuth2 redirect-uri resolution respects.
+  # Dev is unaffected: the Vite proxy doesn't send X-Forwarded-* headers, so
+  # the filter falls through to the actual request scheme/host.
+  forward-headers-strategy: framework
 
 app:
   security:
