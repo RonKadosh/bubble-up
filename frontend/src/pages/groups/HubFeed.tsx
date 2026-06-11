@@ -215,11 +215,14 @@ export function HubFeed({
   onSelectGroup,
   onOpenCreate,
   onOpenBubbleList,
+  onJoined,
 }: {
   onSelectGroup: (groupId: string) => void
   onOpenCreate: () => void
   /** Phone/tablet only: opens the Bubble-list drawer. Rendered below the header. */
   onOpenBubbleList?: () => void
+  /** Discovery join completed; lets the parent refresh My Bubbles before selection. */
+  onJoined?: (groupId: string) => void | Promise<void>
 }) {
   const { t } = useTranslation()
   const meId = useAuthStore((s) => s.user?.id ?? null)
@@ -256,6 +259,20 @@ export function HubFeed({
 
   async function refreshFeed() {
     try { setFeed(await getFeed()) } catch { /* keep the stale feed on a transient failure */ }
+  }
+
+  async function handleDiscoveryJoined(groupId: string) {
+    setFeed((prev) => prev
+      ? {
+          sections: prev.sections.map((section) => section.key === 'DISCOVERY'
+            ? {
+                ...section,
+                items: section.items.filter((item) => (item.groupId ?? item.cta?.targetId) !== groupId),
+              }
+            : section),
+        }
+      : prev)
+    await onJoined?.(groupId)
   }
 
   // Open the event detail modal for an UPCOMING card (resolve the event by id).
@@ -317,6 +334,7 @@ export function HubFeed({
           item={preview}
           onClose={() => setPreview(null)}
           onSelectGroup={onSelectGroup}
+          onJoined={handleDiscoveryJoined}
         />
       )}
 
@@ -529,10 +547,12 @@ function PublicBubbleModal({
   item,
   onClose,
   onSelectGroup,
+  onJoined,
 }: {
   item: FeedItem
   onClose: () => void
   onSelectGroup: (groupId: string) => void
+  onJoined?: (groupId: string) => void | Promise<void>
 }) {
   const { t } = useTranslation()
   const groupId = item.groupId ?? item.cta?.targetId ?? ''
@@ -557,6 +577,7 @@ function PublicBubbleModal({
     setError('')
     try {
       await joinGroup(groupId)
+      await onJoined?.(groupId)
       onClose()
       onSelectGroup(groupId)
     } catch (e) {

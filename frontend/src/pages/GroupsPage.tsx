@@ -609,6 +609,11 @@ export default function GroupsPage() {
                 onSelectGroup={setSelectedId}
                 onOpenCreate={() => navigate('/groups', { state: { openCreate: true } })}
                 onOpenBubbleList={() => setMobileSidebarOpen(true)}
+                onJoined={async (groupId) => {
+                  await loadGroups()
+                  refreshMembers(groupId)
+                  refreshRooms()
+                }}
               />
             </div>
           ) : (
