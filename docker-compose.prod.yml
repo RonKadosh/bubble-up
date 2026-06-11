@@ -57,7 +57,7 @@ services:
       GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET:-}
       MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-}
       AWS_SES_REGION: ${AWS_SES_REGION:-us-east-1}
-      APP_DEMO_SEED_ENABLED: "true"
+      APP_DEMO_SEED_ENABLED: "false"
       # `update` keeps existing rows on each deploy and only ALTERs tables
       # to match new entity definitions. The default in application.yml is
       # `create-drop` (so dev/test resets cleanly); prod overrides to keep
