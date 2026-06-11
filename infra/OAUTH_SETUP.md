@@ -1,131 +1,163 @@
 # Google OAuth2 + AWS SES setup
 
-One-time manual setup needed to make the Google sign-in + email-verification flow work. Code changes are on the `feature/feature-oauth-support` branch.
+One-time manual setup needed to make the Google sign-in + email-verification
+flow work in production.
 
 There are 3 humans-only steps:
 
-1. **Create a Google OAuth2 client** in Google Cloud Console
-2. **Verify a sender identity in AWS SES**
-3. **Drop the new secrets into SSM Parameter Store**
+1. Create a Google OAuth2 client in Google Cloud Console
+2. Verify a sender identity in AWS SES
+3. Drop the new secrets into SSM Parameter Store
 
-After that, everything else (IAM permissions, code, env wiring) is handled by Terraform + the deploy workflow.
+After that, everything else (IAM permissions, code, env wiring) is handled by
+Terraform + the deploy workflow.
+
+## Canonical production host
+
+Bubble.up production uses `https://bubbleup.online` as the single canonical
+origin.
+
+- `https://bubbleup.online` is the app host used for Google OAuth and email links.
+- `https://www.bubbleup.online` may resolve too, but it should only redirect to
+  `https://bubbleup.online`.
+- Google Cloud should allow both hosts if `www` still resolves, but users
+  should always start the OAuth flow from the root domain.
 
 ---
 
 ## 1. Google OAuth2 client (5 minutes)
 
-1. Open **https://console.cloud.google.com/**. Sign in with whatever Google account will manage the app.
-2. Create a new project: **"Select a project"** dropdown → **New project** → name it `Bubble.up`.
-3. In the search bar, type **"OAuth consent screen"** → open it.
-   - **User type**: External → Create
-   - **App name**: `Bubble.up`
-   - **User support email**: your email
-   - **App domain → Application home page**: `https://bubbleup.100-50-61-243.nip.io` (or your real domain when you have one)
-   - **Authorized domains**: add `nip.io` (or your real domain)
-   - **Developer contact email**: same as user support
-   - **Save and continue** through the scopes screen (no extra scopes needed — we only ask for `email` and `profile`).
-   - Add yourself as a **Test user** so you can sign in while the app is in "Testing" status.
-4. In the search bar, type **"Credentials"** → open it.
-   - Click **+ Create credentials** → **OAuth client ID**.
-   - **Application type**: Web application
-   - **Name**: `bubbleup-web`
-   - **Authorized JavaScript origins**:
-     - `http://localhost:3000` (dev frontend)
-     - `https://bubbleup.100-50-61-243.nip.io` (prod)
-   - **Authorized redirect URIs**:
-     - `http://localhost:3000/login/oauth2/code/google` (dev via frontend proxy / docker-compose)
-     - `http://localhost:8080/login/oauth2/code/google` (dev when hitting backend directly)
-     - `https://bubbleup.100-50-61-243.nip.io/login/oauth2/code/google` (prod, through Caddy)
-   - **Create** → you'll get a **Client ID** (`<random>.apps.googleusercontent.com`) and **Client secret** (`GOCSPX-<random>`). **Copy both — the secret is only shown once**.
-
-You'll paste these into SSM in step 3.
+1. Open [Google Cloud Console](https://console.cloud.google.com/) and sign in
+   with the Google account that will manage the app.
+2. Create a project named `Bubble.up`.
+3. Open **OAuth consent screen**.
+   - User type: `External`
+   - App name: `Bubble.up`
+   - User support email: your email
+   - Application home page: `https://bubbleup.online`
+   - Authorized domains: `bubbleup.online`
+   - Developer contact email: your email
+   - Save and continue through scopes. No extra scopes are needed; the app only
+     requests `email` and `profile`.
+   - Add yourself as a test user while the app is still in testing mode.
+4. Open **Credentials** and create an **OAuth client ID**.
+   - Application type: `Web application`
+   - Name: `bubbleup-web`
+   - Authorized JavaScript origins:
+     - `http://localhost:3000`
+     - `https://bubbleup.online`
+     - `https://www.bubbleup.online` (optional alias, if it still resolves)
+   - Authorized redirect URIs:
+     - `http://localhost:3000/login/oauth2/code/google`
+     - `http://localhost:8080/login/oauth2/code/google`
+     - `https://bubbleup.online/login/oauth2/code/google`
+     - `https://www.bubbleup.online/login/oauth2/code/google` (optional alias,
+       if `www` still resolves)
+5. Copy the generated **Client ID** and **Client secret**. You will paste them
+   into SSM in step 3.
 
 ---
 
 ## 2. AWS SES sender identity (5 minutes)
 
-We use SES from the EC2 box to send the verification emails. Free tier covers **62,000 messages/month** when sending from EC2 — way more than we'll need.
+We use SES from the EC2 box to send the verification emails. Free tier covers
+62,000 messages/month when sending from EC2.
 
 ### Verify a sender email
-1. Open https://us-east-1.console.aws.amazon.com/ses/home?region=us-east-1#/verified-identities
-2. Click **Create identity** → choose **Email address**
-3. Enter a sender, e.g. `noreply@your-real-domain.com` if you have a domain, OR your personal Gmail for testing (e.g. `bubbleup.notifications@gmail.com`)
-4. **Create identity**
-5. Open the inbox of that address → click the AWS verification link
-6. Confirm in the SES console that the identity status is **Verified**
 
-### (Optional but recommended for launch) Request production access
+1. Open the SES verified identities page in `us-east-1`.
+2. Click **Create identity** and choose **Email address**.
+3. Enter a sender, for example `noreply@your-real-domain.com` for production or
+   a verified Gmail address for testing.
+4. Create the identity.
+5. Open the inbox of that address and click the AWS verification link.
+6. Confirm the identity status is **Verified** in SES.
 
-While in the SES **sandbox** you can only send to *verified* addresses — fine for testing with you + a couple of teammates. To send to anyone:
+### Optional but recommended for launch: request production access
 
-1. https://us-east-1.console.aws.amazon.com/ses/home?region=us-east-1#/account
-2. Click **Request production access**
-3. Mail type: Transactional
-4. Website: `https://bubbleup.100-50-61-243.nip.io`
-5. Use case description: copy-paste:
-   > Bubble.up is a Israeli academic study collaboration platform for university students. We send email verification messages to users who sign up using a `.ac.il` email address but log in with a personal Google account, so we can confirm they actually own the academic mailbox. Volume is expected to be < 1,000 messages/month. Compliance: only legitimate university members can sign up; all messages are transactional (verification only, no marketing).
-6. **Submit request** → usually approved in 24h.
+While SES is in the sandbox you can only send to verified recipient addresses.
+That is enough for early testing, but not for launch.
 
-Until you do this, only people whose emails you've explicitly verified can receive emails — sign yourself + Ron + a test alias in step 1 and you'll be unblocked for early testing.
+1. Open the SES account page in `us-east-1`.
+2. Click **Request production access**.
+3. Mail type: `Transactional`
+4. Website: `https://bubbleup.online`
+5. Use case description:
+
+   > Bubble.up is an Israeli academic study collaboration platform for
+   > university students. We send email verification messages to users who sign
+   > up with an academic `.ac.il` inbox. Messages are transactional only. Volume
+   > is expected to stay well below 1,000 messages per month.
+
+6. Submit the request.
+
+Until production access is approved, only explicitly verified recipient emails
+can receive the verification messages.
 
 ---
 
 ## 3. SSM secrets (1 minute)
 
-Paste the values from steps 1 + 2 into Parameter Store. You can do this from PowerShell on your machine (your AWS CLI is already configured):
+Paste the values from steps 1 and 2 into Parameter Store:
 
 ```powershell
-# From step 1 (Google):
+# Google OAuth
 aws ssm put-parameter --name /bubbleup/prod/GOOGLE_OAUTH_CLIENT_ID `
   --type SecureString --value "<paste-client-id>.apps.googleusercontent.com" --overwrite
 
 aws ssm put-parameter --name /bubbleup/prod/GOOGLE_OAUTH_CLIENT_SECRET `
   --type SecureString --value "GOCSPX-<paste-secret>" --overwrite
 
-# From step 2 (SES) — must be a verified identity:
+# SES sender
 aws ssm put-parameter --name /bubbleup/prod/MAIL_FROM_ADDRESS `
   --type SecureString --value "noreply@your-domain.com" --overwrite
 
-# SES region for the SDK (same as our resources):
+# SES region
 aws ssm put-parameter --name /bubbleup/prod/AWS_SES_REGION `
   --type String --value "us-east-1" --overwrite
 ```
 
 Verify:
+
 ```powershell
 aws ssm get-parameters-by-path --path /bubbleup/prod --query "Parameters[].Name" --output text
 ```
-You should see the new 4 names alongside the existing JWT/DB/JITSI/GHCR ones.
+
+You should see the four names above alongside the existing JWT, DB, JITSI, and
+GHCR entries.
+
+Also sanity-check that `/bubbleup/prod/GOOGLE_OAUTH_CLIENT_ID` and
+`/bubbleup/prod/GOOGLE_OAUTH_CLIENT_SECRET` belong to the same Google OAuth
+client you just edited. A stale client ID/secret pair can still break prod
+Google sign-in even when the browser is on the right domain.
 
 ---
 
-## 4. Local dev — `.env` for `docker-compose up`
+## 4. Local dev `.env` for `docker compose up`
 
 Add the same values to your local `.env` (gitignored) so local dev works:
 
 ```env
-# Google OAuth (from step 1 — same values, OR a separate "dev" OAuth client if you prefer)
 GOOGLE_OAUTH_CLIENT_ID=<paste>.apps.googleusercontent.com
 GOOGLE_OAUTH_CLIENT_SECRET=GOCSPX-<paste>
 
-# SES sender — for local dev you can use a personal verified email
 MAIL_FROM_ADDRESS=your-verified-email@gmail.com
 AWS_SES_REGION=us-east-1
 
-# AWS creds for the SES SDK in dev (use your IAM user, not root)
 AWS_ACCESS_KEY_ID=AKIA...
 AWS_SECRET_ACCESS_KEY=...
 ```
 
-In prod, the EC2 instance role is auto-extended with `ses:SendEmail` permission (via Terraform in `infra/iam.tf`), so no AWS keys are needed on the box — only locally for `docker compose up` dev workflow.
+In production, the EC2 instance role is granted SES permissions via Terraform,
+so no AWS access keys are needed on the box.
 
 ---
 
-## When something doesn't work
+## When something does not work
 
 | Symptom | Probable cause |
-|---|---|
-| Google sign-in returns "redirect_uri_mismatch" | The `Authorized redirect URIs` in Google Cloud Console doesn't exactly match. Trailing slashes matter. Re-check `http://localhost:3000/login/oauth2/code/google` for docker-compose/frontend-proxy dev, `http://localhost:8080/login/oauth2/code/google` for direct-backend dev, and the prod URL. |
-| Sign-in works but the app says "not a recognized academic email" | The Google email isn't a `.ac.il` address. You'll then be prompted for a secondary academic email — the verification link goes via SES. |
-| Verification email never arrives | (a) SES sandbox + recipient not verified, OR (b) wrong `MAIL_FROM_ADDRESS`. Look in SES → "Sending statistics" for bounces. |
-| Prod EC2 logs `AccessDenied: ses:SendEmail` | `terraform apply` wasn't run after the SES policy was added. Re-apply. |
+| --- | --- |
+| Google sign-in returns `redirect_uri_mismatch` | The Google OAuth client does not exactly include the callback URL. Re-check `http://localhost:3000/login/oauth2/code/google`, `http://localhost:8080/login/oauth2/code/google`, and `https://bubbleup.online/login/oauth2/code/google`. If `www` still resolves, add `https://www.bubbleup.online/login/oauth2/code/google` too. |
+| Prod login still breaks after updating Google Cloud | The SSM `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET` do not belong to the same OAuth client you edited. |
+| Verification email never arrives | SES is still sandboxed and the recipient is not verified, or `MAIL_FROM_ADDRESS` is wrong. |
+| Prod EC2 logs `AccessDenied: ses:SendEmail` | `terraform apply` was not run after the SES policy was added. Re-apply Terraform. |

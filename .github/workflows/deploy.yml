@@ -1,6 +1,7 @@
 name: deploy
 
-# Runs after ci.yml finishes on a v*.*.* tag (or manually via workflow_dispatch).
+# Runs after ci.yml finishes on a v*.*.* tag such as v1.9.0
+# (or manually via workflow_dispatch).
 # Strategy: embed docker-compose.prod.yml + Caddyfile INLINE in the SSM payload
 # so the EC2 box never needs to fetch anything from a private GitHub repo. The
 # box only pulls images from GHCR (authenticated with a PAT stored in SSM).
@@ -9,7 +10,7 @@ name: deploy
 #   AWS_REGION              e.g. us-east-1
 #   AWS_DEPLOY_ROLE_ARN     arn:aws:iam::<acct>:role/bubbleup-github-deploy
 #   EC2_INSTANCE_ID         i-...
-#   CADDY_DOMAIN            bubbleup.<eip-with-dashes>.nip.io
+#   CADDY_DOMAIN            bubbleup.online
 
 on:
   workflow_run:
@@ -31,28 +32,38 @@ jobs:
     runs-on: ubuntu-latest
     if: >
       github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' &&
-       startsWith(github.event.workflow_run.head_branch, 'v'))
+      github.event.workflow_run.conclusion == 'success'
 
     steps:
       - uses: actions/checkout@v4
         with:
-          # Check out the tag the CI run built; for manual dispatch, current ref.
-          ref: ${{ github.event.workflow_run.head_branch || github.ref }}
+          # Check out the CI commit for workflow_run events and fetch tags so we
+          # can resolve the matching vX.Y.Z release tag from the SHA itself.
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
+          fetch-depth: 0
 
-      - name: Resolve image tag (strip leading v if present)
+      - name: Resolve image tag
         id: tag
         run: |
+          set -euo pipefail
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             RAW="${{ github.event.inputs.image_tag }}"
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
           else
-            RAW="${{ github.event.workflow_run.head_branch }}"
+            RAW=$(git tag --points-at "${{ github.event.workflow_run.head_sha }}" --list 'v*.*.*' | sort -V | tail -n 1)
+            if [[ -z "$RAW" ]]; then
+              echo "deploy=false" >> "$GITHUB_OUTPUT"
+              echo "No vX.Y.Z tag points at ${{ github.event.workflow_run.head_sha }}; skipping auto deploy."
+              exit 0
+            fi
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
           fi
           TAG="${RAW#v}"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "Resolved image tag: $TAG"
 
       - name: Base64-encode compose + Caddyfile
+        if: steps.tag.outputs.deploy == 'true'
         id: files
         run: |
           COMPOSE_B64=$(base64 -w0 docker-compose.prod.yml)
@@ -61,12 +72,14 @@ jobs:
           echo "caddy_b64=$CADDY_B64" >> "$GITHUB_OUTPUT"
 
       - name: Configure AWS credentials via OIDC
+        if: steps.tag.outputs.deploy == 'true'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
 
       - name: Send SSM Run Command
+        if: steps.tag.outputs.deploy == 'true'
         id: ssm
         env:
           IMAGE_TAG: ${{ steps.tag.outputs.tag }}
@@ -156,6 +169,7 @@ jobs:
           echo "Dispatched SSM command $CMD_ID"
 
       - name: Wait for the SSM command to finish
+        if: steps.tag.outputs.deploy == 'true'
         env:
           CMD_ID: ${{ steps.ssm.outputs.cmd_id }}
           INSTANCE_ID: ${{ vars.EC2_INSTANCE_ID }}
@@ -180,7 +194,7 @@ jobs:
           exit 1
 
       - name: Show deploy output
-        if: always()
+        if: always() && steps.tag.outputs.deploy == 'true'
         env:
           CMD_ID: ${{ steps.ssm.outputs.cmd_id }}
           INSTANCE_ID: ${{ vars.EC2_INSTANCE_ID }}
