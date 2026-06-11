@@ -10,8 +10,10 @@ on:
 # Single workflow that:
 #   - Always builds + tests backend, builds backend + frontend images.
 #   - On a v*.*.* tag, ALSO logs into GHCR and pushes both images,
-#     tagged with the version and 'latest'. Cutting a GitHub Release
-#     (which creates the tag) is what kicks off a deploy via deploy.yml.
+#     tagged with the version and 'latest'. Use real semver tags such as
+#     v1.9.0; tags like 1.9v or v1.9 do not match this workflow.
+#     Publishing a GitHub Release for that same tag is what kicks off a
+#     deploy via deploy.yml.
 
 permissions:
   contents: read
