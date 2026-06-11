@@ -20,6 +20,10 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, UUID> 
 
     List<GroupMember> findAllByGroupIdAndRole(UUID groupId, MembershipRole role);
 
+    /** Batched role lookup — one row per (group, role) match. Used to resolve owners for a list of
+     *  groups in a single query instead of one per group. */
+    List<GroupMember> findAllByGroupIdInAndRole(Collection<UUID> groupIds, MembershipRole role);
+
     Optional<GroupMember> findByGroupIdAndUserId(UUID groupId, UUID userId);
 
     boolean existsByGroupIdAndUserId(UUID groupId, UUID userId);

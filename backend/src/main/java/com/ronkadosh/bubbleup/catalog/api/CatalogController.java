@@ -53,6 +53,15 @@ public class CatalogController {
         return ApiResponse.success(queries.listCoursesByDepartment(id, termId));
     }
 
+    @GetMapping("/courses/search")
+    public ApiResponse<List<CourseSummary>> searchCourses(
+            @RequestParam UUID universityId,
+            @RequestParam UUID termId,
+            @RequestParam String q
+    ) {
+        return ApiResponse.success(queries.searchCourses(universityId, termId, q));
+    }
+
     @GetMapping("/courses/{id}")
     public ApiResponse<CourseSummary> getCourse(@PathVariable UUID id) {
         return ApiResponse.success(queries.getCourse(id));

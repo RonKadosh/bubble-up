@@ -27,9 +27,26 @@ public interface CourseRepository extends JpaRepository<Course, UUID> {
               and (:q = '' or lower(c.code) like concat('%', :q, '%')
                           or lower(c.name) like concat('%', :q, '%'))
             """)
-    Page<Course> searchForAdmin(
+    Page<Course> search(
             @Param("universityId") UUID universityId,
             @Param("q") String q,
+            Pageable pageable
+    );
+
+    @Query("""
+            select c from Course c
+            where c.universityId = :universityId
+              and (:q = '' or lower(c.code) like concat('%', :q, '%')
+                          or lower(c.name) like concat('%', :q, '%'))
+              and exists (
+                select o.id from CourseOffering o
+                where o.courseId = c.id and o.termId = :termId
+              )
+            """)
+    Page<Course> searchOfferedInTerm(
+            @Param("universityId") UUID universityId,
+            @Param("q") String q,
+            @Param("termId") UUID termId,
             Pageable pageable
     );
 }

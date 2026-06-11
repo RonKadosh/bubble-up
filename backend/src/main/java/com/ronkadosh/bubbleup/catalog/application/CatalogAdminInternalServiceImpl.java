@@ -280,7 +280,7 @@ public class CatalogAdminInternalServiceImpl implements CatalogAdminInternalServ
     public Page<CourseAdminDto> searchCourses(UUID universityId, String q, Pageable pageable) {
         // Empty-string sentinel — see backend/CLAUDE.md re: Postgres bytea binding.
         String norm = q == null || q.isBlank() ? "" : q.trim().toLowerCase(Locale.ROOT);
-        return courseRepository.searchForAdmin(universityId, norm, pageable)
+        return courseRepository.search(universityId, norm, pageable)
                 .map(CatalogAdminInternalServiceImpl::toCourseDto);
     }
 

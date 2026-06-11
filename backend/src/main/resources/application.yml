@@ -12,6 +12,12 @@ spring:
       hibernate:
         format_sql: false
         dialect: org.hibernate.dialect.PostgreSQLDialect
+        # Batched inserts/updates — load-bearing for LoadTestSeeder's bulk writes,
+        # harmless (mildly beneficial) for normal operation.
+        jdbc:
+          batch_size: 100
+        order_inserts: true
+        order_updates: true
   servlet:
     multipart:
       enabled: true
@@ -80,9 +86,27 @@ app:
       # Boots 10 demo users + Study Bubbles on first start. Idempotent.
       # Temporarily ON by default while iterating; turn off in any env that
       # should not have shared credentials.
-      enabled: ${APP_DEMO_SEED_ENABLED:true}
+      enabled: ${APP_DEMO_SEED_ENABLED:false}
   simulation:
     enabled: false
+  loadtest:
+    # Full-semester bulk dataset for DB load testing (bootstrap/seed/LoadTestSeeder).
+    # OFF by default — enable only against a disposable database. The match-cache
+    # volume is derived (real refreshUserMatchCache per user), not a knob here.
+    enabled: ${APP_LOADTEST_ENABLED:false}
+    users: ${APP_LOADTEST_USERS:10000}
+    courses: ${APP_LOADTEST_COURSES:500}
+    enrollments-per-user: ${APP_LOADTEST_ENROLLMENTS_PER_USER:4}
+    groups-per-course: ${APP_LOADTEST_GROUPS_PER_COURSE:10}
+    avg-members-per-group: 7
+    avg-messages-per-group: ${APP_LOADTEST_AVG_MESSAGES_PER_GROUP:20}
+    max-messages-in-one-group: 1000
+    public-fraction: 0.8
+    poll-fraction: 0.15
+    pinned-fraction: 0.2
+    calendar-fraction: 0.25
+    build-match-cache: ${APP_LOADTEST_BUILD_MATCH_CACHE:true}
+    random-seed: 42
   agents:
     enabled: false
   help:
@@ -159,4 +183,4 @@ app:
         # Seeds end-to-end matching scenarios (cold/cold, complementary, duplicate,
         # untrusted group, cold user, trending order) for manual browser E2E.
         # Temporarily ON by default while iterating on matching v1.
-        enabled: ${APP_MATCHING_SCENARIO_SEED_ENABLED:true}
+        enabled: ${APP_MATCHING_SCENARIO_SEED_ENABLED:false}

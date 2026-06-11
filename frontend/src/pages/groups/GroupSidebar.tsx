@@ -42,12 +42,14 @@ interface GroupSidebarProps {
 }
 
 /**
- * Left rail of the GroupsPage hub: collapsible create-form + list of "bubbles".
+ * The GroupsPage hub's bubble rail: collapsible create-form + list of "bubbles".
  * Owns its own create-form state (`showCreate`, `newName`, …) — pure view state
  * with no reason to live in the parent.
  *
- * Below `desktop` (1200px) this renders as a slide-over drawer anchored to the
- * inline-start edge with a backdrop. At desktop+ it's a normal inline aside.
+ * At desktop+ it's a normal inline aside sitting at the *end* (opposite the app's
+ * icon rail), so the hub content starts flush with the rail like every other page.
+ * Below `desktop` (1200px) it renders as a slide-over drawer anchored to the
+ * inline-start edge with a backdrop (the header hamburger that opens it is there).
  */
 export function GroupSidebar({ groups, selectedId, meId, unreadByGroup, liveGroupIds, onSelect, onCreate, mobileOpen, onMobileClose, initialCreate, onInitialCreateConsumed }: GroupSidebarProps) {
   const { t } = useTranslation()
@@ -123,6 +125,7 @@ export function GroupSidebar({ groups, selectedId, meId, unreadByGroup, liveGrou
         className={`
           flex flex-col bg-surface border-e border-line
           desktop:static desktop:z-auto desktop:w-80 desktop:translate-x-0 desktop:shadow-none
+          desktop:border-e-0 desktop:border-s
           fixed inset-y-0 start-0 z-40 w-[18rem] max-w-[85vw] shadow-bubble
           transition-transform duration-200 ease-out
           ${mobileOpen ? 'translate-x-0' : '-translate-x-full rtl:translate-x-full desktop:translate-x-0 desktop:rtl:translate-x-0'}

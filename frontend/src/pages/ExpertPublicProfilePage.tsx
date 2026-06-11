@@ -9,7 +9,7 @@ import {
   type ExpertSession,
 } from '../api/expert'
 import { errorCode } from '../api/errors'
-import { getGroups, type Group } from '../api/groups'
+import { getMyGroups, type Group } from '../api/groups'
 import { useAuthStore } from '../store/authStore'
 import { RequestBookingModal } from './expert/RequestBookingModal'
 import { Card } from '../components/Card'
@@ -54,7 +54,7 @@ export default function ExpertPublicProfilePage() {
     if (me?.id === userId) {
       listMyExpertSessions().then((s) => { if (!cancelled) setOwnSessions(s) }).catch(() => {})
     }
-    getGroups().then((all) => {
+    getMyGroups().then((all) => {
       if (cancelled) return
       setMyGroups(all.filter((g) => me?.id && g.ownerId === me.id))
     }).catch(() => {})

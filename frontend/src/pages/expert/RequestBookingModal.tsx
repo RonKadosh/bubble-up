@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { createBookingRequest } from '../../api/expert'
 import { errorCode } from '../../api/errors'
-import { getGroups, type Group } from '../../api/groups'
+import { getMyGroups, type Group } from '../../api/groups'
 import { useAuthStore } from '../../store/authStore'
 import { Button } from '../../components/Button'
 
@@ -33,7 +33,7 @@ export function RequestBookingModal({ open, expertUserId, onClose, onSent }: Pro
   useEffect(() => {
     if (!open) return
     setLoadingGroups(true)
-    getGroups()
+    getMyGroups()
       .then((all) => {
         const owned = all.filter((g) => me?.id && g.ownerId === me.id)
         setGroups(owned)

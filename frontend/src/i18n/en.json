@@ -201,9 +201,16 @@
     "subtitle": "Browse departments and courses at your university.",
     "browseHeading": "Browse & enroll",
     "enrolledBadge": "ENROLLED",
+    "search": {
+      "coursePlaceholder": "Search any course…",
+      "deptPlaceholder": "Filter departments",
+      "resultsAcross": "Offered courses across all departments",
+      "noResults": "No courses match.",
+      "minChars": "Type at least 2 characters",
+      "capped": "Showing the first 50 — refine your search"
+    },
     "term": {
       "label": "Term",
-      "all": "All terms",
       "current": "Current term"
     },
     "column": {
@@ -214,6 +221,7 @@
     "empty": {
       "departments": "No departments to show.",
       "courses": "Pick a department to see its courses.",
+      "coursesInTerm": "No courses offered in the selected term.",
       "detail": "Pick a course to see its details."
     },
     "myCourses": {

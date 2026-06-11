@@ -46,11 +46,6 @@ export interface UpdateGroupPayload {
   visibility?: Visibility
 }
 
-export async function getGroups(): Promise<Group[]> {
-  const res = await client.get<ApiSuccess<Group[]>>('/groups')
-  return res.data.data
-}
-
 /** Groups the current user is a member of. Backs the "My Bubbles" hub sidebar. */
 export async function getMyGroups(): Promise<Group[]> {
   const res = await client.get<ApiSuccess<Group[]>>('/groups/me')

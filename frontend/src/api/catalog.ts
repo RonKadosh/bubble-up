@@ -81,6 +81,18 @@ export async function getCoursesByDepartment(departmentId: string, termId?: stri
   return res.data.data
 }
 
+/**
+ * Global course search across a university, scoped to a term: only courses with an
+ * offering in that term are returned. Server-side and capped (at most 50 rows), so the
+ * whole catalog never loads client-side. A blank query returns an empty list.
+ */
+export async function searchCourses(universityId: string, q: string, termId: string): Promise<Course[]> {
+  const res = await client.get<ApiSuccess<Course[]>>('/catalog/courses/search', {
+    params: { universityId, q, termId },
+  })
+  return res.data.data
+}
+
 export async function getCourse(courseId: string): Promise<Course> {
   const res = await client.get<ApiSuccess<Course>>(`/catalog/courses/${courseId}`)
   return res.data.data

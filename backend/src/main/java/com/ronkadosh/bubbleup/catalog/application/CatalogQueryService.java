@@ -19,10 +19,13 @@ import com.ronkadosh.bubbleup.catalog.persistence.UniversityRepository;
 import com.ronkadosh.bubbleup.common.error.AppException;
 import com.ronkadosh.bubbleup.common.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -78,6 +81,33 @@ public class CatalogQueryService {
             if (courseIds.isEmpty()) return List.of();
         }
         List<Course> courses = courseRepository.findAllById(courseIds);
+        Map<UUID, List<UUID>> deptsByCourse = deptsByCourseFor(courseIds);
+        return courses.stream()
+                .map(c -> CourseSummary.from(c, deptsByCourse.getOrDefault(c.getId(), List.of())))
+                .toList();
+    }
+
+    /**
+     * Global course search across a university, scoped to a term: only courses with an offering in that term
+     * are returned (a course that exists overall but isn't offered in the term never shows). Capped at 50
+     * rows — the term filter is applied in the query, so the cap is taken after gating (no missed matches).
+     * A blank query returns empty (no all-courses dump).
+     */
+    @Transactional(readOnly = true)
+    public List<CourseSummary> searchCourses(UUID universityId, UUID termId, String q) {
+        if (!universityRepository.existsById(universityId)) {
+            throw new AppException(ErrorCode.UNIVERSITY_NOT_FOUND);
+        }
+        if (!termRepository.existsById(termId)) {
+            throw new AppException(ErrorCode.TERM_NOT_FOUND);
+        }
+        String norm = q == null || q.isBlank() ? "" : q.trim().toLowerCase(Locale.ROOT);
+        if (norm.isEmpty()) return List.of();
+        List<Course> courses = courseRepository
+                .searchOfferedInTerm(universityId, norm, termId, PageRequest.of(0, 50, Sort.by("code")))
+                .getContent();
+        if (courses.isEmpty()) return List.of();
+        List<UUID> courseIds = courses.stream().map(Course::getId).toList();
         Map<UUID, List<UUID>> deptsByCourse = deptsByCourseFor(courseIds);
         return courses.stream()
                 .map(c -> CourseSummary.from(c, deptsByCourse.getOrDefault(c.getId(), List.of())))

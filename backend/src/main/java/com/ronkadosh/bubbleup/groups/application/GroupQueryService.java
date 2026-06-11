@@ -34,7 +34,7 @@ import java.time.Instant;
 import java.time.YearMonth;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -54,96 +54,6 @@ public class GroupQueryService {
     private final EnrollmentInternalService enrollmentInternalService;
     private final FileStorageService fileStorageService;
 
-    @Transactional(readOnly = true)
-    public List<GroupResponse> getAllGroups() {
-        return groupRepository.findAll().stream()
-                .filter(g -> g.getStatus() == GroupStatus.ACTIVE)
-                .map(this::toResponse)
-                .toList();
-    }
-
-    /**
-     * Filtered list. Precedence (most-specific first):
-     * <ol>
-     *   <li>{@code offeringId} — exact match.</li>
-     *   <li>{@code courseId} + optional {@code termId} — narrows to one or all offerings of the course.</li>
-     *   <li>{@code departmentId} + optional {@code termId} — expands via catalog.</li>
-     *   <li>{@code universityId} + optional {@code termId} — expands via catalog.</li>
-     *   <li>All-null delegates to {@link #getAllGroups()}.</li>
-     * </ol>
-     */
-    @Transactional(readOnly = true)
-    public List<GroupResponse> getGroupsFiltered(UUID offeringId, UUID courseId, UUID departmentId,
-                                                 UUID universityId, UUID termId) {
-        if (offeringId != null) {
-            return mapToResponses(groupRepository.findAllByOfferingIdAndStatus(offeringId, GroupStatus.ACTIVE));
-        }
-        if (courseId != null) {
-            List<UUID> offeringIds = resolveOfferingIdsForCourse(courseId, termId);
-            return mapToResponses(byOfferingIds(offeringIds));
-        }
-        if (departmentId != null) {
-            if (termId != null) {
-                return mapToResponses(byOfferingIds(
-                        catalogInternalService.offeringIdsForDepartmentAndTerm(departmentId, termId)));
-            }
-            return mapToResponses(byOfferingIdsForCourses(
-                    catalogInternalService.courseIdsForDepartment(departmentId)));
-        }
-        if (universityId != null) {
-            if (termId != null) {
-                return mapToResponses(byOfferingIds(
-                        catalogInternalService.offeringIdsForUniversityAndTerm(universityId, termId)));
-            }
-            return mapToResponses(byOfferingIdsForCourses(
-                    catalogInternalService.courseIdsForUniversity(universityId)));
-        }
-        return getAllGroups();
-    }
-
-    /**
-     * Home-scope feed: bubbles in the caller's university + department + current term.
-     * Throws {@link ErrorCode#USER_AFFILIATION_REQUIRED} when affiliation is missing.
-     *
-     * <p>Widening flags let the same endpoint serve "show me other departments" /
-     * "show me other universities" without a second route.
-     */
-    @Transactional(readOnly = true)
-    public List<GroupResponse> getRelevant(UUID userId,
-                                           boolean includeOtherDepartments,
-                                           boolean includeOtherUniversities,
-                                           UUID termIdOverride) {
-        UserProfile profile = authInternalService.getProfile(userId)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-        if (!profile.hasAffiliation()) {
-            throw new AppException(ErrorCode.USER_AFFILIATION_REQUIRED);
-        }
-        UUID universityId = profile.universityId();
-        UUID departmentId = profile.departmentId();
-        UUID termId = termIdOverride != null
-                ? termIdOverride
-                : catalogInternalService.currentTermFor(universityId).map(TermRef::id).orElse(null);
-
-        if (includeOtherUniversities) {
-            // Cross-uni view: term-scope only (any uni). When no term resolves we
-            // gracefully return every public-ish group.
-            if (termId == null) return getAllGroups();
-            return mapToResponses(byOfferingIds(allOfferingIdsForTerm(termId)));
-        }
-
-        if (includeOtherDepartments) {
-            return mapToResponses(filterByUniversityAndTerm(universityId, termId));
-        }
-
-        // Default: my-uni + my-dept (+ current term if known).
-        if (termId == null) {
-            // Graceful degradation: no current term — show all bubbles in my dept across terms.
-            return mapToResponses(byOfferingIdsForCourses(
-                    catalogInternalService.courseIdsForDepartment(departmentId)));
-        }
-        return mapToResponses(byOfferingIds(
-                catalogInternalService.offeringIdsForDepartmentAndTerm(departmentId, termId)));
-    }
 
     /** Groups the caller is currently a member of. */
     @Transactional(readOnly = true)
@@ -384,45 +294,32 @@ public class GroupQueryService {
         return YearMonth.now(ZoneOffset.UTC).plusMonths(1).atDay(1).atStartOfDay(ZoneOffset.UTC).toInstant();
     }
 
-    private List<UUID> resolveOfferingIdsForCourse(UUID courseId, UUID termId) {
-        if (termId != null) {
-            return catalogInternalService.offeringIdForCourseAndTerm(courseId, termId)
-                    .map(List::of)
-                    .orElse(List.of());
-        }
-        // Any offering of this course (across all terms).
-        return catalogInternalService.offeringIdsForCourses(List.of(courseId));
-    }
-
-    private List<UUID> allOfferingIdsForTerm(UUID termId) {
-        // No direct lookup; in practice multi-uni "term-only" is rare. Approximated
-        // as offerings whose term matches — derived by scanning offerings.
-        return catalogInternalService.offeringIdsForTerm(termId);
-    }
-
-    private List<StudyGroup> filterByUniversityAndTerm(UUID universityId, UUID termId) {
-        if (termId == null) {
-            return byOfferingIdsForCourses(catalogInternalService.courseIdsForUniversity(universityId));
-        }
-        return byOfferingIds(catalogInternalService.offeringIdsForUniversityAndTerm(universityId, termId));
-    }
-
-    private List<StudyGroup> byOfferingIds(Collection<UUID> offeringIds) {
-        if (offeringIds.isEmpty()) return List.of();
-        return groupRepository.findAllByOfferingIdInAndStatus(offeringIds, GroupStatus.ACTIVE);
-    }
-
-    private List<StudyGroup> byOfferingIdsForCourses(List<UUID> courseIds) {
-        if (courseIds.isEmpty()) return List.of();
-        return byOfferingIds(catalogInternalService.offeringIdsForCourses(courseIds));
-    }
-
+    /**
+     * Maps a list of groups to responses in a constant number of queries (two), instead of
+     * the per-group owner + member-count lookups that made the list endpoints O(N) round-trips.
+     * Owners and counts are fetched batched and joined in memory.
+     */
     private List<GroupResponse> mapToResponses(List<StudyGroup> groups) {
+        if (groups.isEmpty()) return List.of();
+        List<UUID> ids = groups.stream().map(StudyGroup::getId).toList();
+
+        Map<UUID, Long> countByGroup = new HashMap<>();
+        for (Object[] row : memberRepository.countByGroupIdIn(ids)) {
+            countByGroup.put((UUID) row[0], (Long) row[1]);
+        }
+        Map<UUID, UUID> ownerByGroup = new HashMap<>();
+        for (GroupMember owner : memberRepository.findAllByGroupIdInAndRole(ids, MembershipRole.OWNER)) {
+            ownerByGroup.putIfAbsent(owner.getGroupId(), owner.getUserId());
+        }
+
         List<GroupResponse> out = new ArrayList<>(groups.size());
-        for (StudyGroup g : groups) out.add(toResponse(g));
+        for (StudyGroup g : groups) {
+            out.add(GroupResponse.from(g, ownerByGroup.get(g.getId()), countByGroup.getOrDefault(g.getId(), 0L)));
+        }
         return out;
     }
 
+    /** Single-group mapping (one extra round-trip is fine for a by-id read). */
     private GroupResponse toResponse(StudyGroup group) {
         UUID ownerId = memberRepository.findAllByGroupIdAndRole(group.getId(), MembershipRole.OWNER).stream()
                 .findFirst()
