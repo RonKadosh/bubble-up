@@ -46,7 +46,7 @@ class OAuth2LoginSuccessHandlerTest {
                 "STUDENT",
                 "Test User",
                 null,
-                false
+                true
         );
         when(oauthLoginService.loginOrRegister("google-sub-123", "user@post.bgu.ac.il", true, "Test User"))
                 .thenReturn(authResponse);
@@ -73,6 +73,6 @@ class OAuth2LoginSuccessHandlerTest {
                 .containsEntry("role", "STUDENT")
                 .containsEntry("displayName", "Test User")
                 .containsEntry("avatarUrl", "")
-                .containsEntry("emailVerified", "false");
+                .containsEntry("emailVerified", "true");
     }
 }

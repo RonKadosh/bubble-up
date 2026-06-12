@@ -57,7 +57,7 @@ export default function OAuthCallbackPage() {
       avatarUrl,
       emailVerified,
     })
-    navigate(emailVerified ? '/dashboard' : '/auth/verify', { replace: true })
+    navigate('/dashboard', { replace: true })
   }, [navigate, params, setAuth])
 
   return (

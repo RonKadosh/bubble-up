@@ -25,7 +25,7 @@ import static org.mockito.Mockito.when;
 class OAuthLoginServiceTest {
 
     @Test
-    void new_academic_google_signup_stays_pending_until_bubbleup_email_is_redeemed() {
+    void new_academic_google_signup_is_verified_immediately() {
         UserRepository userRepository = mock(UserRepository.class);
         JwtService jwtService = mock(JwtService.class);
         RefreshTokenService refreshTokenService = mock(RefreshTokenService.class);
@@ -58,8 +58,8 @@ class OAuthLoginServiceTest {
         ArgumentCaptor<User> savedUser = ArgumentCaptor.forClass(User.class);
         verify(userRepository).save(savedUser.capture());
 
-        assertThat(savedUser.getValue().isEmailVerified()).isFalse();
-        assertThat(response.emailVerified()).isFalse();
+        assertThat(savedUser.getValue().isEmailVerified()).isTrue();
+        assertThat(response.emailVerified()).isTrue();
         assertThat(response.email()).isEqualTo("student@post.bgu.ac.il");
         assertThat(response.role()).isEqualTo("STUDENT");
     }
@@ -162,7 +162,7 @@ class OAuthLoginServiceTest {
         );
 
         assertThat(response.email()).isEqualTo("student@unknown-college.ac.il");
-        assertThat(response.emailVerified()).isFalse();
+        assertThat(response.emailVerified()).isTrue();
         assertThat(response.role()).isEqualTo("STUDENT");
     }
 }

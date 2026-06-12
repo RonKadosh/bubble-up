@@ -6,7 +6,6 @@ import com.ronkadosh.bubbleup.common.context.UserRole;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -25,17 +24,6 @@ public interface UserRepository extends JpaRepository<User, UUID> {
      * over email when resolving an existing user.
      */
     Optional<User> findByGoogleSub(String googleSub);
-
-    /**
-     * Update a user's email. {@link User#email} is intentionally not
-     * exposed via Lombok {@code @Setter} (changing it is a privileged
-     * operation that should only happen through a verified-ownership flow);
-     * this targeted JPQL update lets the verification service rewrite the
-     * column without giving the rest of the code a foot-gun.
-     */
-    @Modifying
-    @Query("update User u set u.email = :email where u.id = :id")
-    void updateEmail(@Param("id") UUID id, @Param("email") String email);
 
     long countByRole(UserRole role);
     long countByCreatedAtAfter(Instant since);

@@ -9,10 +9,9 @@ export interface AuthUser {
   /** Cache-busted absolute path from the server, or null when no avatar set. */
   avatarUrl: string | null
   /**
-   * True once Bubble.up's first-signup verification email has been redeemed.
-   * Main-product Google users stay pending until they click the link from
-   * the team mailbox; the temporary password testing route is treated as
-   * verified separately by the backend response.
+   * Always true for accounts that can reach the app: Google verifies the
+   * address and the academic-domain check is the sign-up gate (there is no
+   * separate email-verification step). Kept for forward-compat.
    */
   emailVerified: boolean
 }
