@@ -32,19 +32,16 @@ import java.util.Optional;
  *       institution via {@link UniversityEmailRegistry}. Non-{@code .ac.il}
  *       Google accounts are rejected with {@link ErrorCode#NOT_ACADEMIC_EMAIL}
  *       — they cannot sign up through this flow at all.</li>
- *   <li>Every first-time Google sign-up starts pending:
- *       {@code emailVerified=false}. Bubble.up then emails a one-time
- *       verification link to that same academic inbox via
- *       {@link EmailVerificationService}.</li>
- *   <li>Once the user clicks the Bubble.up email link, later Google sign-ins
- *       reuse the stored verified state and go straight into the app.</li>
+ *   <li>That is the whole gate: Google has already verified the address and
+ *       the academic-domain check is the "uni only" rule, so a first-time
+ *       sign-up is created already verified and goes straight into the app.
+ *       There is no separate Bubble.up email-verification step (the earlier
+ *       SES-link flow was dropped).</li>
  * </ol>
  *
- * <p>Result: the main product flow still accepts only Israeli academic Google
- * accounts, but Bubble.up keeps its own first-signup verification step by
- * sending the link from the team mailbox through SES. Testing / QA can still
- * use the password endpoints behind {@code /login/testing}; that path is
- * handled separately.
+ * <p>Result: the OAuth flow accepts only Israeli academic Google accounts and
+ * activates them immediately. Testing / QA can still use the password
+ * endpoints behind {@code /login/testing}; that path is handled separately.
  */
 @Service
 @RequiredArgsConstructor
@@ -101,9 +98,10 @@ public class OAuthLoginService {
             return issuePair(user);
         }
 
-        // 3) Brand new user. The academic Google address is accepted, but the
-        //    first app session still remains pending until the Bubble.up email
-        //    verification link is redeemed.
+        // 3) Brand new user. Google has already verified the address
+        //    (email_verified, checked above) and the academic-domain gate is
+        //    the "uni only" rule, so the account is active immediately — there
+        //    is no separate Bubble.up email-verification step (SES was dropped).
         UserRole defaultRole = academicMatch.kind() == MemberKind.STAFF
                 ? UserRole.EXPERT
                 : UserRole.STUDENT;
@@ -111,7 +109,7 @@ public class OAuthLoginService {
         User user = User.builder()
                 .email(normalisedEmail)
                 .googleSub(googleSub)
-                .emailVerified(false)
+                .emailVerified(true)
                 .role(defaultRole)
                 .displayName(safeName(displayName, normalisedEmail))
                 .build();

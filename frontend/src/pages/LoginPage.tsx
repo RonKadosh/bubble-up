@@ -15,17 +15,14 @@ export default function LoginPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const accessToken = useAuthStore((s) => s.accessToken)
-  const emailVerified = useAuthStore((s) => s.user?.emailVerified ?? false)
   const [params] = useSearchParams()
   const [error, setError] = useState<string>('')
 
-  // Signed-in users continue wherever they left off: verified users go into
-  // the app; first-time academic Google signups continue to the Bubble.up
-  // verification screen until they click the email link.
+  // Already signed in? Go straight into the app.
   useEffect(() => {
     if (!accessToken) return
-    navigate(emailVerified ? '/dashboard' : '/auth/verify', { replace: true })
-  }, [accessToken, emailVerified, navigate])
+    navigate('/dashboard', { replace: true })
+  }, [accessToken, navigate])
 
   // /login?error=<CODE> happens when the OAuth callback redirected us here
   // (e.g. NOT_ACADEMIC_EMAIL after we rejected a non-.ac.il Google email).

@@ -24,26 +24,10 @@ spring:
       max-file-size: 25MB
       max-request-size: 26MB
 
-  # Google sign-in. When CLIENT_ID/SECRET are blank the registration is
-  # effectively disabled (Spring still wires the auto-config but the
-  # /oauth2/authorization/google endpoint will fail with a clear error).
-  # This lets the app boot in environments that don't have OAuth set up yet
-  # (e.g. a CI job running mvn verify without secrets).
-  security:
-    oauth2:
-      client:
-        registration:
-          google:
-            client-id: ${GOOGLE_OAUTH_CLIENT_ID:}
-            client-secret: ${GOOGLE_OAUTH_CLIENT_SECRET:}
-            scope:
-              - openid
-              - email
-              - profile
-            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
-        provider:
-          google:
-            issuer-uri: https://accounts.google.com
+  # Google sign-in is registered by GoogleOAuthClientConfig only when both
+  # GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET are non-blank. Keeping
+  # the registration out of spring.security.oauth2.* lets local/dev boots run
+  # without secrets instead of failing Spring Boot's eager client validation.
 
 server:
   port: 8080
@@ -78,17 +62,6 @@ app:
     private-key-pem: ${APP_JITSI_PRIVATE_KEY_PEM:}
     server-url: ${APP_JITSI_SERVER_URL:https://8x8.vc}
     token-ttl: ${APP_JITSI_TOKEN_TTL:PT2H}
-  mail:
-    # Sender address for transactional emails (academic-email verification).
-    # Must be a verified SES identity in `aws-region`. Blank disables sending —
-    # the verification flow returns MAIL_NOT_CONFIGURED in that case.
-    from: ${MAIL_FROM_ADDRESS:}
-    aws-region: ${AWS_SES_REGION:us-east-1}
-    # How long a verification link is valid for.
-    verification-ttl: ${MAIL_VERIFICATION_TTL:PT30M}
-    # Where the link in the email points. The path is appended to this base.
-    # Defaults to the first CORS-allowed origin (i.e. the frontend).
-    frontend-base-url: ${MAIL_FRONTEND_BASE_URL:${app.cors.allowed-origins}}
   demo:
     seed:
       # Boots 10 demo users + Study Bubbles on first start. Idempotent.

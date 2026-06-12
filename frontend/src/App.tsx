@@ -3,7 +3,6 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import LoginPage from './pages/LoginPage'
 import OAuthCallbackPage from './pages/auth/OAuthCallbackPage'
 import TestingLoginPage from './pages/auth/TestingLoginPage'
-import VerifyEmailPage from './pages/auth/VerifyEmailPage'
 import DashboardPage from './pages/DashboardPage'
 import GroupsPage from './pages/GroupsPage'
 import ProfilePage from './pages/ProfilePage'
@@ -31,17 +30,14 @@ import { connectWs, disconnectWs } from './api/ws'
 
 function RequireAuth({ children }: { children: JSX.Element }) {
   const accessToken = useAuthStore((s) => s.accessToken)
-  const emailVerified = useAuthStore((s) => s.user?.emailVerified ?? false)
   if (!accessToken) return <Navigate to="/login" replace />
-  if (!emailVerified) return <Navigate to="/auth/verify" replace />
   return children
 }
 
 function LandingRedirect() {
   const accessToken = useAuthStore((s) => s.accessToken)
-  const emailVerified = useAuthStore((s) => s.user?.emailVerified ?? false)
   if (!accessToken) return <Navigate to="/login" replace />
-  return <Navigate to={emailVerified ? '/dashboard' : '/auth/verify'} replace />
+  return <Navigate to="/dashboard" replace />
 }
 
 /**
@@ -87,11 +83,11 @@ export default function App() {
   }, [lang])
 
   useEffect(() => {
-    const { accessToken, user } = useAuthStore.getState()
-    if (accessToken && user?.emailVerified) connectWs()
+    const { accessToken } = useAuthStore.getState()
+    if (accessToken) connectWs()
     return useAuthStore.subscribe((state, prev) => {
-      const wasConnected = Boolean(prev.accessToken && prev.user?.emailVerified)
-      const shouldConnect = Boolean(state.accessToken && state.user?.emailVerified)
+      const wasConnected = Boolean(prev.accessToken)
+      const shouldConnect = Boolean(state.accessToken)
       if (shouldConnect && !wasConnected) connectWs()
       if (!shouldConnect && wasConnected) disconnectWs()
     })
@@ -103,12 +99,9 @@ export default function App() {
         <Route path="/" element={<LandingRedirect />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/login/testing" element={<TestingLoginPage />} />
-        {/* OAuth landing pages — public on purpose: /auth/callback reads
-            tokens from the URL fragment and hydrates authStore; /auth/verify
-            handles BOTH the "enter your academic email" form (authed) AND the
-            "redeem the token in the email" path (public). */}
+        {/* OAuth landing page — public on purpose: /auth/callback reads
+            tokens from the URL fragment and hydrates authStore. */}
         <Route path="/auth/callback" element={<OAuthCallbackPage />} />
-        <Route path="/auth/verify" element={<VerifyEmailPage />} />
         <Route
           element={
             <RequireAuth>

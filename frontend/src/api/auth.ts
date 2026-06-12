@@ -9,13 +9,11 @@ export interface AuthResponse {
   displayName: string
   /** Cache-busted URL or null when no avatar set. */
   avatarUrl: string | null
-  /** True once the user has proved ownership of a .ac.il address. */
+  /**
+   * Always true for accounts reachable here: Google verifies the address and
+   * the academic-domain check is the sign-up gate. Kept for forward-compat.
+   */
   emailVerified: boolean
-}
-
-export interface VerifyEmailResponse {
-  emailVerified: boolean
-  email: string
 }
 
 /**
@@ -38,26 +36,6 @@ export async function register(
   const res = await client.post<ApiSuccess<AuthResponse>>(
     '/auth/register',
     { email, password, displayName },
-  )
-  return res.data.data
-}
-
-/**
- * Send a verification link to the academic email the user supplied.
- * Requires an authed session. The link is good for 30 minutes.
- */
-export async function requestVerificationEmail(academicEmail: string): Promise<void> {
-  await client.post('/auth/verify-email/request', { academicEmail })
-}
-
-/**
- * Redeem the token from the link in the verification email.
- * Public endpoint: the token itself is the proof.
- */
-export async function confirmVerificationEmail(token: string): Promise<VerifyEmailResponse> {
-  const res = await client.post<ApiSuccess<VerifyEmailResponse>>(
-    '/auth/verify-email/confirm',
-    { token },
   )
   return res.data.data
 }

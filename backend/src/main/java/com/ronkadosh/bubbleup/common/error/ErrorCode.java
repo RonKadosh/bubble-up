@@ -21,7 +21,6 @@ public enum ErrorCode {
     REFRESH_TOKEN_REUSED(ErrorCategory.UNAUTHORIZED, HttpStatus.UNAUTHORIZED),
     ACCOUNT_SUSPENDED(ErrorCategory.FORBIDDEN, HttpStatus.FORBIDDEN),
     ACCOUNT_BANNED(ErrorCategory.FORBIDDEN, HttpStatus.FORBIDDEN),
-    EMAIL_VERIFICATION_REQUIRED(ErrorCategory.FORBIDDEN, HttpStatus.FORBIDDEN),
 
     // OAuth2 / Google sign-in
     /** Google's ID token didn't carry an email claim (rare; user denied scope). */
@@ -32,20 +31,6 @@ public enum ErrorCode {
     NOT_ACADEMIC_EMAIL(ErrorCategory.FORBIDDEN, HttpStatus.FORBIDDEN),
     /** OAuth client not configured (GOOGLE_OAUTH_CLIENT_ID/_SECRET unset). */
     OAUTH_NOT_CONFIGURED(ErrorCategory.INTERNAL, HttpStatus.SERVICE_UNAVAILABLE),
-
-    // Academic-email verification (SES-backed)
-    /** Token doesn't exist, was tampered with, or already redeemed. */
-    VERIFICATION_TOKEN_INVALID(ErrorCategory.VALIDATION, HttpStatus.BAD_REQUEST),
-    /** Token was valid once but the TTL window passed (default 30 minutes). */
-    VERIFICATION_TOKEN_EXPIRED(ErrorCategory.VALIDATION, HttpStatus.GONE),
-    /** Too many verification requests from this user in the rate-limit window. */
-    VERIFICATION_TOO_MANY_REQUESTS(ErrorCategory.RATE_LIMIT, HttpStatus.TOO_MANY_REQUESTS),
-    /** Caller is already verified — no point re-issuing a token. */
-    EMAIL_ALREADY_VERIFIED(ErrorCategory.CONFLICT, HttpStatus.CONFLICT),
-    /** Email sending hasn't been configured (MAIL_FROM_ADDRESS blank in this env). */
-    MAIL_NOT_CONFIGURED(ErrorCategory.INTERNAL, HttpStatus.SERVICE_UNAVAILABLE),
-    /** SES rejected the request (sender unverified, sandbox restriction, etc.). */
-    MAIL_SEND_FAILED(ErrorCategory.INTERNAL, HttpStatus.BAD_GATEWAY),
 
     // Groups
     GROUP_NOT_FOUND(ErrorCategory.NOT_FOUND, HttpStatus.NOT_FOUND),
