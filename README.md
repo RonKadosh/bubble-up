@@ -156,6 +156,18 @@ cd backend  && mvn test                        # ~test suite, H2 in-memory, no D
 cd frontend && npm run build                   # strict tsc + vite build
 ```
 
+Local debugging:
+
+```bash
+docker-compose up -d --build
+curl http://localhost:8080/api/actuator/health
+```
+
+Open Dozzle at `http://localhost:9999` to inspect container logs. Backend HTTP
+requests are logged as `http_request ...`; copy the `traceId` from a failed or
+slow request and search for that value to follow the request through the backend
+logs. Request bodies are intentionally not logged.
+
 ---
 
 <sub>Bubble.up is an evolving project. The matching ideology, the depth of expert tooling, and how much of the model to surface to users are all areas of active iteration.</sub>
