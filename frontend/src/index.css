@@ -112,11 +112,14 @@
   :root {
     /* Two-font system (both Hebrew-complete, loaded in main.tsx):
        Rubik (rounded terminals — the bubbly voice) for headings, buttons, and
-       Bubble names; Assistant (Hebrew-first humanist) for body and chat. */
+       Bubble names; Assistant (Hebrew-first humanist) for body and chat.
+       Arabic falls through to common system Arabic UI fonts. */
     --font-heading: 'Rubik Variable', 'Assistant Variable', ui-sans-serif, system-ui,
-                    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+                    "Segoe UI", "Tahoma", "Arial", "Noto Sans Arabic", Roboto,
+                    "Helvetica Neue", sans-serif;
     --font-body: 'Assistant Variable', ui-sans-serif, system-ui,
-                 "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+                 "Segoe UI", "Tahoma", "Arial", "Noto Sans Arabic", Roboto,
+                 "Helvetica Neue", sans-serif;
   }
 
   html, body, #root {

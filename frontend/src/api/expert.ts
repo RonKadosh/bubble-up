@@ -146,6 +146,11 @@ export async function listOpenSessions(): Promise<ExpertSession[]> {
   return res.data.data
 }
 
+export async function listOpenSessionsForExpert(expertUserId: string): Promise<ExpertSession[]> {
+  const res = await client.get<ApiSuccess<ExpertSession[]>>(`/expert-sessions/by-expert/${expertUserId}`)
+  return res.data.data
+}
+
 export async function cancelExpertSession(sessionId: string): Promise<void> {
   await client.post(`/expert-sessions/${sessionId}/cancel`)
 }

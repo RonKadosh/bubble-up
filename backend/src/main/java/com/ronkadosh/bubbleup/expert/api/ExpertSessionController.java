@@ -56,6 +56,11 @@ public class ExpertSessionController {
         return ApiResponse.success(queries.listForExpert(me.id()));
     }
 
+    @GetMapping("/by-expert/{expertUserId}")
+    public ApiResponse<List<ExpertSessionResponse>> listOpenForExpert(@PathVariable UUID expertUserId) {
+        return ApiResponse.success(queries.listOpenForExpert(expertUserId));
+    }
+
     /**
      * All currently-OPEN sessions across every expert, sorted by upcoming
      * start time. Returned to any authenticated user — this is the directory

@@ -54,6 +54,20 @@ public class ExpertSessionQueryService {
                 .toList();
     }
 
+    /**
+     * Public browse surface for one expert's currently joinable offerings. Only
+     * OPEN sessions are returned; cancelled, ended, live, and full sessions stay
+     * off the public profile.
+     */
+    @Transactional(readOnly = true)
+    public List<ExpertSessionResponse> listOpenForExpert(UUID expertUserId) {
+        return sessionRepo.findByExpertUserIdAndStatusOrderByCreatedAtDesc(
+                        expertUserId, ExpertSessionStatus.OPEN).stream()
+                .map(this::toResponse)
+                .sorted(this::compareByStartsAt)
+                .toList();
+    }
+
     @Transactional(readOnly = true)
     public List<ExpertSessionResponse> listEnrolledForGroup(UUID groupId) {
         return enrollmentRepo.findByGroupId(groupId).stream()
@@ -73,12 +87,7 @@ public class ExpertSessionQueryService {
     public List<ExpertSessionResponse> listOpen() {
         return sessionRepo.findByStatusOrderByCreatedAtDesc(ExpertSessionStatus.OPEN).stream()
                 .map(this::toResponse)
-                .sorted((a, b) -> {
-                    if (a.startsAt() == null && b.startsAt() == null) return 0;
-                    if (a.startsAt() == null) return 1;
-                    if (b.startsAt() == null) return -1;
-                    return a.startsAt().compareTo(b.startsAt());
-                })
+                .sorted(this::compareByStartsAt)
                 .toList();
     }
 
@@ -127,5 +136,12 @@ public class ExpertSessionQueryService {
                 .map(RoomSummary::id)
                 .orElse(null);
         return ExpertSessionResponse.from(session, roomId, (int) enrolled, startsAt, endsAt);
+    }
+
+    private int compareByStartsAt(ExpertSessionResponse a, ExpertSessionResponse b) {
+        if (a.startsAt() == null && b.startsAt() == null) return 0;
+        if (a.startsAt() == null) return 1;
+        if (b.startsAt() == null) return -1;
+        return a.startsAt().compareTo(b.startsAt());
     }
 }
