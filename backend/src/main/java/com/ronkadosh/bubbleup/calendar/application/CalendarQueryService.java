@@ -2,6 +2,7 @@ package com.ronkadosh.bubbleup.calendar.application;
 
 import com.ronkadosh.bubbleup.calendar.api.dto.CalendarEventResponse;
 import com.ronkadosh.bubbleup.calendar.model.CalendarEvent;
+import com.ronkadosh.bubbleup.calendar.model.CalendarEventType;
 import com.ronkadosh.bubbleup.calendar.model.CalendarOwnerType;
 import com.ronkadosh.bubbleup.calendar.persistence.CalendarEventRepository;
 import com.ronkadosh.bubbleup.common.error.AppException;
@@ -80,6 +81,10 @@ public class CalendarQueryService {
     public CalendarEventResponse get(UUID eventId, UUID requesterId) {
         CalendarEvent event = repo.findById(eventId)
                 .orElseThrow(() -> new AppException(ErrorCode.CALENDAR_EVENT_NOT_FOUND));
+        if (event.getEventType() == CalendarEventType.EXPERT_SESSION
+                && expertInternalService.isAuthorizedForSessionCalendarEvent(eventId, requesterId)) {
+            return CalendarEventResponse.from(event);
+        }
         requireOwnerAccess(event.getOwnerType(), event.getOwnerId(), requesterId);
         return CalendarEventResponse.from(event);
     }
