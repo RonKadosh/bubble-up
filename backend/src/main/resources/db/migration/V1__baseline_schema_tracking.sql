@@ -1,0 +1,6 @@
+-- Baseline marker for the schema that existed before Flyway was introduced.
+--
+-- Keep this migration intentionally empty. Current environments still let
+-- Hibernate manage the existing schema; new schema changes should be added as
+-- V2__*.sql and onward, then production can move from ddl-auto=update to
+-- ddl-auto=validate after the full schema is captured.

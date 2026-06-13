@@ -18,6 +18,11 @@ spring:
           batch_size: 100
         order_inserts: true
         order_updates: true
+  flyway:
+    enabled: ${SPRING_FLYWAY_ENABLED:true}
+    baseline-on-migrate: ${SPRING_FLYWAY_BASELINE_ON_MIGRATE:true}
+    baseline-version: ${SPRING_FLYWAY_BASELINE_VERSION:1}
+    baseline-description: Existing schema before Flyway
   servlet:
     multipart:
       enabled: true
@@ -28,6 +33,29 @@ spring:
   # GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET are non-blank. Keeping
   # the registration out of spring.security.oauth2.* lets local/dev boots run
   # without secrets instead of failing Spring Boot's eager client validation.
+
+logging:
+  pattern:
+    level: "%5p traceId=%X{traceId:-} userId=%X{userId:-}"
+
+management:
+  endpoints:
+    web:
+      base-path: /api/actuator
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  info:
+    env:
+      enabled: true
+
+info:
+  app:
+    name: Bubble.up
+    service: backend
 
 server:
   port: 8080
