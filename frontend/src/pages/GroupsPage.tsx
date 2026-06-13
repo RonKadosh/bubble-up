@@ -414,7 +414,11 @@ export default function GroupsPage() {
       refreshRooms()
     } catch (e) {
       setError(describeError(e, t,
-        { GROUP_IS_FULL: 'groups.error.full', NOT_ENROLLED_IN_COURSE: 'groups.error.notEnrolled' },
+        {
+          GROUP_IS_FULL: 'groups.error.full',
+          NOT_ENROLLED_IN_COURSE: 'groups.error.notEnrolled',
+          ALREADY_GROUP_MEMBER: 'dashboard.publicBubble.alreadyMember',
+        },
         'groups.error.join'))
     }
   }
