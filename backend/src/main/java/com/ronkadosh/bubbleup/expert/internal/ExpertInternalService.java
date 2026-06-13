@@ -32,6 +32,12 @@ public interface ExpertInternalService {
     boolean isAuthorizedForSession(UUID sessionId, UUID userId);
 
     /**
+     * Same authorization as {@link #isAuthorizedForSession(UUID, UUID)}, looked
+     * up from the calendar event that backs an expert session.
+     */
+    boolean isAuthorizedForSessionCalendarEvent(UUID calendarEventId, UUID userId);
+
+    /**
      * True iff {@code isAuthorizedForSession} AND the current time is within
      * {@code [startsAt - 15min, endsAt]}. Use this to gate entry to the
      * live video/whiteboard room.

@@ -1,10 +1,12 @@
 package com.ronkadosh.bubbleup.e2e;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -59,11 +61,26 @@ class ExpertJourneyE2EIT extends E2EFlowTest {
         // (the backend merges enrolled sessions into the group calendar query).
         String from = java.time.Instant.now().minusSeconds(86400).toString();
         String to = hoursFromNow(168).toString();
-        mvc.perform(get("/api/calendars/events")
+        JsonNode events = dataOf(mvc.perform(get("/api/calendars/events")
                         .param("ownerType", "GROUP").param("ownerId", groupId.toString())
                         .param("from", from).param("to", to).with(bearer(owner)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[?(@.eventType == 'EXPERT_SESSION')]").exists());
+                .andExpect(jsonPath("$.data[?(@.eventType == 'EXPERT_SESSION')]").exists()));
+
+        String eventId = null;
+        for (JsonNode event : events) {
+            if ("EXPERT_SESSION".equals(event.get("eventType").asText())) {
+                eventId = event.get("id").asText();
+                break;
+            }
+        }
+        assertThat(eventId).isNotNull();
+        mvc.perform(get("/api/calendars/events/{id}", eventId).with(bearer(owner)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.eventType").value("EXPERT_SESSION"));
+        AuthedUser outsider = registerEnrolled();
+        mvc.perform(get("/api/calendars/events/{id}", eventId).with(bearer(outsider)))
+                .andExpect(status().isForbidden());
 
         // Also reachable via the group-scoped enrolled-sessions endpoint.
         mvc.perform(get("/api/expert-sessions/enrolled").param("groupId", groupId.toString())

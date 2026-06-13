@@ -79,6 +79,14 @@ public class ExpertInternalServiceImpl implements ExpertInternalService {
 
     @Override
     @Transactional(readOnly = true)
+    public boolean isAuthorizedForSessionCalendarEvent(UUID calendarEventId, UUID userId) {
+        return sessionRepo.findByCalendarEventId(calendarEventId)
+                .map(session -> isAuthorizedForSession(session.getId(), userId))
+                .orElse(false);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public java.util.List<UUID> findActiveSessionCalendarEventIdsForGroup(UUID groupId) {
         return enrollmentRepo.findByGroupId(groupId).stream()
                 .map(e -> sessionRepo.findById(e.getExpertSessionId()).orElse(null))
