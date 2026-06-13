@@ -109,6 +109,52 @@ class HelpControllerIT extends IntegrationTest {
     }
 
     @Test
+    void ask_experts_tab_question_explains_sessions_and_bookings() throws Exception {
+        AuthedUser user = registerAndLogin();
+
+        String json = mvc.perform(post("/api/help/ask")
+                        .with(bearer(user))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "question": "How do I use the expert tab to get private help?",
+                                  "locale": "en",
+                                  "currentPath": "/experts"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        JsonNode data = om.readTree(json).get("data");
+        assertThat(data.get("source").asText()).isEqualTo("LOCAL");
+        assertThat(data.get("answer").asText()).contains("Experts tab");
+        assertThat(ids(data.get("topics"))).contains("find-expert");
+    }
+
+    @Test
+    void ask_color_question_points_to_preferences_theme() throws Exception {
+        AuthedUser user = registerAndLogin();
+
+        String json = mvc.perform(post("/api/help/ask")
+                        .with(bearer(user))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "question": "How do I change the color of the site?",
+                                  "locale": "en",
+                                  "currentPath": "/settings"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        JsonNode data = om.readTree(json).get("data");
+        assertThat(data.get("source").asText()).isEqualTo("LOCAL");
+        assertThat(data.get("answer").asText()).contains("light and dark");
+        assertThat(ids(data.get("topics"))).contains("change-appearance");
+    }
+
+    @Test
     void ask_saves_question_entry_and_recent_questions_returns_it() throws Exception {
         AuthedUser user = registerAndLogin();
 

@@ -312,6 +312,30 @@ class ExpertSessionIT extends IntegrationTest {
     }
 
     @Test
+    void list_open_for_expert_returns_only_that_experts_open_sessions() throws Exception {
+        AuthedUser expert = registerEnrolled();
+        applyAsExpert(expert);
+        UUID openSessionId = createSession(expert, 5);
+        UUID fullSessionId = createSession(expert, 1);
+
+        AuthedUser otherExpert = registerEnrolled();
+        applyAsExpert(otherExpert);
+        UUID otherSessionId = createSession(otherExpert, 5);
+
+        AuthedUser owner = registerEnrolled();
+        UUID groupId = createGroup(owner);
+        enrollGroup(owner, fullSessionId, groupId).andExpect(status().isCreated());
+
+        AuthedUser viewer = registerEnrolled();
+        mvc.perform(get("/api/expert-sessions/by-expert/{expertUserId}", expert.id()).with(bearer(viewer)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[?(@.id=='" + openSessionId + "')]").exists())
+                .andExpect(jsonPath("$.data[?(@.id=='" + fullSessionId + "')]").doesNotExist())
+                .andExpect(jsonPath("$.data[?(@.id=='" + otherSessionId + "')]").doesNotExist())
+                .andExpect(jsonPath("$.data[?(@.status!='OPEN')]").doesNotExist());
+    }
+
+    @Test
     void group_calendar_includes_enrolled_session_events() throws Exception {
         AuthedUser expert = registerEnrolled();
         applyAsExpert(expert);

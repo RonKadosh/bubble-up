@@ -197,17 +197,37 @@ public class HelpCatalog {
                     "find-expert",
                     "Experts",
                     HelpAudience.STUDENT,
-                    "Find or book an expert",
-                    "Experts can host sessions or receive booking requests from students and groups.",
+                    "Use the Experts tab",
+                    "The Experts tab helps group owners find open expert sessions, browse verified experts, and request private help for a Bubble.",
                     List.of(
                             "Open Experts.",
-                            "Browse the expert directory and open a profile.",
-                            "Request a booking if you need help for a group or study topic.",
-                            "Track your booking requests from the bookings page."
+                            "Use Sessions to find open sessions that your Bubble can enroll in.",
+                            "Use Experts to browse verified experts by headline, bio, or expertise tag.",
+                            "Open an expert profile when you want more detail.",
+                            "Request a session if you need private help for a specific group or study topic.",
+                            "Track sent booking requests from My bookings."
                     ),
                     List.of(action("Open Experts", "/experts"), action("Open Bookings", "/bookings")),
-                    List.of("expert", "booking", "request", "session", "help"),
-                    List.of("mentor", "teacher", "tutor", "ask expert", "support")
+                    List.of("expert", "experts tab", "booking", "request", "session", "help", "mentor"),
+                    List.of("mentor", "teacher", "tutor", "ask expert", "support", "private help", "open sessions", "verified experts")
+            ),
+            topic(
+                    "expert-session-enroll",
+                    "Experts",
+                    HelpAudience.STUDENT,
+                    "Enroll a Bubble in an expert session",
+                    "If you own a Bubble, you can enroll it into an open expert session so the session appears on the Bubble calendar.",
+                    List.of(
+                            "Open Experts.",
+                            "Choose the Sessions tab.",
+                            "Find a session that matches your topic and time.",
+                            "Click Enroll a group.",
+                            "Pick one of the Bubbles you own.",
+                            "After enrollment, open that Bubble calendar or Home to find the session link."
+                    ),
+                    List.of(action("Open Experts", "/experts"), action("Open My Bubbles", "/groups")),
+                    List.of("expert", "session", "enroll", "bubble", "calendar", "owner"),
+                    List.of("join expert session", "enroll group", "owned group", "open session", "capacity", "schedule conflict")
             ),
             topic(
                     "become-expert",
@@ -224,6 +244,23 @@ public class HelpCatalog {
                     List.of(action("Become an expert", "/become-expert")),
                     List.of("expert", "apply", "verification", "profile"),
                     List.of("teach", "mentor", "application", "approve", "verified")
+            ),
+            topic(
+                    "change-appearance",
+                    "Settings",
+                    HelpAudience.STUDENT,
+                    "Change site colors or appearance",
+                    "You can switch Bubble.up between light and dark appearance from Settings. Custom accent colors are not available in the app settings yet.",
+                    List.of(
+                            "Open Settings from the sidebar.",
+                            "Choose the Preferences tab.",
+                            "In Appearance, select Light or Dark.",
+                            "The choice is saved on this device and applied automatically next time.",
+                            "If you mean custom brand colors instead of light/dark mode, that is not a user setting yet."
+                    ),
+                    List.of(action("Open Settings", "/settings")),
+                    List.of("settings", "theme", "appearance", "color", "colors", "dark mode", "light mode"),
+                    List.of("change color", "site color", "website color", "theme color", "dark", "light", "preferences", "look")
             ),
             topic(
                     "expert-hub",

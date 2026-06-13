@@ -10,5 +10,6 @@ import java.util.UUID;
 public interface ExpertSessionRepository extends JpaRepository<ExpertSession, UUID> {
     List<ExpertSession> findByExpertProfileIdOrderByCreatedAtDesc(UUID expertProfileId);
     List<ExpertSession> findByExpertUserIdOrderByCreatedAtDesc(UUID expertUserId);
+    List<ExpertSession> findByExpertUserIdAndStatusOrderByCreatedAtDesc(UUID expertUserId, ExpertSessionStatus status);
     List<ExpertSession> findByStatusOrderByCreatedAtDesc(ExpertSessionStatus status);
 }
