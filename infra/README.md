@@ -104,7 +104,7 @@ Production should serve:
 ## 4. Verify
 
 ```powershell
-curl https://bubbleup.online/api/auth/health
+curl https://bubbleup.online/api/actuator/health
 ```
 
 Then visit `https://bubbleup.online/` and verify:

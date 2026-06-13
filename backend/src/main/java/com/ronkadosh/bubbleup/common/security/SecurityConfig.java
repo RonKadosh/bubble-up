@@ -64,6 +64,10 @@ public class SecurityConfig {
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(ApiPaths.AUTH_BASE + "/**").permitAll()
+                        .requestMatchers(HttpMethod.GET,
+                                ApiPaths.API_BASE + "/actuator/health",
+                                ApiPaths.API_BASE + "/actuator/health/**",
+                                ApiPaths.API_BASE + "/actuator/info").permitAll()
                         // /ws handshake is public; JWT is enforced at STOMP CONNECT by StompAuthChannelInterceptor.
                         .requestMatchers("/ws/**").permitAll()
                         // Avatar stream is public so <img src=...> works without an Authorization header.
