@@ -27,6 +27,7 @@ public class GoogleOAuthClientConfig {
                 .clientSecret(clientSecret)
                 .scope("openid", "email", "profile")
                 .redirectUri("{baseUrl}/login/oauth2/code/{registrationId}")
+                .authorizationUri("https://accounts.google.com/o/oauth2/v2/auth?prompt=select_account")
                 .build();
 
         return new InMemoryClientRegistrationRepository(google);
