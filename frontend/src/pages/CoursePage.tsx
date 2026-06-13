@@ -82,7 +82,11 @@ export default function CoursePage() {
       await joinGroup(groupId)
       setJoinedGroupIds((s) => new Set(s).add(groupId))
     } catch (e) {
-      setActionError(describeError(e, t, {}, 'course.error.join'))
+      setActionError(describeError(e, t, {
+        GROUP_IS_FULL: 'groups.error.full',
+        NOT_ENROLLED_IN_COURSE: 'groups.error.notEnrolled',
+        ALREADY_GROUP_MEMBER: 'dashboard.publicBubble.alreadyMember',
+      }, 'course.error.join'))
     }
   }
 
