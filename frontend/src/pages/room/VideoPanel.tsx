@@ -47,7 +47,14 @@ interface Props {
 export function VideoPanel({ room }: Props) {
   const { t } = useTranslation()
   const containerRef = useRef<HTMLDivElement | null>(null)
-  const user = useAuthStore((s) => s.user)
+  // Select the two primitives the effect actually uses, NOT the whole user object.
+  // A token refresh (15-min access-token expiry, or a WS-drop-triggered refresh)
+  // calls setAuth with a brand-new user object of identical values; depending on that
+  // reference would re-run the effect and dispose/rebuild the Jitsi iframe mid-call
+  // ("conference not found"). These strings are stable across a refresh, so the
+  // iframe is left alone.
+  const displayName = useAuthStore((s) => s.user?.displayName)
+  const email = useAuthStore((s) => s.user?.email)
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -72,8 +79,8 @@ export function VideoPanel({ room }: Props) {
           parentNode: containerRef.current,
           width: '100%',
           height: '100%',
-          userInfo: user
-            ? { displayName: user.displayName || user.email, email: user.email }
+          userInfo: (displayName || email)
+            ? { displayName: displayName || email, email }
             : undefined,
           configOverwrite: {
             prejoinPageEnabled: false,
@@ -128,7 +135,7 @@ export function VideoPanel({ room }: Props) {
       publishToRoomPresence(room.id, 'LEAVE')
       try { api?.dispose() } catch (e) { console.warn('[VideoPanel] dispose failed', e) }
     }
-  }, [room.id, room.jitsiAppId, room.jitsiJwt, room.jitsiRoomName, room.jitsiServerUrl, user])
+  }, [room.id, room.jitsiAppId, room.jitsiJwt, room.jitsiRoomName, room.jitsiServerUrl, displayName, email])
 
   if (!room.jitsiAppId || !room.jitsiJwt) {
     return (

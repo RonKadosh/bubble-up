@@ -70,13 +70,9 @@ export async function pushWhiteboard(roomId: string, snapshot: ExcalidrawSnapsho
   await client.post<ApiSuccess<void>>(`/rooms/${roomId}/whiteboard/elements`, snapshot)
 }
 
-/** Extend the room's session by a fixed +15 min (any bubble member). */
-export async function extendRoom(roomId: string): Promise<BubbleRoom> {
-  const res = await client.post<ApiSuccess<BubbleRoom>>(`/rooms/${roomId}/extend`)
-  return res.data.data
-}
-
-/** Lifecycle events broadcast on /topic/rooms/{id}/lifecycle. */
+/** Lifecycle events broadcast on /topic/rooms/{id}/lifecycle. The EXTENDED event and
+ *  the backend /extend endpoint still exist but are no longer surfaced in the UI:
+ *  rooms now stay alive while the call is occupied rather than ending at a fixed time. */
 export interface RoomLifecycleEvent {
   event: 'ENDED' | 'EXTENDED'
   roomId: string

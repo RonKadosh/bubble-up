@@ -41,10 +41,10 @@ public class JaasJitsiTokenService implements JitsiTokenService {
         Instant now = timeProvider.now();
         Duration ttl = jitsiProperties.tokenTtl() != null ? jitsiProperties.tokenTtl() : Duration.ofHours(2);
         Instant ttlExpiry = now.plus(ttl);
-        // hardExpiry == event.endsAt (set by RoomQueryService). Whichever is sooner wins.
-        // The time-window gate in RoomQueryService ensures we're never here past endsAt;
-        // if we somehow are, JaaS will reject with an expired-token error rather than
-        // accidentally extending the call.
+        // Optional caller-supplied hard cap; whichever is sooner wins. RoomQueryService
+        // now passes null (rooms may run past their scheduled endsAt while occupied), so
+        // the token is bounded purely by tokenTtl and re-minted on each GET. A hardExpiry
+        // is still honored if a future caller wants a firm per-token ceiling.
         Instant effectiveExpiry = (hardExpiry != null && hardExpiry.isBefore(ttlExpiry)) ? hardExpiry : ttlExpiry;
 
         Map<String, Object> user = new LinkedHashMap<>();

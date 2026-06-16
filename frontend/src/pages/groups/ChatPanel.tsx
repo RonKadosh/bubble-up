@@ -27,7 +27,7 @@ import {
   getFiles,
   listFolders,
 } from '../../api/files'
-import { extendRoom, getRoomForEvent } from '../../api/room'
+import { getRoomForEvent } from '../../api/room'
 import { getExpertSession, type ExpertSession } from '../../api/expert'
 import { describeError } from '../../api/errors'
 import {
@@ -724,16 +724,6 @@ function ChatMessageRow({
     )
   }
 
-  if (m.messageType === 'SYSTEM_ROOM_END_SOON' && m.linkTargetType === 'ROOM' && m.linkTargetId) {
-    return (
-      <RoomEndSoonCard
-        messageId={m.id}
-        roomId={m.linkTargetId}
-        content={m.content || 'Session ends in 15 minutes'}
-      />
-    )
-  }
-
   if (m.messageType === 'SYSTEM_ROOM_EXTENDED') {
     return (
       <p data-msgid={m.id} className="flex items-center justify-center gap-1.5 text-center text-xs text-muted italic">
@@ -1356,69 +1346,6 @@ function FileLinkCard({ fileId, caption, mine, cache, onNeedFile, onOpen }: File
         )}
       </div>
     </button>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Private: SYSTEM_ROOM_END_SOON renderer — the 15-min "extend?" prompt.
-// ---------------------------------------------------------------------------
-
-interface RoomEndSoonCardProps {
-  messageId: string
-  roomId: string
-  content: string
-}
-
-function RoomEndSoonCard({ messageId, roomId, content }: RoomEndSoonCardProps) {
-  const { t } = useTranslation()
-  const [extending, setExtending] = useState(false)
-  const [extended, setExtended] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  async function handleExtend() {
-    if (extending || extended) return
-    setExtending(true)
-    setError(null)
-    try {
-      await extendRoom(roomId)
-      setExtended(true)
-    } catch (err) {
-      setError(describeError(err, t,
-        {
-          ROOM_ENDED: 'groups.error.roomEnded',
-          NOT_GROUP_MEMBER: 'groups.error.notMember',
-          GROUP_SCHEDULE_CONFLICT: 'groups.error.extendConflictExpert',
-        },
-        'groups.error.extendRoom'))
-    } finally {
-      setExtending(false)
-    }
-  }
-
-  return (
-    <div
-      data-msgid={messageId}
-      className="self-center max-w-md w-full bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-2xl px-4 py-3 flex flex-col gap-2 shadow-themed"
-    >
-      <p className="flex items-center gap-1.5 text-sm font-medium text-amber-900 dark:text-amber-100">
-        <ClockIcon className="w-4 h-4 shrink-0" /> {content}
-      </p>
-      {error && <p className="text-xs text-rose-600">{error}</p>}
-      {extended ? (
-        <p className="text-xs text-emerald-700 dark:text-emerald-300 font-medium">
-          ✓ Session extended by 15 min
-        </p>
-      ) : (
-        <button
-          type="button"
-          onClick={handleExtend}
-          disabled={extending}
-          className="self-start text-xs font-semibold px-3 py-1.5 rounded-full bg-amber-600 hover:bg-amber-700 disabled:opacity-60 text-white transition-colors"
-        >
-          {extending ? 'Extending…' : 'Extend +15 min'}
-        </button>
-      )}
-    </div>
   )
 }
 

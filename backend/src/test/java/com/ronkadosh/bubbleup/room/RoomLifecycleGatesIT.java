@@ -4,8 +4,8 @@ import com.ronkadosh.bubbleup.calendar.model.CalendarEvent;
 import com.ronkadosh.bubbleup.calendar.model.CalendarEventType;
 import com.ronkadosh.bubbleup.calendar.model.CalendarOwnerType;
 import com.ronkadosh.bubbleup.calendar.persistence.CalendarEventRepository;
-import com.ronkadosh.bubbleup.chat.model.ChatMessageType;
 import com.ronkadosh.bubbleup.chat.persistence.ChatMessageRepository;
+import com.ronkadosh.bubbleup.room.application.RoomCallPresenceService;
 import com.ronkadosh.bubbleup.room.application.RoomLifecycleScheduler;
 import com.ronkadosh.bubbleup.room.internal.RoomInternalService;
 import com.ronkadosh.bubbleup.room.model.Room;
@@ -44,6 +44,7 @@ class RoomLifecycleGatesIT extends IntegrationTest {
     @Autowired ChatMessageRepository chatMessageRepository;
     @Autowired RoomLifecycleScheduler scheduler;
     @Autowired RoomInternalService roomInternalService;
+    @Autowired RoomCallPresenceService roomCallPresenceService;
 
     // ---------- Time-window gate ----------
 
@@ -62,7 +63,11 @@ class RoomLifecycleGatesIT extends IntegrationTest {
     }
 
     @Test
-    void getRoom_after_endsAt_returns_ROOM_ENDED() throws Exception {
+    void getRoom_after_endsAt_but_not_closed_is_still_joinable() throws Exception {
+        // A room past its scheduled endsAt but NOT yet closed (endedAt null) stays
+        // joinable — that's how an occupied room is kept alive into overtime. So the
+        // join gate must NOT reject with ROOM_ENDED. In the test profile (no JaaS creds)
+        // the request proceeds all the way to token issuance and fails there instead.
         AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
         Instant startsAt = Instant.now().minus(Duration.ofHours(2));
@@ -71,8 +76,8 @@ class RoomLifecycleGatesIT extends IntegrationTest {
         UUID roomId = roomRepository.findByCalendarEventId(eventId).orElseThrow().getId();
 
         mvc.perform(get("/api/rooms/{roomId}", roomId).with(bearer(owner)))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.error.code").value("ROOM_ENDED"));
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.error.code").value("JITSI_NOT_CONFIGURED"));
     }
 
     @Test
@@ -142,10 +147,10 @@ class RoomLifecycleGatesIT extends IntegrationTest {
     // ---------- Lifecycle scheduler ----------
 
     @Test
-    void scheduler_hard_closes_rooms_past_endsAt() throws Exception {
+    void scheduler_closes_empty_room_past_endsAt_grace() throws Exception {
         AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
-        // Event ended 5 min ago.
+        // Event ended 5 min ago and nobody is in the call → past the empty grace → close.
         UUID eventId = createEvent(owner, groupId, "STUDY_SESSION",
                 Instant.now().minus(Duration.ofHours(1)),
                 Instant.now().minus(Duration.ofMinutes(5)));
@@ -156,52 +161,59 @@ class RoomLifecycleGatesIT extends IntegrationTest {
         scheduler.tick();
 
         Room reloaded = roomRepository.findById(roomId).orElseThrow();
-        assertNotNull(reloaded.getEndedAt(), "Scheduler should set endedAt for past-end rooms");
+        assertNotNull(reloaded.getEndedAt(),
+                "An empty room well past endsAt (beyond the grace) should be hard-closed");
     }
 
     @Test
-    void scheduler_posts_end_soon_warning_within_15min_window() throws Exception {
+    void scheduler_keeps_occupied_room_open_past_endsAt() throws Exception {
         AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
-        // endsAt 10 min from now → inside the 15-min warning window.
+        // Ended 5 min ago, but someone is still in the call → stay alive.
         UUID eventId = createEvent(owner, groupId, "STUDY_SESSION",
-                Instant.now().minus(Duration.ofMinutes(5)),
-                Instant.now().plus(Duration.ofMinutes(10)));
+                Instant.now().minus(Duration.ofHours(1)),
+                Instant.now().minus(Duration.ofMinutes(5)));
         UUID roomId = roomRepository.findByCalendarEventId(eventId).orElseThrow().getId();
-        long before = countByType(ChatMessageType.SYSTEM_ROOM_END_SOON);
+        roomCallPresenceService.join(roomId, owner.id());
 
         scheduler.tick();
 
-        Room reloaded = roomRepository.findById(roomId).orElseThrow();
-        assertNotNull(reloaded.getEndWarningSentAt(),
-                "Scheduler should stamp endWarningSentAt once it posts the warning");
-        long after = countByType(ChatMessageType.SYSTEM_ROOM_END_SOON);
-        assertEquals(before + 1, after, "One SYSTEM_ROOM_END_SOON message should be posted");
+        assertNull(roomRepository.findById(roomId).orElseThrow().getEndedAt(),
+                "An occupied room must not be closed even past endsAt");
     }
 
     @Test
-    void scheduler_does_not_double_post_warning() throws Exception {
+    void scheduler_keeps_empty_room_within_grace() throws Exception {
         AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
+        // Ended only 30s ago — within the 2-min empty grace, even though never occupied.
         UUID eventId = createEvent(owner, groupId, "STUDY_SESSION",
-                Instant.now().minus(Duration.ofMinutes(5)),
-                Instant.now().plus(Duration.ofMinutes(10)));
-        // Touch eventId so the IDE doesn't flag it as unused — the scheduler picks the room up via repository.
-        assertTrue(roomRepository.findByCalendarEventId(eventId).isPresent());
-        long before = countByType(ChatMessageType.SYSTEM_ROOM_END_SOON);
+                Instant.now().minus(Duration.ofMinutes(30)),
+                Instant.now().minus(Duration.ofSeconds(30)));
+        UUID roomId = roomRepository.findByCalendarEventId(eventId).orElseThrow().getId();
 
         scheduler.tick();
-        scheduler.tick();   // second pass — should be a no-op for the warning.
 
-        long after = countByType(ChatMessageType.SYSTEM_ROOM_END_SOON);
-        assertEquals(before + 1, after,
-                "Second tick must not duplicate the warning (endWarningSentAt guards it)");
+        assertNull(roomRepository.findById(roomId).orElseThrow().getEndedAt(),
+                "A room just past endsAt (within the empty grace) should not be closed yet");
     }
 
-    private long countByType(ChatMessageType type) {
-        return chatMessageRepository.findAll().stream()
-                .filter(m -> m.getMessageType() == type)
-                .count();
+    @Test
+    void scheduler_keeps_room_within_grace_after_last_leave() throws Exception {
+        AuthedUser owner = registerEnrolled();
+        UUID groupId = createGroup(owner);
+        // Ended 5 min ago, but the last occupant only just left → grace runs from the leave.
+        UUID eventId = createEvent(owner, groupId, "STUDY_SESSION",
+                Instant.now().minus(Duration.ofHours(1)),
+                Instant.now().minus(Duration.ofMinutes(5)));
+        UUID roomId = roomRepository.findByCalendarEventId(eventId).orElseThrow().getId();
+        roomCallPresenceService.join(roomId, owner.id());
+        roomCallPresenceService.leave(roomId, owner.id());   // stamps lastOccupiedAt ≈ now
+
+        scheduler.tick();
+
+        assertNull(roomRepository.findById(roomId).orElseThrow().getEndedAt(),
+                "Room should stay open during the grace window measured from the last leave");
     }
 
     // ---------- helpers ----------

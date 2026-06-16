@@ -151,9 +151,13 @@ public class RoomInternalServiceImpl implements RoomInternalService {
             CalendarEventSummary event =
                     calendarInternalService.findById(room.getCalendarEventId()).orElse(null);
             if (event == null) continue;
-            // Joinable window: [startsAt - GROUP_OPEN_BEFORE, endsAt]. Mirrors RoomQueryService.requireOpen.
+            // Joinable window: from startsAt - GROUP_OPEN_BEFORE onwards. There's no hard
+            // upper bound at endsAt — a room stays live past its scheduled end while the
+            // call is occupied (mirrors RoomQueryService.requireOpen + the lifecycle
+            // scheduler). So past endsAt the room is only "live" if someone is still in it.
             Instant opensAt = event.startsAt().minus(RoomQueryService.GROUP_OPEN_BEFORE);
-            if (now.isBefore(opensAt) || now.isAfter(event.endsAt())) continue;
+            if (now.isBefore(opensAt)) continue;
+            if (now.isAfter(event.endsAt()) && roomCallPresenceService.count(room.getId()) == 0) continue;
             out.add(new LiveRoomSummary(
                     room.getId(),
                     room.getGroupId(),

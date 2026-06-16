@@ -1,5 +1,6 @@
 package com.ronkadosh.bubbleup.room.application;
 
+import com.ronkadosh.bubbleup.common.datetime.TimeProvider;
 import com.ronkadosh.bubbleup.common.error.AppException;
 import com.ronkadosh.bubbleup.common.error.ErrorCode;
 import com.ronkadosh.bubbleup.common.websocket.StompPrincipal;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 
 import java.security.Principal;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -45,9 +47,19 @@ public class RoomCallPresenceService {
     private final ExpertInternalService expertInternalService;
     private final WebSocketPublisher webSocketPublisher;
     private final WebSocketUserTracker webSocketUserTracker;
+    private final TimeProvider timeProvider;
 
     /** roomId → set of user IDs currently in the call. Empty sets are left in place (harmless). */
     private final Map<UUID, Set<UUID>> participantsByRoom = new ConcurrentHashMap<>();
+
+    /**
+     * roomId → the last instant the room had ≥1 occupant, stamped on every occupancy
+     * change (join / leave / disconnect). When a room empties, this ≈ the moment the
+     * last person left — the lifecycle scheduler uses it to apply an "empty for N min"
+     * grace before closing an overtime room. In-memory, same ephemerality as
+     * {@link #participantsByRoom} (lost on restart).
+     */
+    private final Map<UUID, Instant> lastOccupiedByRoom = new ConcurrentHashMap<>();
 
     // @Lazy on the WebSocket-infra beans breaks a cycle: this service is pulled in
     // by RoomInternalServiceImpl, and both WebSocketPublisher and WebSocketUserTracker
@@ -59,12 +71,14 @@ public class RoomCallPresenceService {
             GroupInternalService groupInternalService,
             ExpertInternalService expertInternalService,
             @Lazy WebSocketPublisher webSocketPublisher,
-            @Lazy WebSocketUserTracker webSocketUserTracker) {
+            @Lazy WebSocketUserTracker webSocketUserTracker,
+            TimeProvider timeProvider) {
         this.roomRepository = roomRepository;
         this.groupInternalService = groupInternalService;
         this.expertInternalService = expertInternalService;
         this.webSocketPublisher = webSocketPublisher;
         this.webSocketUserTracker = webSocketUserTracker;
+        this.timeProvider = timeProvider;
     }
 
     public void join(UUID roomId, UUID userId) {
@@ -72,6 +86,7 @@ public class RoomCallPresenceService {
                 .orElseThrow(() -> new AppException(ErrorCode.ROOM_NOT_FOUND));
         requireMember(room, userId);
         if (participantsByRoom.computeIfAbsent(roomId, k -> ConcurrentHashMap.newKeySet()).add(userId)) {
+            touchOccupancy(roomId);
             broadcast(roomId);
         }
     }
@@ -79,6 +94,7 @@ public class RoomCallPresenceService {
     public void leave(UUID roomId, UUID userId) {
         Set<UUID> set = participantsByRoom.get(roomId);
         if (set != null && set.remove(userId)) {
+            touchOccupancy(roomId);
             broadcast(roomId);
         }
     }
@@ -86,6 +102,19 @@ public class RoomCallPresenceService {
     public int count(UUID roomId) {
         Set<UUID> set = participantsByRoom.get(roomId);
         return set == null ? 0 : set.size();
+    }
+
+    /**
+     * The last instant the room had ≥1 occupant, or {@code null} if it has never been
+     * occupied this process lifetime. When empty, this ≈ when the last person left.
+     */
+    public Instant lastOccupiedAt(UUID roomId) {
+        return lastOccupiedByRoom.get(roomId);
+    }
+
+    /** Stamp the room's last-occupancy-change instant. Called on every join/leave/disconnect. */
+    private void touchOccupancy(UUID roomId) {
+        lastOccupiedByRoom.put(roomId, timeProvider.now());
     }
 
     /**
@@ -102,7 +131,10 @@ public class RoomCallPresenceService {
         for (Map.Entry<UUID, Set<UUID>> e : participantsByRoom.entrySet()) {
             if (e.getValue().remove(userId)) affected.add(e.getKey());
         }
-        for (UUID roomId : affected) broadcast(roomId);
+        for (UUID roomId : affected) {
+            touchOccupancy(roomId);
+            broadcast(roomId);
+        }
     }
 
     private void broadcast(UUID roomId) {
