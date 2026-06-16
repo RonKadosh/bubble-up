@@ -221,7 +221,8 @@
       "enrollForTerm": "הרשמה ל-{{code}}",
       "enrolling": "נרשם…",
       "unenroll": "ביטול הרשמה",
-      "notOffered": "לא מוצע בסמסטר זה"
+      "notOffered": "לא מוצע בסמסטר זה",
+      "offeredInOtherTerm": "מוצע ב־{{term}} — ההרשמה נפתחת בסמסטר הנוכחי"
     },
     "confirmUnenroll": {
       "title": "לבטל את ההרשמה לקורס?",

@@ -231,7 +231,8 @@
       "enrollForTerm": "Enroll for {{code}}",
       "enrolling": "Enrolling…",
       "unenroll": "Unenroll",
-      "notOffered": "Not offered this term"
+      "notOffered": "Not offered this term",
+      "offeredInOtherTerm": "Offered in {{term}} — enrollment opens in the current term"
     },
     "confirmUnenroll": {
       "title": "Unenroll from this course?",

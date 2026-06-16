@@ -231,7 +231,8 @@
       "enrollForTerm": "التسجيل في {{code}}",
       "enrolling": "جارٍ التسجيل…",
       "unenroll": "إلغاء التسجيل",
-      "notOffered": "لم يتم تقديم هذا المصطلح"
+      "notOffered": "لم يتم تقديم هذا المصطلح",
+      "offeredInOtherTerm": "يُقدّم في {{term}} — يفتح التسجيل في الفصل الحالي"
     },
     "confirmUnenroll": {
       "title": "هل تريد إلغاء التسجيل في هذه الدورة؟",

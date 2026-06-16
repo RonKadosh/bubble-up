@@ -441,6 +441,7 @@ export default function AcademyPage() {
                 termsById={termsById}
                 deptsById={deptsById}
                 currentTerm={currentTerm}
+                selectedTerm={selectedTermId ? termsById.get(selectedTermId) ?? null : null}
                 enrollment={enrolledCourseIds.get(course.id) ?? null}
                 enrollBusy={enrollBusy}
                 onEnroll={() => handleEnroll(course.id)}
@@ -773,6 +774,7 @@ function CourseDetail({
   termsById,
   deptsById,
   currentTerm,
+  selectedTerm,
   enrollment,
   enrollBusy,
   onEnroll,
@@ -784,6 +786,8 @@ function CourseDetail({
   termsById: Map<string, Term>
   deptsById: Map<string, Department>
   currentTerm: Term | null
+  /** The term the user is browsing (the page-level Term selector). */
+  selectedTerm: Term | null
   enrollment: Enrollment | null
   enrollBusy: boolean
   onEnroll: () => void
@@ -803,6 +807,15 @@ function CourseDetail({
   const hasCurrentOffering = useMemo(
     () => currentTerm != null && offerings.some((o) => o.termId === currentTerm.id),
     [currentTerm, offerings]
+  )
+  // The course is offered in the term being browsed, which may differ from the
+  // current (enrollment) term — in which case it's offered, just not enrollable yet.
+  const offeredInSelectedOtherTerm = useMemo(
+    () =>
+      selectedTerm != null &&
+      selectedTerm.id !== currentTerm?.id &&
+      offerings.some((o) => o.termId === selectedTerm.id),
+    [selectedTerm, currentTerm, offerings]
   )
   const isEnrolled = enrollment != null
 
@@ -836,6 +849,10 @@ function CourseDetail({
               ? t('academy.detail.enrollForTerm', { code: currentTerm.code })
               : t('academy.detail.enroll')}
           </Button>
+        ) : offeredInSelectedOtherTerm && selectedTerm ? (
+          <span className="text-xs text-muted px-3 py-1.5 rounded-full border border-line bg-surface-muted">
+            {t('academy.detail.offeredInOtherTerm', { term: selectedTerm.name })}
+          </span>
         ) : (
           <span className="text-xs text-muted px-3 py-1.5 rounded-full border border-line bg-surface-muted">
             {t('academy.detail.notOffered')}
