@@ -183,9 +183,11 @@ public class ChatCommandService {
                             "unsupported link target type: " + req.linkTargetType());
                 }
             }
-            case SYSTEM_JOIN, SYSTEM_LEAVE ->
-                    throw new AppException(ErrorCode.VALIDATION_ERROR,
-                            "system messages cannot be sent via HTTP");
+            // Every non-content type is system-initiated only. A default arm (not an
+            // enumerated SYSTEM_* list) keeps this closed: a newly added SYSTEM_* enum
+            // value is rejected automatically instead of silently falling through.
+            default -> throw new AppException(ErrorCode.VALIDATION_ERROR,
+                    "system messages cannot be sent via HTTP");
         }
     }
 }

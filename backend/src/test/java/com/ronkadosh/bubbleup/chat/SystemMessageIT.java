@@ -1,7 +1,10 @@
 package com.ronkadosh.bubbleup.chat;
 
+import com.ronkadosh.bubbleup.chat.model.ChatMessageType;
 import com.ronkadosh.bubbleup.support.IntegrationTest;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.http.MediaType;
 
 import java.util.UUID;
@@ -11,6 +14,33 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 class SystemMessageIT extends IntegrationTest {
+
+    /**
+     * Regression guard: no SYSTEM_* type may be posted over HTTP. The validation
+     * switch in ChatCommandService rejects every non-content type via a {@code default}
+     * arm, so adding a new SYSTEM_* enum value can't silently reopen the spoof hole.
+     * EXCLUDE filters down to the SYSTEM_* members — TEXT/LINK are the legitimate
+     * client-sendable types and have their own happy-path coverage.
+     */
+    @ParameterizedTest
+    @EnumSource(value = ChatMessageType.class, names = {"TEXT", "LINK"}, mode = EnumSource.Mode.EXCLUDE)
+    void system_message_types_cannot_be_posted_via_http(ChatMessageType type) throws Exception {
+        AuthedUser owner = registerEnrolled();
+        createGroup(owner, "PUBLIC");
+        UUID defaultRoomId = defaultRoomId(owner);
+
+        mvc.perform(post("/api/chat/rooms/{id}/messages", defaultRoomId)
+                        .with(bearer(owner))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(String.format("{\"content\":\"spoofed\",\"type\":\"%s\"}", type)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+
+        // Nothing was persisted — the room is still empty.
+        mvc.perform(get("/api/chat/rooms/{id}/messages", defaultRoomId).with(bearer(owner)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(0));
+    }
 
     @Test
     void join_emits_system_join_in_default_room() throws Exception {
