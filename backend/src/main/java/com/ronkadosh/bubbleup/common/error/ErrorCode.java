@@ -47,6 +47,7 @@ public enum ErrorCode {
 
     // Group files
     FILE_TOO_LARGE(ErrorCategory.VALIDATION, HttpStatus.PAYLOAD_TOO_LARGE),
+    GROUP_STORAGE_QUOTA_EXCEEDED(ErrorCategory.VALIDATION, HttpStatus.PAYLOAD_TOO_LARGE),
     FILE_TYPE_BLOCKED(ErrorCategory.VALIDATION, HttpStatus.BAD_REQUEST),
     GROUP_FILE_NOT_FOUND(ErrorCategory.NOT_FOUND, HttpStatus.NOT_FOUND),
     NOT_FILE_UPLOADER_OR_GROUP_OWNER(ErrorCategory.FORBIDDEN, HttpStatus.FORBIDDEN),

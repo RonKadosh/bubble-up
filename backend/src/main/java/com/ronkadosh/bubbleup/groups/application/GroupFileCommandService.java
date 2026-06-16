@@ -26,7 +26,11 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class GroupFileCommandService {
 
+    /** Per-file cap. A single upload may not exceed this. */
     static final long MAX_BYTES = 25L * 1024 * 1024;
+
+    /** Per-group total cap. The sum of all of a group's files may not exceed this. */
+    static final long GROUP_QUOTA_BYTES = 25L * 1024 * 1024;
 
     private final GroupFileRepository repo;
     private final GroupFolderRepository folderRepo;
@@ -43,6 +47,11 @@ public class GroupFileCommandService {
         }
         if (file.getSize() > MAX_BYTES) {
             throw new AppException(ErrorCode.FILE_TOO_LARGE);
+        }
+        long currentTotal = repo.sumSizeBytesByGroupId(groupId);
+        if (currentTotal + file.getSize() > GROUP_QUOTA_BYTES) {
+            throw new AppException(ErrorCode.GROUP_STORAGE_QUOTA_EXCEEDED,
+                    "Group storage limit is " + (GROUP_QUOTA_BYTES / (1024 * 1024)) + " MB");
         }
         typeFilter.requireAllowed(file.getOriginalFilename(), file.getContentType());
         if (folderId != null) {

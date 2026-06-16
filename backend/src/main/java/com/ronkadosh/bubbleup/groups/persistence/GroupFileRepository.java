@@ -28,6 +28,10 @@ public interface GroupFileRepository extends JpaRepository<GroupFile, UUID> {
 
     Optional<GroupFile> findByIdAndGroupId(UUID id, UUID groupId);
 
+    /** Total bytes currently stored for a group — drives the per-group storage quota. */
+    @Query("select coalesce(sum(f.sizeBytes), 0) from GroupFile f where f.groupId = :groupId")
+    long sumSizeBytesByGroupId(@Param("groupId") UUID groupId);
+
     boolean existsByFolderId(UUID folderId);
 
     @Modifying

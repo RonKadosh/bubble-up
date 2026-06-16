@@ -88,6 +88,21 @@ class GroupFileIT extends IntegrationTest {
     }
 
     @Test
+    void group_total_storage_quota_enforced() throws Exception {
+        AuthedUser owner = registerEnrolled();
+        UUID groupId = createGroup(owner);
+        // First file is under the per-file cap and under the 25 MB group total.
+        uploadFile(owner, groupId, "big1.bin", "application/octet-stream", new byte[20 * 1024 * 1024]);
+        // Second file is under the per-file cap on its own, but pushes the group
+        // total to 30 MB — over the 25 MB group quota → rejected.
+        MockMultipartFile second = new MockMultipartFile(
+                "file", "big2.bin", "application/octet-stream", new byte[10 * 1024 * 1024]);
+        mvc.perform(multipart("/api/groups/{id}/files", groupId).file(second).with(bearer(owner)))
+                .andExpect(status().isPayloadTooLarge())
+                .andExpect(jsonPath("$.error.code").value("GROUP_STORAGE_QUOTA_EXCEEDED"));
+    }
+
+    @Test
     void download_returns_bytes_and_headers() throws Exception {
         AuthedUser owner = registerEnrolled();
         UUID groupId = createGroup(owner);
