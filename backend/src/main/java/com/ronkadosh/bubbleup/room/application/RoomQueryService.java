@@ -127,9 +127,13 @@ public class RoomQueryService {
         boolean videoOpen = videoOpensAt != null && !now.isBefore(videoOpensAt);
         String jwt = null;
         if (videoOpen || isHost) {
-            // JWT exp == event.endsAt (the time-window gate above guarantees we never reach
-            // here past endsAt). The token service still caps further by tokenTtl when shorter.
-            Instant hardExpiry = event != null ? event.endsAt() : null;
+            // The token is NOT capped at endsAt: a room stays alive past its scheduled
+            // end while the call is occupied (see RoomLifecycleScheduler), so the JWT must
+            // outlive endsAt or JaaS would kick everyone at the scheduled end. A fresh token
+            // is minted on every GET, so overtime sessions keep getting valid tokens; the
+            // server-side empty-close (ENDED broadcast) is the real lifecycle bound. The
+            // token service still bounds each token by tokenTtl (default 2h).
+            Instant hardExpiry = null;
             UserIdentity identity = authInternalService.getIdentity(requester.id()).orElse(null);
             // GROUP rooms: no Jitsi moderator. EXPERT_SESSION rooms: the host gets
             // moderator privileges (mute, kick, share-screen permissions), participants don't.
@@ -149,16 +153,19 @@ public class RoomQueryService {
     }
 
     /**
-     * Time-window gate: a member can open the room only during
-     * {@code [event.startsAt - openBefore, event.endsAt]}. The {@code openBefore}
-     * window depends on scope — 15 min for GROUP rooms, 5 min for EXPERT_SESSION
-     * rooms. After {@code endsAt} or once {@code Room.endedAt} is set by the
-     * lifecycle scheduler, joining is permanently closed.
+     * Time-window gate: a member can open the room only from
+     * {@code event.startsAt - openBefore} onwards. The {@code openBefore} window
+     * depends on scope — 15 min for GROUP rooms, 5 min for EXPERT_SESSION rooms.
+     *
+     * <p>There is intentionally <b>no upper bound at {@code endsAt}</b>: a room
+     * stays alive past its scheduled end while the call is occupied, and a member
+     * may join or rejoin during that overtime (rejoining is what keeps it alive).
+     * Joining is closed only once the lifecycle scheduler stamps {@code Room.endedAt}
+     * (set after the call has been empty past {@code endsAt} for the grace window) —
+     * ended is ended for everyone.
      *
      * <p>The EXPERT_SESSION host is exempt from the "not yet open" gate so they
-     * can arrive early to set up the room. They still cannot enter past
-     * {@code endsAt} / once the lifecycle scheduler closed the room — ended is
-     * ended for everyone.
+     * can arrive early to set up the room.
      */
     private void requireOpen(Room room, CalendarEventSummary event, boolean isHost) {
         if (event == null) {
@@ -177,7 +184,7 @@ public class RoomQueryService {
                         : ErrorCode.ROOM_NOT_YET_OPEN);
             }
         }
-        if (room.getEndedAt() != null || now.isAfter(event.endsAt())) {
+        if (room.getEndedAt() != null) {
             throw new AppException(ErrorCode.ROOM_ENDED);
         }
     }

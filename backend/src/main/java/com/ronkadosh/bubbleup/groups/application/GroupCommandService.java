@@ -1,6 +1,7 @@
 package com.ronkadosh.bubbleup.groups.application;
 
 import com.ronkadosh.bubbleup.auth.internal.AuthInternalService;
+import com.ronkadosh.bubbleup.auth.internal.dto.UserIdentity;
 import com.ronkadosh.bubbleup.calendar.internal.CalendarInternalService;
 import com.ronkadosh.bubbleup.calendar.model.CalendarOwnerType;
 import com.ronkadosh.bubbleup.catalog.internal.CatalogInternalService;
@@ -173,7 +174,17 @@ public class GroupCommandService {
         eventPublisher.publishEvent(new GroupMembershipChangedEvent(groupId));
     }
 
+    /**
+     * Label for a member in a SYSTEM_JOIN / SYSTEM_LEAVE chat notice. Prefers the
+     * display name (matching the expert-session "X joined the session" row), falls
+     * back to email, then a short id when neither is available.
+     */
     private String displayFor(UUID userId) {
+        String name = authInternalService.getIdentity(userId)
+                .map(UserIdentity::displayName)
+                .filter(n -> n != null && !n.isBlank())
+                .orElse(null);
+        if (name != null) return name;
         return authInternalService.getEmail(userId)
                 .orElseGet(() -> userId.toString().substring(0, 8));
     }

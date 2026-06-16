@@ -58,7 +58,7 @@ class SystemMessageIT extends IntegrationTest {
                 .andExpect(jsonPath("$.data[0].messageType").value("SYSTEM_JOIN"))
                 .andExpect(jsonPath("$.data[0].senderId").doesNotExist())
                 .andExpect(jsonPath("$.data[0].subjectUserId").value(joiner.id().toString()))
-                .andExpect(jsonPath("$.data[0].content").value(joiner.email()));
+                .andExpect(jsonPath("$.data[0].content").value(joiner.displayName()));
     }
 
     @Test
@@ -129,7 +129,7 @@ class SystemMessageIT extends IntegrationTest {
                 .andExpect(jsonPath("$.data.length()").value(1))
                 .andExpect(jsonPath("$.data[0].messageType").value("SYSTEM_JOIN"))
                 .andExpect(jsonPath("$.data[0].subjectUserId").value(invitee.id().toString()))
-                .andExpect(jsonPath("$.data[0].content").value(invitee.email()));
+                .andExpect(jsonPath("$.data[0].content").value(invitee.displayName()));
     }
 
     private UUID createGroup(AuthedUser owner, String visibility) throws Exception {

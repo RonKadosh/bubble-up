@@ -163,6 +163,7 @@ public abstract class IntegrationTest {
         return new AuthedUser(
                 u.id(),
                 u.email(),
+                u.displayName(),
                 data.get("accessToken").asText(),
                 data.get("refreshToken").asText()
         );
@@ -185,6 +186,7 @@ public abstract class IntegrationTest {
         return new AuthedUser(
                 UUID.fromString(data.get("userId").asText()),
                 email,
+                displayName,
                 data.get("accessToken").asText(),
                 data.get("refreshToken").asText()
         );
@@ -198,5 +200,5 @@ public abstract class IntegrationTest {
     }
 
     /** `jwt` is the access JWT (kept short to minimize churn across existing tests). */
-    public record AuthedUser(UUID id, String email, String jwt, String refreshToken) {}
+    public record AuthedUser(UUID id, String email, String displayName, String jwt, String refreshToken) {}
 }

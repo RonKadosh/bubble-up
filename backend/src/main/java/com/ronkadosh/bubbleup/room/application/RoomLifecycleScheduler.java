@@ -29,18 +29,19 @@ import java.util.UUID;
  * Drives the room session lifecycle:
  *
  * <ul>
- *   <li>15 min before {@code endsAt} — posts the SYSTEM_ROOM_END_SOON chat
- *       message with an Extend CTA. Stamps {@code endWarningSentAt} so we
- *       don't double-post. The extend flow clears this stamp, allowing a fresh
- *       warning to fire before the new end time.</li>
- *   <li>At {@code endsAt} — hard-closes the room: sets {@code endedAt}, clears
- *       the in-memory whiteboard snapshot, broadcasts {@code ENDED} on
+ *   <li>Past {@code endsAt} — hard-closes the room <b>only once the call has
+ *       emptied</b>: while anyone is still in the call the room stays alive
+ *       past its scheduled end. Once empty, it closes after
+ *       {@link #OVERTIME_EMPTY_GRACE} of continuous emptiness (a never-used room
+ *       closes {@code endsAt + grace}). Hard-close sets {@code endedAt}, clears
+ *       the in-memory whiteboard snapshot, and broadcasts {@code ENDED} on
  *       {@code /topic/rooms/{id}/lifecycle}.</li>
  * </ul>
  *
- * Runs every 30 seconds. Two-tick precision is plenty for a 15-min warning
- * and a hard close — the JaaS JWT exp is also bounded to {@code endsAt} so a
- * client can't sneak past even if we're slow.
+ * Runs every 30 seconds. Occupancy comes from {@link RoomCallPresenceService}
+ * (live in-call count + last-occupied stamp). The ENDED broadcast — not the JaaS
+ * JWT exp — is now the lifecycle bound, since the token is allowed to outlive
+ * {@code endsAt} so an occupied call isn't kicked at its scheduled end.
  *
  * <p><b>Transaction boundary</b>: {@link #tick()} is intentionally NOT
  * {@code @Transactional}. Each per-room action runs in its own transaction
@@ -58,8 +59,12 @@ import java.util.UUID;
 @Slf4j
 public class RoomLifecycleScheduler {
 
-    /** How early before {@code endsAt} to post the "ends soon" warning. */
-    private static final Duration WARN_BEFORE = Duration.ofMinutes(15);
+    /**
+     * How long a room must stay empty (no one in the call) past {@code endsAt}
+     * before the scheduler hard-closes it. Gives a brief reconnect/reload window
+     * so a momentary 0-count doesn't kill an otherwise-active overtime session.
+     */
+    private static final Duration OVERTIME_EMPTY_GRACE = Duration.ofMinutes(2);
     /** EXPERT_SESSION rooms: how early before {@code startsAt} the
      *  registration window closes and the "session is opening" system message
      *  fires into each enrolled group's chat. */
@@ -69,6 +74,7 @@ public class RoomLifecycleScheduler {
     private final CalendarInternalService calendarInternalService;
     private final ChatInternalService chatInternalService;
     private final ExpertInternalService expertInternalService;
+    private final RoomCallPresenceService roomCallPresenceService;
     private final WhiteboardRelay whiteboardRelay;
     private final WebSocketPublisher webSocketPublisher;
     private final TimeProvider timeProvider;
@@ -89,6 +95,7 @@ public class RoomLifecycleScheduler {
             CalendarInternalService calendarInternalService,
             @Lazy ChatInternalService chatInternalService,
             ExpertInternalService expertInternalService,
+            RoomCallPresenceService roomCallPresenceService,
             WhiteboardRelay whiteboardRelay,
             @Lazy WebSocketPublisher webSocketPublisher,
             TimeProvider timeProvider) {
@@ -96,6 +103,7 @@ public class RoomLifecycleScheduler {
         this.calendarInternalService = calendarInternalService;
         this.chatInternalService = chatInternalService;
         this.expertInternalService = expertInternalService;
+        this.roomCallPresenceService = roomCallPresenceService;
         this.whiteboardRelay = whiteboardRelay;
         this.webSocketPublisher = webSocketPublisher;
         this.timeProvider = timeProvider;
@@ -141,18 +149,24 @@ public class RoomLifecycleScheduler {
         CalendarEventSummary event = eventOpt.get();
         if (event.endsAt() == null) return;
 
-        // Pass A: hard-close if past endsAt.
+        // Pass A: hard-close past endsAt — but only once the call has emptied for
+        // OVERTIME_EMPTY_GRACE. While anyone is in the call the room stays alive past
+        // its scheduled end (the user-facing "stay active as long as there are people
+        // in the room" behavior). Applies to both GROUP and EXPERT_SESSION scopes.
         if (now.isAfter(event.endsAt())) {
-            self.hardCloseTx(roomId, now);
-            return;
-        }
-
-        // Pass B: 15-min warning. Skip if already sent for this end time.
-        if (room.getEndWarningSentAt() == null) {
-            Instant warnAt = event.endsAt().minus(WARN_BEFORE);
-            if (!now.isBefore(warnAt) && now.isBefore(event.endsAt())) {
-                self.sendEndSoonWarningTx(roomId, now);
+            if (roomCallPresenceService.count(roomId) > 0) {
+                return;   // occupied → keep alive past endsAt
             }
+            Instant lastOccupied = roomCallPresenceService.lastOccupiedAt(roomId);
+            Instant emptySince = lastOccupied != null ? lastOccupied : event.endsAt();
+            Instant closeAt = emptySince.plus(OVERTIME_EMPTY_GRACE);
+            if (closeAt.isBefore(event.endsAt())) {
+                closeAt = event.endsAt();   // never close before the scheduled end
+            }
+            if (now.isAfter(closeAt)) {
+                self.hardCloseTx(roomId, now);
+            }
+            return;
         }
 
         // Pass C: EXPERT_SESSION registration close — at startsAt - 5min,
@@ -234,44 +248,6 @@ public class RoomLifecycleScheduler {
             log.warn("[RoomLifecycle] broadcast ENDED failed for room {}: {}", room.getId(), e.getMessage());
         }
         log.info("[RoomLifecycle] hard-closed room {}", room.getId());
-    }
-
-    /**
-     * Stamps {@code endWarningSentAt} and posts the system chat message in
-     * one transaction. The stamp commits even if the chat post fails — we
-     * deliberately do NOT swallow the chat exception so the tx commits with
-     * the stamp set; if there's a downstream chat layer issue we'd rather
-     * skip the warning than log-spam every 30s.
-     *
-     * <p>The trick: we run the chat post inside its OWN nested call wrapped in
-     * a try/catch logger. Because that nested call goes through the self-proxy
-     * with {@code REQUIRES_NEW}, its failure doesn't poison our outer tx.
-     */
-    @Transactional
-    public void sendEndSoonWarningTx(UUID roomId, Instant now) {
-        Room room = roomRepository.findById(roomId).orElse(null);
-        if (room == null || room.getEndWarningSentAt() != null || room.getEndedAt() != null) return;
-        room.setEndWarningSentAt(now);
-        roomRepository.save(room);
-        UUID groupId = room.getGroupId();
-        if (groupId == null) return;
-        // Post via a separate transaction so a chat failure doesn't roll back our stamp.
-        try {
-            self.postWarningMessageTx(groupId, room.getId());
-        } catch (RuntimeException e) {
-            log.warn("[RoomLifecycle] warning post failed for room {}: {}", room.getId(), e.getMessage());
-        }
-    }
-
-    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
-    public void postWarningMessageTx(UUID groupId, UUID roomId) {
-        chatInternalService.postSystemMessageWithLink(
-                groupId,
-                ChatMessageType.SYSTEM_ROOM_END_SOON,
-                "Session ends in 15 minutes",
-                ChatLinkTargetType.ROOM,
-                roomId
-        );
     }
 
     /**

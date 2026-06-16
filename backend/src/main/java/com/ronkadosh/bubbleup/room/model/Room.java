@@ -64,9 +64,11 @@ public class Room {
     private Instant endedAt;
 
     /**
-     * Stamped the first time the lifecycle scheduler posts the "ends in 15 min"
-     * system message. Prevents duplicate prompts on subsequent ticks. Reset to
-     * null on extend, so a fresh warning fires before the new {@code endsAt}.
+     * Vestigial — no longer written by the lifecycle scheduler. Previously stamped
+     * when the scheduler posted the "ends in 15 min" warning, which was removed when
+     * rooms switched to "stay alive while occupied" (close on empty, not at endsAt).
+     * The column is kept to avoid a prod drop (no Flyway); {@code RoomCommandService.extend}
+     * still nulls it harmlessly.
      */
     @Column(name = "end_warning_sent_at")
     @Setter
