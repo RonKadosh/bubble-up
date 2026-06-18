@@ -69,6 +69,11 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        # Enable the dev-only password page (/login/testing) in the local stack
+        # so it can be exercised against the containerized backend. The prod
+        # compose uses a prebuilt CI image that never sets this, so prod stays off.
+        VITE_DEV_LOGIN: "true"
     ports:
       - "3000:80"
     depends_on:
