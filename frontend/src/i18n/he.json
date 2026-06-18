@@ -165,7 +165,15 @@
     "errorBanned": "החשבון הזה חסום כרגע.",
     "errorSuspended": "החשבון הזה מושעה כרגע.",
     "errorOAuthCancelled": "ההתחברות עם Google בוטלה או לא הושלמה.",
-    "errorSessionExpired": "פג תוקף ההתחברות שלכם. התחילו שוב עם Google."
+    "errorSessionExpired": "פג תוקף ההתחברות שלכם. התחילו שוב עם Google.",
+    "heroTitle": "שדרגו את",
+    "heroTitleAccent": "חוויית הלמידה.",
+    "heroSubtitle": "נבנתה על ידי סטודנטים, עבור סטודנטים — המרחב שבו קבוצות הלמידה שלכם נפגשות, מתכננות וצומחות יחד.",
+    "demoTitle": "רוצים להתנסות?",
+    "demoSubtitle": "סיור קצר ב-Bubble.up עוד לפני ההתחברות. כך נראות הבועות, החדרים והיומנים המשותפים.",
+    "demoCta": "לדמו",
+    "demoComingSoon": "הדגמה בקרוב 🫧 אנחנו עוד משייפים אותה.",
+    "footerRights": "© 2026 Bubble.up. כל הזכויות שמורות."
   },
   "oauth": {
     "signingYouIn": "מחברים אותך",

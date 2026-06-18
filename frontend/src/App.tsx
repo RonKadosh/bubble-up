@@ -1,8 +1,7 @@
-import { useEffect } from 'react'
+import { useEffect, lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import LoginPage from './pages/LoginPage'
 import OAuthCallbackPage from './pages/auth/OAuthCallbackPage'
-import TestingLoginPage from './pages/auth/TestingLoginPage'
 import DashboardPage from './pages/DashboardPage'
 import GroupsPage from './pages/GroupsPage'
 import ProfilePage from './pages/ProfilePage'
@@ -27,6 +26,15 @@ import { applyThemeClass, useThemeStore } from './store/themeStore'
 import { applyLangAttrs, useLanguageStore } from './store/languageStore'
 import i18n from './i18n'
 import { connectWs, disconnectWs } from './api/ws'
+
+// Dev-only password login (`/login/testing`). `__DEV_LOGIN__` is a build-time
+// literal (see vite.config.ts): true under `npm run dev` and in the local
+// docker-compose stack (which passes VITE_DEV_LOGIN=true), false in production
+// CI builds. When false, this dynamic import — and its chunk, including the
+// restored login/register API code — is dead-code-eliminated from the bundle.
+const TestingLoginPage = __DEV_LOGIN__
+  ? lazy(() => import('./pages/auth/TestingLoginPage'))
+  : null
 
 function RequireAuth({ children }: { children: JSX.Element }) {
   const accessToken = useAuthStore((s) => s.accessToken)
@@ -98,7 +106,15 @@ export default function App() {
       <Routes>
         <Route path="/" element={<LandingRedirect />} />
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/login/testing" element={<TestingLoginPage />} />
+        {/* Dev-only password login. Registered only when import.meta.env.DEV;
+            in prod TestingLoginPage is null, the route is absent, and the path
+            falls through to the catch-all redirect below. */}
+        {TestingLoginPage && (
+          <Route
+            path="/login/testing"
+            element={<Suspense fallback={null}><TestingLoginPage /></Suspense>}
+          />
+        )}
         {/* OAuth landing page — public on purpose: /auth/callback reads
             tokens from the URL fragment and hydrates authStore. */}
         <Route path="/auth/callback" element={<OAuthCallbackPage />} />

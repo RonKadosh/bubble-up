@@ -165,7 +165,15 @@
     "errorBanned": "This account is currently banned.",
     "errorSuspended": "This account is currently suspended.",
     "errorOAuthCancelled": "Google sign-in was cancelled or could not be completed.",
-    "errorSessionExpired": "Your sign-up session expired. Please start again with Google."
+    "errorSessionExpired": "Your sign-up session expired. Please start again with Google.",
+    "heroTitle": "Level up your",
+    "heroTitleAccent": "study game.",
+    "heroSubtitle": "Built for students, by students — the hub where your study Bubbles meet, plan, and grow together.",
+    "demoTitle": "Want to try it out?",
+    "demoSubtitle": "Take a quick tour of Bubble.up before you sign in. See how Bubbles, rooms, and shared calendars come together.",
+    "demoCta": "Go to demo",
+    "demoComingSoon": "Demo coming soon 🫧 we're putting the finishing touches on it.",
+    "footerRights": "© 2026 Bubble.up. All rights reserved."
   },
   "oauth": {
     "signingYouIn": "Signing you in",
