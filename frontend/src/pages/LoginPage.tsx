@@ -1,15 +1,22 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { GOOGLE_OAUTH_START_URL } from '../api/auth'
 import { useAuthStore } from '../store/authStore'
-import { AuthScene } from '../components/AuthScene'
+import { Button } from '../components/Button'
+import { BubbleField } from '../components/BubbleField'
+import { BubbleLogo, ArrowRightIcon } from '../components/Icons'
 
 /**
- * Single-button sign-in screen. The button is a plain anchor pointing at
- * the Spring Security entry URL — the browser must navigate there directly
- * so Spring can attach the SESSION cookie used during the round-trip to
- * Google. Don't fetch this URL from axios; it won't work.
+ * Public landing page + sign-in. A real product page (top bar → hero with the
+ * sign-in card → "try the demo" call-out → footer), rendered in the Bubble.up
+ * visual language (iridescent card, brand gradients, pill buttons). Google
+ * OAuth is the only sign-in path — the old password form has been removed.
+ *
+ * The Google button is a plain anchor-style full-page navigate to the Spring
+ * Security entry URL — the browser must go there directly so Spring can attach
+ * the SESSION cookie used during the round-trip to Google. Don't fetch it from
+ * axios; it won't work.
  */
 export default function LoginPage() {
   const { t } = useTranslation()
@@ -17,6 +24,12 @@ export default function LoginPage() {
   const accessToken = useAuthStore((s) => s.accessToken)
   const [params] = useSearchParams()
   const [error, setError] = useState<string>('')
+
+  // The real demo is being built by a teammate; for now the CTA flashes a
+  // self-contained "coming soon" notice (the global Toaster isn't mounted on
+  // this public route). Swap showDemoNotice for a navigate/link when it lands.
+  const [demoNotice, setDemoNotice] = useState<boolean>(false)
+  const demoTimer = useRef<number | null>(null)
 
   // Already signed in? Go straight into the app.
   useEffect(() => {
@@ -32,35 +45,113 @@ export default function LoginPage() {
     setError(errorMessage(code, t))
   }, [params, t])
 
+  // Clear any pending notice timer on unmount.
+  useEffect(() => () => { if (demoTimer.current) window.clearTimeout(demoTimer.current) }, [])
+
   function startGoogleSignIn() {
     // Full-page navigate. The backend issues an HTTP 302 to accounts.google.com.
     window.location.assign(GOOGLE_OAUTH_START_URL)
   }
 
+  function showDemoNotice() {
+    setDemoNotice(true)
+    if (demoTimer.current) window.clearTimeout(demoTimer.current)
+    demoTimer.current = window.setTimeout(() => setDemoNotice(false), 3600)
+  }
+
   return (
-    <AuthScene>
-      <h1 className="text-3xl font-bold text-base">{t('login.headingSignIn')}</h1>
-      <p className="text-sm text-muted mt-2 mb-8">{t('login.subGoogleOnly')}</p>
+    <div className="relative flex min-h-screen flex-col overflow-x-hidden bg-base text-base">
+      <div className="pointer-events-none absolute inset-0 z-0 bg-brand-gradient-soft opacity-30 dark:opacity-20" />
 
-      {error && (
-        <div className="bg-danger-soft text-danger text-sm px-4 py-2.5 rounded-2xl border border-line mb-4 animate-pop-in">
-          {error}
+      {/* Top bar */}
+      <header className="sticky top-0 z-30 border-b border-line bg-base/80 backdrop-blur-md">
+        <div className="mx-auto flex h-16 w-full max-w-[1200px] items-center px-4 tablet:px-6 desktop:px-8">
+          <div className="flex items-center gap-2.5">
+            <div className="ring-iridescent rounded-full p-[1.5px] shadow-themed">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-gradient text-on-brand">
+                <BubbleLogo className="h-5 w-5" />
+              </div>
+            </div>
+            <span className="font-heading text-xl font-bold text-base">{t('brand.name')}</span>
+          </div>
         </div>
-      )}
+      </header>
 
-      <button
-        type="button"
-        onClick={startGoogleSignIn}
-        className="w-full bg-white text-[#1f1f1f] border border-line rounded-2xl py-3.5 px-4 flex items-center justify-center gap-3 font-medium text-sm hover:bg-neutral-50 transition shadow-bubble bubble-pop"
-      >
-        <GoogleGlyph />
-        {t('login.signInWithGoogle')}
-      </button>
+      {/* Hero: drifting bubble field + copy + sign-in card. The whole sign-in
+          surface lives in a single viewport — main fills the space between the
+          header and footer and vertically centres its content, so the footer
+          stays in view without scrolling. The demo call-out is folded into the
+          hero copy (no separate below-the-fold band). */}
+      <main className="relative z-10 flex w-full flex-grow items-center">
+        <BubbleField />
+        <div className="relative z-10 mx-auto flex w-full max-w-[1200px] flex-col items-center gap-10 px-4 py-10 tablet:py-12 desktop:flex-row desktop:items-center desktop:justify-between desktop:gap-16 desktop:px-8 desktop:py-12">
+          <div className="w-full space-y-6 text-center desktop:max-w-[46%] desktop:text-start">
+            <h1 className="font-heading text-4xl font-extrabold leading-tight text-base tablet:text-5xl desktop:text-6xl">
+              {t('login.heroTitle')}{' '}
+              <span className="text-primary-600">{t('login.heroTitleAccent')}</span>
+            </h1>
+            <p className="mx-auto max-w-md text-base leading-relaxed text-secondary tablet:text-lg desktop:mx-0">
+              {t('login.heroSubtitle')}
+            </p>
 
-      <p className="mt-6 text-xs text-muted text-center leading-relaxed">
-        {t('login.academicOnlyNote')}
-      </p>
-    </AuthScene>
+            {/* Demo call-out, folded into the hero so the page stays one screen. */}
+            <div className="flex flex-col items-center gap-3 desktop:items-start">
+              <Button
+                variant="secondary"
+                size="lg"
+                onClick={showDemoNotice}
+                aria-label={t('login.demoCta')}
+                rightIcon={<ArrowRightIcon className="h-5 w-5 rtl:rotate-180" />}
+              >
+                {t('login.demoCta')}
+              </Button>
+              {demoNotice && (
+                <p role="status" className="animate-pop-in rounded-full bg-surface-hover px-4 py-2 text-sm text-secondary">
+                  {t('login.demoComingSoon')}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="w-full max-w-md">
+            <div className="ring-iridescent animate-rise-in rounded-[2.5rem] p-[2px] shadow-bubble">
+              <div className="bubble-surface relative overflow-hidden rounded-[calc(2.5rem-2px)] p-6 tablet:p-8 desktop:p-10">
+                <h2 className="text-2xl font-bold text-base">{t('login.headingSignIn')}</h2>
+                <p className="mb-8 mt-2 text-sm text-muted">{t('login.subGoogleOnly')}</p>
+
+                {error && (
+                  <div
+                    role="alert"
+                    className="mb-4 animate-pop-in rounded-2xl border border-line bg-danger-soft px-4 py-2.5 text-sm text-danger"
+                  >
+                    {error}
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={startGoogleSignIn}
+                  className="flex w-full items-center justify-center gap-3 rounded-2xl border border-line bg-white px-4 py-3.5 text-sm font-medium text-[#1f1f1f] shadow-bubble bubble-pop transition hover:bg-surface-hover"
+                >
+                  <GoogleGlyph />
+                  {t('login.signInWithGoogle')}
+                </button>
+
+                <p className="mt-6 text-center text-xs leading-relaxed text-muted">
+                  {t('login.academicOnlyNote')}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <footer className="relative z-10 border-t border-line bg-base/90 backdrop-blur-md">
+        <div className="mx-auto w-full max-w-[1200px] px-4 py-6 text-center desktop:px-8">
+          <p className="text-xs text-muted">{t('login.footerRights')}</p>
+        </div>
+      </footer>
+    </div>
   )
 }
 
