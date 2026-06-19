@@ -76,6 +76,10 @@ services:
       args:
         # Bake the demo flag into the static bundle. Matches APP_DEMO_ENABLED above.
         VITE_DEMO_MODE: ${VITE_DEMO_MODE:-true}
+        # Enable the dev-only password page (/login/testing) in the local stack
+        # so it can be exercised against the containerized backend. The prod
+        # compose uses a prebuilt CI image that never sets this, so prod stays off.
+        VITE_DEV_LOGIN: "true"
     ports:
       - "3000:80"
     depends_on:

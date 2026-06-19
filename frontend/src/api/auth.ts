@@ -23,6 +23,12 @@ export interface AuthResponse {
  */
 export const GOOGLE_OAUTH_START_URL = '/oauth2/authorization/google'
 
+/**
+ * Legacy email + password sign-in. Production uses Google OAuth exclusively;
+ * these two functions exist only for the dev-only `/login/testing` page, which
+ * is gated behind `import.meta.env.DEV` and dead-code-eliminated from prod
+ * builds (see App.tsx). Don't import these from product code.
+ */
 export async function login(email: string, password: string): Promise<AuthResponse> {
   const res = await client.post<ApiSuccess<AuthResponse>>('/auth/login', { email, password })
   return res.data.data

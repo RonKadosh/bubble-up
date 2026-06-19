@@ -7,6 +7,10 @@ COPY . .
 # "true" only for the demo.bubbleup.online image; defaults off for the real app.
 ARG VITE_DEMO_MODE=false
 ENV VITE_DEMO_MODE=$VITE_DEMO_MODE
+# Off by default — production/CI builds omit it, so the dev-only password page
+# (/login/testing) is stripped. The local docker-compose passes this as `true`.
+ARG VITE_DEV_LOGIN=false
+ENV VITE_DEV_LOGIN=$VITE_DEV_LOGIN
 RUN npm run build
 
 FROM nginx:alpine

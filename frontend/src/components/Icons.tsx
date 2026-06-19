@@ -226,6 +226,16 @@ export function ArrowLeftIcon(p: IconProps) {
   )
 }
 
+/** Arrow pointing to the inline-end. Add `rtl:rotate-180` for a semantic "forward". */
+export function ArrowRightIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <line x1="5" y1="12" x2="19" y2="12" />
+      <polyline points="12 5 19 12 12 19" />
+    </Svg>
+  )
+}
+
 export function LockIcon(p: IconProps) {
   return (
     <Svg {...p}>
