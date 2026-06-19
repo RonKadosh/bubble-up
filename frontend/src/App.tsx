@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import LoginPage from './pages/LoginPage'
+import DemoLandingPage from './pages/DemoLandingPage'
 import OAuthCallbackPage from './pages/auth/OAuthCallbackPage'
 import TestingLoginPage from './pages/auth/TestingLoginPage'
 import DashboardPage from './pages/DashboardPage'
@@ -27,16 +28,21 @@ import { applyThemeClass, useThemeStore } from './store/themeStore'
 import { applyLangAttrs, useLanguageStore } from './store/languageStore'
 import i18n from './i18n'
 import { connectWs, disconnectWs } from './api/ws'
+import { DEMO_MODE } from './api/demo'
+
+/** Where an unauthenticated visitor lands: the demo build sends them to the
+ *  one-click /demo entry; the real app to the Google login. */
+const UNAUTH_LANDING = DEMO_MODE ? '/demo' : '/login'
 
 function RequireAuth({ children }: { children: JSX.Element }) {
   const accessToken = useAuthStore((s) => s.accessToken)
-  if (!accessToken) return <Navigate to="/login" replace />
+  if (!accessToken) return <Navigate to={UNAUTH_LANDING} replace />
   return children
 }
 
 function LandingRedirect() {
   const accessToken = useAuthStore((s) => s.accessToken)
-  if (!accessToken) return <Navigate to="/login" replace />
+  if (!accessToken) return <Navigate to={UNAUTH_LANDING} replace />
   return <Navigate to="/dashboard" replace />
 }
 
@@ -99,6 +105,8 @@ export default function App() {
         <Route path="/" element={<LandingRedirect />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/login/testing" element={<TestingLoginPage />} />
+        {/* Public, no-login demo entry (demo build only). */}
+        <Route path="/demo" element={<DemoLandingPage />} />
         {/* OAuth landing page — public on purpose: /auth/callback reads
             tokens from the URL fragment and hydrates authStore. */}
         <Route path="/auth/callback" element={<OAuthCallbackPage />} />

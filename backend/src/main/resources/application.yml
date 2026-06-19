@@ -91,6 +91,14 @@ app:
     server-url: ${APP_JITSI_SERVER_URL:https://8x8.vc}
     token-ttl: ${APP_JITSI_TOKEN_TTL:PT2H}
   demo:
+    # Master switch for the public, no-login interactive demo (demo.bubbleup.online).
+    # OFF here and forced OFF on the AWS prod deploy; turned ON only on the separate
+    # VPS demo deploy. Gates the /api/demo endpoints, per-session world seeder, and
+    # the idle-session cleanup sweep (DemoProperties).
+    enabled: ${APP_DEMO_ENABLED:false}
+    # Idle window before an abandoned demo world is swept, and how often the sweep runs.
+    session-ttl: ${APP_DEMO_SESSION_TTL:PT2H}
+    sweep-interval: ${APP_DEMO_SWEEP_INTERVAL:PT10M}
     seed:
       # Boots 10 demo users + Study Bubbles on first start. Idempotent.
       # Temporarily ON by default while iterating; turn off in any env that

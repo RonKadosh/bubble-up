@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type { BubbleRoom } from '../../api/room'
 import { publishToRoomPresence } from '../../api/ws'
 import { useAuthStore } from '../../store/authStore'
+import { DEMO_MODE } from '../../api/demo'
 
 /** Minimal shape we touch on the global Jitsi API loaded via <script>. */
 declare global {
@@ -138,6 +139,17 @@ export function VideoPanel({ room }: Props) {
   }, [room.id, room.jitsiAppId, room.jitsiJwt, room.jitsiRoomName, room.jitsiServerUrl, displayName, email])
 
   if (!room.jitsiAppId || !room.jitsiJwt) {
+    // In the demo, JaaS is deliberately unconfigured — video is mocked. Show a
+    // friendly placeholder so the room is still explorable (chat / whiteboard work).
+    if (DEMO_MODE) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full gap-3 bg-gradient-to-br from-bubble-magenta/10 to-bubble-green/10 text-center p-6">
+          <span className="text-4xl">🎥</span>
+          <p className="text-base font-semibold text-base">{t('demo.video.title')}</p>
+          <p className="text-sm text-muted max-w-[28ch]">{t('demo.video.body')}</p>
+        </div>
+      )
+    }
     return (
       <div className="flex items-center justify-center h-full text-soft text-sm p-6 text-center">
         {t('room.videoNotConfigured')}

@@ -24,4 +24,5 @@ public final class ApiPaths {
     public static final String FEED_BASE = API_BASE + "/feed";
     public static final String ONBOARDING_BASE = API_BASE + "/onboarding";
     public static final String HELP_BASE = API_BASE + "/help";
+    public static final String DEMO_BASE = API_BASE + "/demo";
 }

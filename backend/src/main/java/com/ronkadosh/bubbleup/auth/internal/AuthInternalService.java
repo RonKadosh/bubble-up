@@ -1,5 +1,6 @@
 package com.ronkadosh.bubbleup.auth.internal;
 
+import com.ronkadosh.bubbleup.auth.internal.dto.AuthSession;
 import com.ronkadosh.bubbleup.auth.internal.dto.UserAdminFilter;
 import com.ronkadosh.bubbleup.auth.internal.dto.UserAdminSummary;
 import com.ronkadosh.bubbleup.auth.internal.dto.UserIdentity;
@@ -44,6 +45,14 @@ public interface AuthInternalService {
      * or ADMIN. Throws {@code USER_NOT_FOUND} if the user does not exist.
      */
     void promoteToExpert(UUID userId);
+
+    /**
+     * Issues a fresh access + refresh token pair for an existing user WITHOUT
+     * credentials. Sole caller is the demo module's guest auto-login; the same
+     * {@code JwtService} + {@code RefreshTokenService} path used by normal login.
+     * Throws {@code USER_NOT_FOUND} if the user does not exist.
+     */
+    AuthSession issueSession(UUID userId);
 
     // ─── Admin panel surface ───────────────────────────────────────────────────
 

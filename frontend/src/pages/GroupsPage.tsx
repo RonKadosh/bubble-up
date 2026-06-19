@@ -659,7 +659,7 @@ export default function GroupsPage() {
               />
             )}
 
-            <div className="relative flex-1 min-h-0 flex flex-col overflow-hidden">
+            <div data-tour="bubble-hub" className="relative flex-1 min-h-0 flex flex-col overflow-hidden">
             <BubbleInfoDrawer
               open={bubbleInfoOpen}
               group={selected}
@@ -719,6 +719,7 @@ export default function GroupsPage() {
                       isFocused={focused === 'chat'}
                       onFocus={() => setFocused('chat')}
                       promoteLabel={promoteLabel}
+                      tourId="bento-chat"
                     >
                       <ChatPanel
                         key={selected.id}
@@ -738,6 +739,7 @@ export default function GroupsPage() {
                       isFocused={focused === 'calendar'}
                       onFocus={() => setFocused('calendar')}
                       promoteLabel={promoteLabel}
+                      tourId="bento-calendar"
                     >
                       <CalendarPanel
                         key={selected.id}
@@ -757,6 +759,7 @@ export default function GroupsPage() {
                       isFocused={focused === 'files'}
                       onFocus={() => setFocused('files')}
                       promoteLabel={promoteLabel}
+                      tourId="bento-files"
                     >
                       <FilesPanel
                         key={selected.id}

@@ -6,7 +6,9 @@ import { Group, getGroup, joinGroup } from '../../api/groups'
 import { CalendarEvent, getEvent } from '../../api/calendar'
 import { listMyCurrentEnrollments } from '../../api/enrollment'
 import { describeError } from '../../api/errors'
+import { DEMO_MODE } from '../../api/demo'
 import { useAuthStore } from '../../store/authStore'
+import { useTourStore } from '../../store/tourStore'
 import { useToastStore } from '../../store/toastStore'
 import { EventModal, EventViewModal } from './CalendarPanel'
 import { Avatar } from '../../components/Avatar'
@@ -307,9 +309,9 @@ export function HubFeed({
         {loading ? (
           <FeedSkeleton />
         ) : (
-          <div className="flex flex-col gap-8">
+          <div className="flex flex-col gap-8" data-tour="home-feed">
             {SECTION_ORDER.map((key) => (
-              <section key={key}>
+              <section key={key} data-tour={`home-section-${key.toLowerCase()}`}>
                 <SectionLabel className="mb-3 ms-1">
                   {t(SECTION_META[key].labelKey)}
                 </SectionLabel>
@@ -560,6 +562,9 @@ function PublicBubbleModal({
   const [loading, setLoading] = useState(true)
   const [joining, setJoining] = useState(false)
   const [error, setError] = useState('')
+  // During the demo tour, lock the modal: Join is the only way out (cancelling /
+  // closing would strand the tour on a vanished anchor). "Skip tutorial" still exits.
+  const tourLocked = DEMO_MODE && useTourStore((s) => s.running)
 
   useEffect(() => {
     let cancelled = false
@@ -577,6 +582,8 @@ function PublicBubbleModal({
     setError('')
     try {
       await joinGroup(groupId)
+      // Let the demo tour advance off the real join (it ends with 2 Bubbles).
+      if (DEMO_MODE) window.dispatchEvent(new Event('demo:joined-match'))
       await onJoined?.(groupId)
       onClose()
       onSelectGroup(groupId)
@@ -598,8 +605,9 @@ function PublicBubbleModal({
     : 'dashboard.discovery.recommended')
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3 tablet:p-4 animate-fade-in" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3 tablet:p-4 animate-fade-in" onClick={tourLocked ? undefined : onClose}>
       <div
+        data-tour="bubble-join-modal"
         className="bg-surface rounded-3xl shadow-bubble animate-pop-in w-full max-w-[28rem] max-h-[85vh] flex flex-col border border-line"
         onClick={(e) => e.stopPropagation()}
       >
@@ -612,7 +620,9 @@ function PublicBubbleModal({
               <p className="text-xs text-muted truncate">{t('dashboard.discovery.fromCourse', { course: courseLabel(item) })}</p>
             )}
           </div>
-          <button type="button" onClick={onClose} className="text-muted hover:text-secondary text-xl leading-none">×</button>
+          {!tourLocked && (
+            <button type="button" onClick={onClose} className="text-muted hover:text-secondary text-xl leading-none">×</button>
+          )}
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
@@ -647,9 +657,11 @@ function PublicBubbleModal({
         </div>
 
         <div className="px-4 py-3 border-t border-line flex items-center justify-end gap-2">
-          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-            {t('common.cancel')}
-          </Button>
+          {!tourLocked && (
+            <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+              {t('common.cancel')}
+            </Button>
+          )}
           {!isPrivate && (
             <Button variant="deep" type="button" size="sm" onClick={handleJoin} disabled={loading || joining}>
               {joining ? t('dashboard.publicBubble.joining') : t('dashboard.publicBubble.join')}

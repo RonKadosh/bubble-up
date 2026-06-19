@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/authStore'
 import { useQuizPromptStore } from '../store/quizPromptStore'
 import { useOnboardingStore, isOnboarded } from '../store/onboardingStore'
 import { getNextQuestion, submitAnswer, type NextQuestion } from '../api/matching'
+import { DEMO_MODE } from '../api/demo'
 import { Button } from './Button'
 
 /**
@@ -56,42 +57,49 @@ export function QuizPrompt() {
     timerRef.current = window.setTimeout(poll, ms)
   }, [clearTimer])
 
-  const poll = useCallback(async () => {
+  const poll = useCallback(async (ignoreCooldown = false) => {
     try {
-      const next = await getNextQuestion()
+      const next = await getNextQuestion(ignoreCooldown)
       if (next.hasQuestion) {
         setQuestion(next)
         setError(null)
       } else {
         setQuestion(null)
-        scheduleAt(next.nextAvailableAt, poll)
+        scheduleAt(next.nextAvailableAt, () => poll())
       }
     } catch (e) {
       console.warn('[QuizPrompt] poll failed', e)
       // Quiet on transient errors — try again in a minute.
       clearTimer()
-      timerRef.current = window.setTimeout(poll, 60_000)
+      timerRef.current = window.setTimeout(() => poll(), 60_000)
     }
   }, [scheduleAt, clearTimer])
+
+  const suppressed = useQuizPromptStore((s) => s.suppressed)
 
   useEffect(() => {
     // Auto-poll only once onboarded (ongoing Daily Drops). During the wizard the
     // first question must NOT pop on its own — it surfaces only when the user
     // clicks "Answer a Daily Drop" on L5 (the openSignal trigger below).
-    if (!accessToken || !onboarded) {
+    // `suppressed` lets the demo tour hold it back until its matching phase.
+    if (!accessToken || !onboarded || suppressed) {
       clearTimer()
       setQuestion(null)
       return
     }
     poll()
     return clearTimer
-  }, [accessToken, onboarded, poll, clearTimer])
+  }, [accessToken, onboarded, suppressed, poll, clearTimer])
 
   // Explicit trigger: the L5 "Answer a Daily Drop" button (or any post-onboarding
   // re-open). Polls to surface a question; no-op if none is available.
   const openSignal = useQuizPromptStore((s) => s.openSignal)
   useEffect(() => {
-    if (openSignal > 0 && accessToken && active) poll()
+    // A deliberate "show me now" (L5 wizard button, or the demo tour's quiz step):
+    // ignore the Daily-Drop cooldown so a question always surfaces if one exists.
+    // In DEMO_MODE the tour drives this explicitly, so don't gate on `active` (the
+    // onboarding-derived flag can lag the guest's seeded "finished" state).
+    if (openSignal > 0 && accessToken && (active || DEMO_MODE)) poll(true)
   }, [openSignal, accessToken, active, poll])
 
   async function onAnswer(answerId: string) {
@@ -100,6 +108,8 @@ export function QuizPrompt() {
     setError(null)
     try {
       await submitAnswer(question.questionId, answerId)
+      // Let the demo tour advance off the real answer (its quiz step has no Next).
+      if (DEMO_MODE) window.dispatchEvent(new Event('demo:quiz-answered'))
       const scheduleAtIso = question.nextAvailableAt
       setQuestion(null)
       if (onboarded) {
@@ -119,12 +129,13 @@ export function QuizPrompt() {
     }
   }
 
-  if (!accessToken || !question?.hasQuestion) return null
+  if (suppressed || !accessToken || !question?.hasQuestion) return null
 
   return (
     <div
       role="dialog"
       aria-label={t('matching.title')}
+      data-tour="quiz-prompt"
       className="fixed z-40 bottom-[5.5rem] start-3 end-3 tablet:bottom-4 tablet:start-4 tablet:end-auto tablet:max-w-[min(22rem,calc(100vw-2rem))] bg-surface border border-line shadow-bubble rounded-3xl p-4"
     >
       <div className="flex items-center gap-2 mb-2">

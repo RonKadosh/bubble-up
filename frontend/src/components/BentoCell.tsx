@@ -29,6 +29,9 @@ interface BentoCellProps {
   isFocused?: boolean
   onFocus?: () => void
   promoteLabel?: string
+  /** Optional data-tour anchor key for the guided demo tour (the maximize
+   *  control is exposed as `${tourId}-maximize`). */
+  tourId?: string
 }
 
 export function BentoCell({
@@ -39,6 +42,7 @@ export function BentoCell({
   isFocused = false,
   onFocus,
   promoteLabel,
+  tourId,
 }: BentoCellProps) {
   const showPromote = !isFocused && !!onFocus
   const body = (
@@ -52,6 +56,7 @@ export function BentoCell({
             onClick={onFocus}
             aria-label={promoteLabel}
             title={promoteLabel}
+            data-tour={tourId ? `${tourId}-maximize` : undefined}
             className="ml-auto text-muted hover:text-base text-sm leading-none px-1.5 py-0.5 rounded transition-colors"
           >
             ⤢
@@ -68,7 +73,7 @@ export function BentoCell({
   // matching Academy's Card lg; inner radius backs off the 1.5px ring padding.
   if (isFocused) {
     return (
-      <div className={`ring-iridescent p-[1.5px] rounded-3xl flex flex-col min-h-0 overflow-hidden shadow-themed ${className}`}>
+      <div data-tour={tourId} className={`ring-iridescent p-[1.5px] rounded-3xl flex flex-col min-h-0 overflow-hidden shadow-themed ${className}`}>
         <div className="flex-1 min-h-0 bg-surface rounded-[calc(1.75rem-1.5px)] flex flex-col overflow-hidden">
           {body}
         </div>
@@ -78,7 +83,7 @@ export function BentoCell({
 
   // Default cell: the same clean surface as Academy's Pane.
   return (
-    <Card size="lg" className={`flex flex-col min-h-0 overflow-hidden ${className}`}>
+    <Card size="lg" data-tour={tourId} className={`flex flex-col min-h-0 overflow-hidden ${className}`}>
       {body}
     </Card>
   )
