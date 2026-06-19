@@ -12,6 +12,7 @@ import {
   type Reliability,
   type NextQuestion,
 } from '../api/matching'
+import { DEMO_MODE } from '../api/demo'
 import { SUPPORTED_LANGUAGES } from '../i18n'
 import { useLanguageStore } from '../store/languageStore'
 import { useThemeStore, type Theme } from '../store/themeStore'
@@ -150,7 +151,11 @@ function MatchingSection() {
     try {
       await submitAnswer(question.questionId, answerId)
       // Refresh the meter so it climbs as they answer, then advance to the next.
-      getReliability().then(setReliability).catch(() => { /* best-effort */ })
+      getReliability().then((r) => {
+        setReliability(r)
+        // Let the demo tour advance once the profile crosses the matchable threshold.
+        if (DEMO_MODE && r.matched) window.dispatchEvent(new Event('demo:matchable'))
+      }).catch(() => { /* best-effort */ })
       await loadNext()
     } catch {
       setError(t('matching.error'))
@@ -163,7 +168,7 @@ function MatchingSection() {
   const allAnswered = finished || (cap > 0 && answered >= cap)
 
   return (
-    <Card size="lg" className="p-5 tablet:p-6 shadow-bubble max-w-2xl">
+    <Card size="lg" data-tour="matching-quiz" className="p-5 tablet:p-6 shadow-bubble max-w-2xl">
       <h2 className="text-lg font-bold text-base">{t('settings.matching.title')}</h2>
       <p className="text-sm text-muted mt-1 mb-4">{t('settings.matching.description')}</p>
       {reliability ? (
@@ -223,7 +228,11 @@ export default function SettingsPage() {
       title={t('settings.title')}
       tabs={
         <Tabs
-          items={TABS.map((key) => ({ key, label: t(`settings.tabs.${key}`) }))}
+          items={TABS.map((key) => ({
+            key,
+            label: t(`settings.tabs.${key}`),
+            tourId: key === 'matching' ? 'settings-tab-matching' : undefined,
+          }))}
           active={tab}
           onChange={(key) => setTab(key as SettingsTab)}
         />

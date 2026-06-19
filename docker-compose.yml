@@ -46,6 +46,10 @@ services:
       GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET:-}
       # Default ON for docker-compose so first-run users see demo bubbles immediately.
       APP_DEMO_SEED_ENABLED: ${APP_DEMO_SEED_ENABLED:-true}
+      # Interactive demo (public /demo + per-session worlds + guided tour). ON by
+      # default on this demo-prep branch so `docker compose up --build` shows it;
+      # set APP_DEMO_ENABLED=false (and VITE_DEMO_MODE=false below) for plain dev.
+      APP_DEMO_ENABLED: ${APP_DEMO_ENABLED:-true}
       # Full-semester load-test dataset (LoadTestSeeder). OFF by default — enable for a
       # load run with: APP_LOADTEST_ENABLED=true docker compose up
       APP_LOADTEST_ENABLED: ${APP_LOADTEST_ENABLED:-false}
@@ -69,6 +73,9 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        # Bake the demo flag into the static bundle. Matches APP_DEMO_ENABLED above.
+        VITE_DEMO_MODE: ${VITE_DEMO_MODE:-true}
     ports:
       - "3000:80"
     depends_on:

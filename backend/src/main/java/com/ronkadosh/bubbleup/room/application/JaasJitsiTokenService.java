@@ -1,5 +1,6 @@
 package com.ronkadosh.bubbleup.room.application;
 
+import com.ronkadosh.bubbleup.common.config.DemoProperties;
 import com.ronkadosh.bubbleup.common.config.JitsiProperties;
 import com.ronkadosh.bubbleup.common.datetime.TimeProvider;
 import com.ronkadosh.bubbleup.common.error.AppException;
@@ -25,6 +26,7 @@ public class JaasJitsiTokenService implements JitsiTokenService {
 
     private final JitsiProperties jitsiProperties;
     private final TimeProvider timeProvider;
+    private final DemoProperties demoProperties;
 
     @Override
     public String issue(Room room,
@@ -35,6 +37,12 @@ public class JaasJitsiTokenService implements JitsiTokenService {
                         boolean moderator,
                         Instant hardExpiry) {
         if (!jitsiProperties.isConfigured()) {
+            // Demo deploy runs with blank JaaS creds on purpose: video is mocked. Return a
+            // null token instead of failing so the room stays enterable — the frontend renders
+            // a "video is off in the demo" placeholder when there's no appId/jwt.
+            if (demoProperties.enabled()) {
+                return null;
+            }
             throw new AppException(ErrorCode.JITSI_NOT_CONFIGURED);
         }
 

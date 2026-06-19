@@ -4,6 +4,7 @@ import { Group, Visibility } from '../../api/groups'
 import { Enrollment, listMyCurrentEnrollments } from '../../api/enrollment'
 import { Avatar } from '../../components/Avatar'
 import { Button } from '../../components/Button'
+import { useTourStore } from '../../store/tourStore'
 
 interface CreateGroupInput {
   name: string
@@ -53,6 +54,8 @@ interface GroupSidebarProps {
  */
 export function GroupSidebar({ groups, selectedId, meId, unreadByGroup, liveGroupIds, onSelect, onCreate, mobileOpen, onMobileClose, initialCreate, onInitialCreateConsumed }: GroupSidebarProps) {
   const { t } = useTranslation()
+  // The demo tour highlights the starter Bubble's row (null outside the demo).
+  const tourStarterGroupId = useTourStore((s) => s.starterGroupId)
   const [showCreate, setShowCreate] = useState(false)
   const [newName, setNewName] = useState('')
   const [newDescription, setNewDescription] = useState('')
@@ -122,6 +125,7 @@ export function GroupSidebar({ groups, selectedId, meId, unreadByGroup, liveGrou
       />
 
       <aside
+        data-tour="bubble-sidebar"
         className={`
           flex flex-col bg-surface border-e border-line
           desktop:static desktop:z-auto desktop:w-80 desktop:translate-x-0 desktop:shadow-none
@@ -284,7 +288,7 @@ export function GroupSidebar({ groups, selectedId, meId, unreadByGroup, liveGrou
 
           if (active) {
             return (
-              <div key={g.id} className="ring-iridescent p-[1.5px] rounded-[2rem] mx-2 my-1 shadow-themed">
+              <div key={g.id} data-tour={g.id === tourStarterGroupId ? 'sidebar-starter-bubble' : undefined} className="ring-iridescent p-[1.5px] rounded-[2rem] mx-2 my-1 shadow-themed">
                 <button
                   onClick={() => onSelect(g.id)}
                   className="w-full flex items-center gap-3 px-3 py-2.5 text-start bg-surface rounded-[calc(2rem-2px)] text-base"
@@ -298,6 +302,7 @@ export function GroupSidebar({ groups, selectedId, meId, unreadByGroup, liveGrou
           return (
             <button
               key={g.id}
+              data-tour={g.id === tourStarterGroupId ? 'sidebar-starter-bubble' : undefined}
               onClick={() => onSelect(g.id)}
               className="w-full flex items-center gap-3 px-3 py-2.5 my-1 mx-2 text-start rounded-2xl transition-all hover:bg-surface-muted text-base bubble-pop"
             >

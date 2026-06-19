@@ -163,9 +163,11 @@ export function GroupHeader({ group, isOwner, isMember, onJoin, liveSession, onS
               {t('groups.header.joinLive')}
             </Button>
           ) : (
-            <Button size="sm" onClick={onScheduleRoom}>
-              {t('groups.header.createLive')}
-            </Button>
+            <span data-tour="bubble-live-room" className="inline-flex">
+              <Button size="sm" onClick={onScheduleRoom}>
+                {t('groups.header.createLive')}
+              </Button>
+            </span>
           )
         )}
         {!isMember && group.visibility === 'PUBLIC' && (

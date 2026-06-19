@@ -149,7 +149,7 @@ export function FileViewer({ groupId, file, isFullscreen, onToggleFullscreen, on
       </div>
 
       {/* Body */}
-      <div ref={containerRef} className="flex-1 min-h-0 overflow-auto p-3 flex justify-center">
+      <div ref={containerRef} data-tour="file-viewer" className="flex-1 min-h-0 overflow-auto p-3 flex justify-center">
         {loadError && (
           <div className="self-center text-sm text-danger">{loadError}</div>
         )}

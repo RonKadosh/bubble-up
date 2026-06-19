@@ -105,6 +105,17 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> 
     int deleteAllByRoomIdIn(@Param("roomIds") Collection<UUID> roomIds);
 
     /**
+     * Demo seeder only: backdate every existing message in a room (its auto-posted
+     * {@code SYSTEM_JOIN} notices) to {@code sentAt}, so the seeded chat history that
+     * follows reads as happening *after* people joined. {@code flushAutomatically}
+     * forces the pending join inserts out before the bulk UPDATE; the JPQL UPDATE
+     * intentionally bypasses the {@code updatable=false} guard on {@code sentAt}.
+     */
+    @Modifying(flushAutomatically = true)
+    @Query("update ChatMessage m set m.sentAt = :sentAt where m.roomId = :roomId")
+    int backdateRoomMessages(@Param("roomId") UUID roomId, @Param("sentAt") Instant sentAt);
+
+    /**
      * Idempotency check for system-message posters. Used by the expert-session
      * join detector to ensure a {@code SYSTEM_JOIN} is posted at most once per
      * user per session-chat room.

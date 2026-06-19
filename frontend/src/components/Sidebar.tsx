@@ -11,6 +11,7 @@ import {
 import { logout as logoutApi } from '../api/auth'
 import { PersistentVideo } from './PersistentVideo'
 import { QuizPrompt } from './QuizPrompt'
+import { DemoTour } from './DemoTour'
 import { OnboardingGuide } from './OnboardingGuide'
 import { UserProfileCard } from './UserProfileCard'
 import { Toaster } from './Toaster'
@@ -40,9 +41,11 @@ interface NavRowProps {
   /** When set, the row is greyed + lock-badged and non-interactive (onboarding). */
   locked?: boolean
   lockedLabel?: string
+  /** Optional data-tour anchor key for the guided demo tour. */
+  tourId?: string
 }
 
-function NavRow({ to, onClick, Icon, label, variant = 'default', ariaLabel, locked = false, lockedLabel }: NavRowProps) {
+function NavRow({ to, onClick, Icon, label, variant = 'default', ariaLabel, locked = false, lockedLabel, tourId }: NavRowProps) {
   const base =
     'group relative flex items-center justify-center w-11 h-11 mx-auto rounded-full transition-all bubble-pop'
   const danger = variant === 'danger'
@@ -82,6 +85,7 @@ function NavRow({ to, onClick, Icon, label, variant = 'default', ariaLabel, lock
       <NavLink
         to={to}
         aria-label={ariaLabel ?? label}
+        data-tour={tourId}
         className={({ isActive }) =>
           `${base} ${
             isActive
@@ -268,6 +272,7 @@ export default function Layout() {
           <NavLink
             to="/dashboard"
             aria-label={t('nav.home')}
+            data-tour="nav-home"
             className="group relative w-11 h-11 rounded-full flex items-center justify-center shrink-0 transition-all hover:bg-white/15 bubble-pop text-on-brand"
           >
             <BubbleLogo className="w-6 h-6" />
@@ -291,7 +296,7 @@ export default function Layout() {
         </nav>
 
         <div className="px-2 pb-3 pt-2 border-t border-white/20 flex flex-col gap-2">
-          <NavRow to="/settings" Icon={SettingsIcon} label={t('nav.settings')} {...lockProps('settings')} />
+          <NavRow to="/settings" Icon={SettingsIcon} label={t('nav.settings')} tourId="nav-settings" {...lockProps('settings')} />
           <NavRow onClick={handleHelp} Icon={HelpIcon} label={t('nav.help')} />
           <NavRow to="/report" Icon={ReportIcon} label={t('nav.report')} />
           <NavRow onClick={handleLogout} Icon={LogoutIcon} label={t('nav.logout')} variant="danger" />
@@ -307,6 +312,7 @@ export default function Layout() {
       <QuizPrompt />
       <UserProfileCard />
       <Toaster />
+      <DemoTour />
     </div>
   )
 }

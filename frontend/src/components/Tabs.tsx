@@ -13,6 +13,8 @@ export interface TabItem {
   label: ReactNode
   /** Optional pending-count pill rendered after the label when > 0. */
   badge?: number
+  /** Optional `data-tour` anchor key for the guided demo overlay. */
+  tourId?: string
 }
 
 interface TabsProps {
@@ -30,6 +32,7 @@ export function Tabs({ items, active, onChange }: TabsProps) {
           <button
             key={item.key}
             type="button"
+            data-tour={item.tourId}
             onClick={() => onChange(item.key)}
             aria-pressed={selected}
             // No transform on hover (no bubble-pop): the tabs live in an

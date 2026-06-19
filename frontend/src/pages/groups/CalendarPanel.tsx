@@ -11,6 +11,7 @@ import {
   updateEvent,
 } from '../../api/calendar'
 import { sendLinkMessage } from '../../api/chat'
+import { DEMO_MODE } from '../../api/demo'
 import { describeError } from '../../api/errors'
 import { getRoomForEvent } from '../../api/room'
 import { Button, IconButton } from '../../components/Button'
@@ -260,7 +261,7 @@ function MonthGridView({ groupId, meId, isOwner, isMember, chatRoomId, onError, 
   }, [i18n.language])
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
+    <div data-tour="calendar-grid" className="flex-1 flex flex-col overflow-hidden">
       <div className="flex items-center justify-between bg-surface border-b border-line px-4 py-2.5 gap-2">
         <div className="flex items-center gap-1">
           <IconButton variant="cell" size="sm" onClick={() => shiftMonth(-1)} aria-label={t('groups.calendar.prevMonth')}>‹</IconButton>
@@ -447,6 +448,8 @@ export function EventModal({
           startsAt: fromLocalInput(startsAt),
           endsAt: fromLocalInput(endsAt),
         })
+        // Lets the demo guided tour advance off the visitor's first created event.
+        if (DEMO_MODE) window.dispatchEvent(new Event('demo:event-created'))
       }
       onSaved()
     } catch (err) {
@@ -690,6 +693,7 @@ export function EventViewModal({
     if (!chatRoomId) return
     try {
       await sendLinkMessage(chatRoomId, 'CALENDAR_EVENT', event.id)
+      if (DEMO_MODE) window.dispatchEvent(new Event('demo:link-shared'))
       onShared()
     } catch {
       onError(t('groups.error.shareToChat'))

@@ -1,6 +1,7 @@
 package com.ronkadosh.bubbleup.auth.application;
 
 import com.ronkadosh.bubbleup.auth.internal.AuthInternalService;
+import com.ronkadosh.bubbleup.auth.internal.dto.AuthSession;
 import com.ronkadosh.bubbleup.auth.internal.dto.UserAdminFilter;
 import com.ronkadosh.bubbleup.auth.internal.dto.UserAdminSummary;
 import com.ronkadosh.bubbleup.auth.internal.dto.UserIdentity;
@@ -11,6 +12,7 @@ import com.ronkadosh.bubbleup.auth.persistence.UserRepository;
 import com.ronkadosh.bubbleup.common.context.UserRole;
 import com.ronkadosh.bubbleup.common.error.AppException;
 import com.ronkadosh.bubbleup.common.error.ErrorCode;
+import com.ronkadosh.bubbleup.common.security.JwtService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -32,6 +34,8 @@ import java.util.stream.Collectors;
 public class AuthInternalServiceImpl implements AuthInternalService {
 
     private final UserRepository userRepository;
+    private final JwtService jwtService;
+    private final RefreshTokenService refreshTokenService;
 
     @Override
     @Transactional(readOnly = true)
@@ -83,6 +87,26 @@ public class AuthInternalServiceImpl implements AuthInternalService {
         }
         user.setRole(UserRole.EXPERT);
         userRepository.save(user);
+    }
+
+    @Override
+    @Transactional
+    public AuthSession issueSession(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        String accessToken = jwtService.generateToken(user.getId(), user.getEmail(), user.getRole());
+        RefreshTokenService.IssuedRefresh refresh = refreshTokenService.issue(user.getId(), null);
+        UserIdentity identity = toIdentity(user);
+        boolean emailVerified = user.getGoogleSub() == null || user.isEmailVerified();
+        return new AuthSession(
+                accessToken,
+                refresh.rawToken(),
+                user.getId(),
+                user.getEmail(),
+                user.getRole().name(),
+                user.getDisplayName(),
+                identity.avatarUrl(),
+                emailVerified);
     }
 
     @Override

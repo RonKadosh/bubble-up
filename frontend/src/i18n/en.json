@@ -1,4 +1,52 @@
 {
+  "demo": {
+    "landing": {
+      "title": "Try Bubble.up",
+      "subtitle": "A 2 minute guided tour of the study group platform.",
+      "blurb": "No sign up, no setup. Click below and you'll land in a fully populated campus with a quick walkthrough, then a sandbox to explore freely.",
+      "cta": "Start demo",
+      "starting": "Setting up your campus...",
+      "error": "Something went wrong starting the demo. Please try again.",
+      "disclaimer": "This is a sandbox. Nothing here is real, and data resets periodically."
+    },
+    "video": {
+      "title": "Video is off in the demo",
+      "body": "Live rooms are mocked here, but chat and the whiteboard still work. The real thing has full video and voice."
+    },
+    "tour": {
+      "next": "Next",
+      "back": "Back",
+      "finish": "Start exploring",
+      "skip": "Skip tutorial",
+      "s1": { "title": "Welcome to Bubble.up", "body": "Your campus, bubbled up. Find your people, study together, and never grind alone. Let's take a quick tour. You can press Skip tutorial in the top right anytime." },
+      "s2": { "title": "This is Home", "body": "Everything happening across your study groups lands right here, your one place to keep up." },
+      "s3": { "title": "Live", "body": "Sessions and study rooms happening right now. Jump in with one click." },
+      "s4": { "title": "Upcoming", "body": "Events and expert sessions coming up, all gathered in one place so nothing slips by." },
+      "s5": { "title": "Activity", "body": "New members, fresh files, and unread messages. A live feed of everything going on." },
+      "s6": { "title": "Step into a Bubble", "body": "These are your Bubbles. Click CS101 Night Owls to step inside." },
+      "s7": { "title": "This is a Bubble", "body": "A study group's home base. Chat, calendar, shared files, and live rooms, all in one place." },
+      "s8": { "title": "The Chat", "body": "Messages, polls, and shared links live here. It's the heart of every Bubble." },
+      "s9": { "title": "Say hi", "body": "Type a message in the box and press Enter to continue. Emojis are welcome." },
+      "s10": { "title": "Customize your view", "body": "Each panel can take center stage. Click the maximize icon on the Calendar to focus it." },
+      "s11": { "title": "Plan something", "body": "Click any day and add your own study event, then continue." },
+      "s12": { "title": "Now the Files", "body": "Maximize the Files panel. It's your Bubble's shared shelf of notes and past exams." },
+      "s13": { "title": "Take a peek", "body": "Open Syllabus.pdf. It previews right here, no download needed." },
+      "s14": { "title": "Share it", "body": "Open any event, then tap 'Share to chat'. It drops the event right into your chat for everyone." },
+      "s14b": { "title": "There it is", "body": "And it lands in the chat as a card the whole Bubble can see. One tap, shared." },
+      "s15": { "title": "And when it's crunch time", "body": "A Bubble can open a live room with video, voice, and a shared whiteboard. Don't start one now, but give it a try later while you explore." },
+      "s16": { "title": "Back Home", "body": "Click the Home button to head back." },
+      "s17": { "title": "Explore", "body": "This is where Bubble.up finds the groups you'll click with. Right now it only shows Trending ones, because we don't know you yet." },
+      "s18": { "title": "Let's get to know you", "body": "Bubble.up learns who you are from quick popup questions and from how you act in the app, then matches you to Bubbles where you'll fit best." },
+      "s19": { "title": "Here's one now", "body": "Answer this quick question. It's how your match profile starts forming." },
+      "s20": { "title": "Want sharper matches?", "body": "Let's answer a few more. Head to Settings." },
+      "s21": { "title": "Open Matching", "body": "Tap the Matching tab." },
+      "s22": { "title": "Build your profile", "body": "Answer a few questions. We'll move on the moment your profile is ready." },
+      "s23": { "title": "Now the magic", "body": "Head back Home." },
+      "s24": { "title": "Look at that", "body": "Real matched Bubbles now, each with your fit score. Let's pick one from Explore and join it. And the more you use Bubble.up, the sharper your matches get." },
+      "s24b": { "title": "Choose a matched Bubble to join", "body": "Tap a matched Bubble to open it, then hit Join to add it to your Bubbles." },
+      "s25": { "title": "That's the tour", "body": "The campus is yours now. Explore, chat, plan, and build your profile. Nothing here is real, so go wild." }
+    }
+  },
   "brand": {
     "name": "Bubble.up",
     "logoAlt": "Bubble.up logo"

@@ -18,6 +18,7 @@ import {
   unpinMessage,
 } from '../../api/chat'
 import { CalendarEvent, getEvent, listEvents } from '../../api/calendar'
+import { DEMO_MODE } from '../../api/demo'
 import {
   GroupFile,
   GroupFolder,
@@ -442,6 +443,8 @@ export function ChatPanel({ groupId, room, meId, isMember, onError, onUnreadChan
     try {
       const msg = await sendTextMessage(roomId, text, replyId)
       dedupeAppend(msg)
+      // Lets the demo guided tour advance off the visitor's first real message.
+      if (DEMO_MODE) window.dispatchEvent(new Event('demo:chat-sent'))
       stickToBottomRef.current = true
       queueMicrotask(() => {
         bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -559,9 +562,10 @@ export function ChatPanel({ groupId, room, meId, isMember, onError, onUnreadChan
       )}
       <form
         onSubmit={handleSend}
+        data-tour="chat-composer"
         className="bg-surface border-t border-line px-5 py-3 flex gap-2 items-center min-w-0"
       >
-        <div className="relative shrink-0">
+        <div className="relative shrink-0" data-tour="composer-share">
           <IconButton
             variant="cell"
             size="md"
@@ -605,6 +609,7 @@ export function ChatPanel({ groupId, room, meId, isMember, onError, onUnreadChan
             contentEditable
             suppressContentEditableWarning
             role="textbox"
+            data-tour="chat-input"
             aria-label={t('groups.chat.messagePlaceholder')}
             onInput={() => {
               const editor = editorRef.current

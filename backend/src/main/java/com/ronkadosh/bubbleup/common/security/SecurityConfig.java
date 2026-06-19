@@ -77,6 +77,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, ApiPaths.GROUPS_BASE + "/*/image").permitAll()
                         // OAuth2 endpoints (Spring Security auto-publishes these).
                         .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
+                        // Public "Start demo" entry — mints a guest session with no login.
+                        // Only does anything when app.demo.enabled (the demo controller is gated);
+                        // harmless 404 elsewhere. /heartbeat + /end stay authenticated.
+                        .requestMatchers(HttpMethod.POST, ApiPaths.DEMO_BASE + "/start").permitAll()
                         .anyRequest().authenticated()
                 )
                 // Missing/invalid JWT must return 401 (not the Spring default 403). The frontend
