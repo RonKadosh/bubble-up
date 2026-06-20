@@ -113,6 +113,60 @@ Then visit `https://bubbleup.online/` and verify:
 - `www.bubbleup.online` redirects to the root host
 - Google sign-in reaches the callback without `redirect_uri_mismatch`
 
+## Demo deploy (demo.bubbleup.online)
+
+The public interactive demo runs **separately** from this AWS stack, on its own VPS,
+with its own Postgres — so demo traffic and the disposable per-session worlds can never
+touch the real users' database or compete for the `t3.micro`'s RAM. It is **not** part of
+the Terraform above and **not** deployed by `deploy.yml` (which is AWS/SSM-only).
+
+Pieces in this repo:
+
+- `docker-compose.demo.yml` — demo stack (own DB, `APP_DEMO_ENABLED=true`, the
+  `bubble-up-frontend-demo` image, shared backend image).
+- `Caddyfile.demo` — like the prod Caddyfile but without the `www.` redirect.
+- `.github/workflows/deploy-demo.yml` — SSH deploy, manual `workflow_dispatch`.
+- `ci.yml` builds and pushes `bubble-up-frontend-demo` (built with `VITE_DEMO_MODE=true`)
+  on every `vX.Y.Z` tag, alongside the prod images.
+
+### One-time setup
+
+1. **VPS**: install Docker Engine + the compose plugin; open firewall ports 80 and 443;
+   add the deploy key's public half to `~/.ssh/authorized_keys` for the ssh user (which
+   must be in the `docker` group); and pre-create the data dirs:
+
+   ```bash
+   sudo mkdir -p /opt/bubbleup-demo /data/postgres /data/files /data/caddy/data /data/caddy/config
+   ```
+
+2. **DNS**: add an `A` record `demo` → the VPS public IP at the bubbleup.online DNS
+   provider. Leave the root `@` and `www` records (pointing at the EC2 Elastic IP)
+   untouched — the real app is unaffected.
+
+3. **GitHub secrets** (Settings → Secrets and variables → Actions):
+   `DEMO_SSH_HOST`, `DEMO_SSH_USER`, `DEMO_SSH_KEY`, `DEMO_DB_PASSWORD`,
+   `DEMO_JWT_SECRET` (generate distinct from prod — same generator as §2 above),
+   `GHCR_USER`, `GHCR_PAT` (PAT with `read:packages`).
+   Optional **variables**: `DEMO_CADDY_DOMAIN` (defaults to `demo.bubbleup.online`),
+   `DEMO_ACME_EMAIL`.
+
+### Ship a demo release
+
+Cut a release tag as in §3 (`ci.yml` builds + pushes all three images), then run the
+**deploy-demo** workflow manually (Actions → deploy-demo → Run workflow) with the image
+tag (e.g. `0.1.0` or `latest`). It SSHes into the VPS, writes `/opt/bubbleup-demo/.env`,
+pulls the images, and restarts the stack.
+
+### Verify
+
+```bash
+curl https://demo.bubbleup.online/api/actuator/health
+```
+
+Then visit `https://demo.bubbleup.online/` → it redirects to `/demo` → **Start demo**
+builds a fresh isolated world, auto-logs in the guest, and launches the guided tour.
+Confirm `https://bubbleup.online` is unchanged.
+
 ## Tearing down
 
 ```powershell

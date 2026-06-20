@@ -1,0 +1,20 @@
+{
+	email {$CADDY_ACME_EMAIL}
+}
+
+# Demo host (demo.bubbleup.online). Unlike the prod Caddyfile there is no
+# www.{$CADDY_DOMAIN} redirect block — there's no www.demo DNS record, and
+# keeping it would make Caddy fail ACME for www.demo.bubbleup.online.
+{$CADDY_DOMAIN} {
+	encode zstd gzip
+
+	# Reverse-proxy everything to the frontend nginx container, which already
+	# proxies /api, /ws and /oauth2 to the backend with the right WebSocket
+	# upgrade headers (see frontend/nginx.conf).
+	reverse_proxy frontend:80 {
+		header_up Host {host}
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+}

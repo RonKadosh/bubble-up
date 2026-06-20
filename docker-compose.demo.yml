@@ -1,0 +1,98 @@
+name: bubbleup-demo
+
+# Demo stack for Bubble.up — serves the public, no-login interactive demo at
+# demo.bubbleup.online on a SEPARATE non-AWS VPS (not the AWS prod box).
+#
+# Differences from docker-compose.prod.yml:
+#   - frontend uses the bubble-up-frontend-demo image (built with VITE_DEMO_MODE=true).
+#   - backend is the SAME image as prod, with APP_DEMO_ENABLED=true (the demo is env-gated):
+#     /api/demo/* endpoints, per-session isolated worlds, and the idle sweep are turned on.
+#   - No Google OAuth / SES / Jitsi wiring — the demo is the public no-login flow only.
+#   - Its own Postgres on the VPS's own disk, so demo traffic and the disposable
+#     per-session worlds can never touch the real users' database.
+#   - Deployed by .github/workflows/deploy-demo.yml over SSH (the AWS SSM path in
+#     deploy.yml can't reach a non-AWS host). Secrets come from /opt/bubbleup-demo/.env,
+#     written by that workflow from GitHub secrets.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - /data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - bubbleup-network
+
+  backend:
+    image: ghcr.io/ronkadosh/bubble-up-backend:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ACCESS_EXPIRATION_MS: ${JWT_ACCESS_EXPIRATION_MS:-900000}
+      REFRESH_TOKEN_EXPIRATION_MS: ${REFRESH_TOKEN_EXPIRATION_MS:-2592000000}
+      CORS_ALLOWED_ORIGINS: https://${CADDY_DOMAIN}
+      FILE_STORAGE_TYPE: local
+      FILE_STORAGE_LOCAL_PATH: /var/bubbleup/files
+      # Turn the public interactive demo ON: /api/demo/* endpoints, per-session
+      # world seeder, and the idle-session cleanup sweep (see DemoProperties).
+      APP_DEMO_ENABLED: "true"
+      # Shared 10-account seeder stays OFF — the no-login /demo flow builds its own
+      # isolated worlds. Flip to "true" only if you want the shared demo logins
+      # (which also need the dev password page baked into the frontend image).
+      APP_DEMO_SEED_ENABLED: "false"
+      # `update` keeps existing rows on each deploy and ALTERs tables to match new
+      # entity definitions; Flyway (enabled in application.yml) runs migrations on
+      # boot. application.yml defaults to create-drop, so this override is required.
+      SPRING_JPA_HIBERNATE_DDL_AUTO: ${SPRING_JPA_HIBERNATE_DDL_AUTO:-update}
+      JAVA_TOOL_OPTIONS: "-Xmx384m -XX:MaxRAMPercentage=60"
+    volumes:
+      - /data/files:/var/bubbleup/files
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - bubbleup-network
+
+  frontend:
+    image: ghcr.io/ronkadosh/bubble-up-frontend-demo:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      - backend
+    networks:
+      - bubbleup-network
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      CADDY_DOMAIN: ${CADDY_DOMAIN}
+      CADDY_ACME_EMAIL: ${CADDY_ACME_EMAIL:-internal}
+    volumes:
+      - ./Caddyfile.demo:/etc/caddy/Caddyfile:ro
+      - /data/caddy/data:/data
+      - /data/caddy/config:/config
+    depends_on:
+      - frontend
+    networks:
+      - bubbleup-network
+
+networks:
+  bubbleup-network:
+    driver: bridge

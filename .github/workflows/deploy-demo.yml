@@ -1,0 +1,87 @@
+name: deploy-demo
+
+# Deploys the interactive demo to demo.bubbleup.online on a SEPARATE non-AWS VPS.
+#
+# Why a separate workflow (not deploy.yml): deploy.yml ships to the AWS prod box via
+# SSM Run Command, which only works for EC2/SSM-managed instances. The demo VPS is a
+# plain box, so we deploy over SSH instead.
+#
+# Manual trigger only (workflow_dispatch) so demo releases are independent of prod's
+# auto-deploy. The images are built and pushed to GHCR by ci.yml on a vX.Y.Z tag
+# (backend is shared with prod; the frontend is the bubble-up-frontend-demo variant).
+#
+# GitHub repo Settings -> Secrets and variables -> Actions:
+#   Secrets:
+#     DEMO_SSH_HOST       public IP / hostname of the VPS
+#     DEMO_SSH_USER       ssh user (must be in the docker group)
+#     DEMO_SSH_KEY        private key whose public half is in the VPS authorized_keys
+#     DEMO_DB_PASSWORD    postgres password for the demo DB (distinct from prod)
+#     DEMO_JWT_SECRET     >=256-bit random, distinct from prod
+#     GHCR_USER           GHCR username for pulling the private images
+#     GHCR_PAT            PAT with read:packages
+#   Variables:
+#     DEMO_CADDY_DOMAIN   demo.bubbleup.online  (optional; defaults below)
+#     DEMO_ACME_EMAIL     email for Let's Encrypt (optional)
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Image tag to deploy (e.g. 0.1.0 — without the leading v, or 'latest')"
+        required: true
+        default: "latest"
+
+jobs:
+  deploy-demo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Base64-encode compose + Caddyfile
+        id: files
+        run: |
+          echo "compose_b64=$(base64 -w0 docker-compose.demo.yml)" >> "$GITHUB_OUTPUT"
+          echo "caddy_b64=$(base64 -w0 Caddyfile.demo)" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1
+        env:
+          COMPOSE_B64: ${{ steps.files.outputs.compose_b64 }}
+          CADDY_B64: ${{ steps.files.outputs.caddy_b64 }}
+          IMAGE_TAG: ${{ github.event.inputs.image_tag }}
+          CADDY_DOMAIN: ${{ vars.DEMO_CADDY_DOMAIN || 'demo.bubbleup.online' }}
+          CADDY_ACME_EMAIL: ${{ vars.DEMO_ACME_EMAIL || 'internal' }}
+          DB_PASSWORD: ${{ secrets.DEMO_DB_PASSWORD }}
+          JWT_SECRET: ${{ secrets.DEMO_JWT_SECRET }}
+          GHCR_USER: ${{ secrets.GHCR_USER }}
+          GHCR_PAT: ${{ secrets.GHCR_PAT }}
+        with:
+          host: ${{ secrets.DEMO_SSH_HOST }}
+          username: ${{ secrets.DEMO_SSH_USER }}
+          key: ${{ secrets.DEMO_SSH_KEY }}
+          envs: COMPOSE_B64,CADDY_B64,IMAGE_TAG,CADDY_DOMAIN,CADDY_ACME_EMAIL,DB_PASSWORD,JWT_SECRET,GHCR_USER,GHCR_PAT
+          script: |
+            set -euo pipefail
+            mkdir -p /opt/bubbleup-demo
+            cd /opt/bubbleup-demo
+            echo "$COMPOSE_B64" | base64 -d > docker-compose.demo.yml
+            echo "$CADDY_B64"   | base64 -d > Caddyfile.demo
+            umask 077
+            cat > .env <<ENV
+            IMAGE_TAG=${IMAGE_TAG}
+            CADDY_DOMAIN=${CADDY_DOMAIN}
+            CADDY_ACME_EMAIL=${CADDY_ACME_EMAIL}
+            DB_NAME=bubbleup
+            DB_USERNAME=bubbleup
+            DB_PASSWORD=${DB_PASSWORD}
+            JWT_SECRET=${JWT_SECRET}
+            JWT_ACCESS_EXPIRATION_MS=900000
+            REFRESH_TOKEN_EXPIRATION_MS=2592000000
+            SPRING_JPA_HIBERNATE_DDL_AUTO=update
+            ENV
+            echo "$GHCR_PAT" | docker login ghcr.io -u "$GHCR_USER" --password-stdin >/dev/null
+            docker compose -f docker-compose.demo.yml --env-file .env pull
+            docker compose -f docker-compose.demo.yml --env-file .env up -d
+            docker image prune -af --filter "until=72h" || true
+            sleep 5
+            docker ps --format 'table {{.Names}}\t{{.Status}}'
