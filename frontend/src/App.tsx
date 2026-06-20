@@ -2,6 +2,7 @@ import { useEffect, lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import LoginPage from './pages/LoginPage'
 import DemoLandingPage from './pages/DemoLandingPage'
+import DemoStatsPage from './pages/DemoStatsPage'
 import OAuthCallbackPage from './pages/auth/OAuthCallbackPage'
 import DashboardPage from './pages/DashboardPage'
 import GroupsPage from './pages/GroupsPage'
@@ -111,7 +112,12 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<LandingRedirect />} />
-        <Route path="/login" element={<LoginPage />} />
+        {/* Build-specific entry pages: each build kills the page that can't work on
+            it. Prod has no /api/demo backend (→ /demo redirects to /login below); the
+            demo box has no Google OAuth creds, so its /login sign-in is dead and
+            redirects to /demo. LandingRedirect/UNAUTH_LANDING already route unauth
+            visitors correctly per build; this only hardens direct URL hits. */}
+        <Route path="/login" element={DEMO_MODE ? <Navigate to="/demo" replace /> : <LoginPage />} />
         {/* Dev-only password login. Registered only when import.meta.env.DEV;
             in prod TestingLoginPage is null, the route is absent, and the path
             falls through to the catch-all redirect below. */}
@@ -121,8 +127,11 @@ export default function App() {
             element={<Suspense fallback={null}><TestingLoginPage /></Suspense>}
           />
         )}
-        {/* Public, no-login demo entry (demo build only). */}
-        <Route path="/demo" element={<DemoLandingPage />} />
+        {/* Public, no-login demo entry (demo build only). On prod the backend is
+            gated off, so the page would 404 on "Start demo" — redirect to /login. */}
+        <Route path="/demo" element={DEMO_MODE ? <DemoLandingPage /> : <Navigate to="/login" replace />} />
+        {/* Operator-only demo usage view, secret-key gated (demo build only). */}
+        {DEMO_MODE && <Route path="/demo/stats" element={<DemoStatsPage />} />}
         {/* OAuth landing page — public on purpose: /auth/callback reads
             tokens from the URL fragment and hydrates authStore. */}
         <Route path="/auth/callback" element={<OAuthCallbackPage />} />

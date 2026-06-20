@@ -7,7 +7,8 @@
       "cta": "Start demo",
       "starting": "Setting up your campus...",
       "error": "Something went wrong starting the demo. Please try again.",
-      "disclaimer": "This is a sandbox. Nothing here is real, and data resets periodically."
+      "disclaimer": "This is a sandbox. Nothing here is real, and data resets periodically.",
+      "desktopNote": "Best experienced on a desktop or laptop."
     },
     "video": {
       "title": "Video is off in the demo",

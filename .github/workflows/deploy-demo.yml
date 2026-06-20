@@ -17,6 +17,7 @@ name: deploy-demo
 #     DEMO_SSH_KEY        private key whose public half is in the VPS authorized_keys
 #     DEMO_DB_PASSWORD    postgres password for the demo DB (distinct from prod)
 #     DEMO_JWT_SECRET     >=256-bit random, distinct from prod
+#     DEMO_STATS_KEY      shared secret to read GET /api/demo/stats (and /demo/stats page)
 #     GHCR_USER           GHCR username for pulling the private images
 #     GHCR_PAT            PAT with read:packages
 #   Variables:
@@ -53,13 +54,14 @@ jobs:
           CADDY_ACME_EMAIL: ${{ vars.DEMO_ACME_EMAIL || 'internal' }}
           DB_PASSWORD: ${{ secrets.DEMO_DB_PASSWORD }}
           JWT_SECRET: ${{ secrets.DEMO_JWT_SECRET }}
+          DEMO_STATS_KEY: ${{ secrets.DEMO_STATS_KEY }}
           GHCR_USER: ${{ secrets.GHCR_USER }}
           GHCR_PAT: ${{ secrets.GHCR_PAT }}
         with:
           host: ${{ secrets.DEMO_SSH_HOST }}
           username: ${{ secrets.DEMO_SSH_USER }}
           key: ${{ secrets.DEMO_SSH_KEY }}
-          envs: COMPOSE_B64,CADDY_B64,IMAGE_TAG,CADDY_DOMAIN,CADDY_ACME_EMAIL,DB_PASSWORD,JWT_SECRET,GHCR_USER,GHCR_PAT
+          envs: COMPOSE_B64,CADDY_B64,IMAGE_TAG,CADDY_DOMAIN,CADDY_ACME_EMAIL,DB_PASSWORD,JWT_SECRET,DEMO_STATS_KEY,GHCR_USER,GHCR_PAT
           script: |
             set -euo pipefail
             mkdir -p /opt/bubbleup-demo
@@ -78,6 +80,7 @@ jobs:
             JWT_ACCESS_EXPIRATION_MS=900000
             REFRESH_TOKEN_EXPIRATION_MS=2592000000
             SPRING_JPA_HIBERNATE_DDL_AUTO=update
+            APP_DEMO_STATS_KEY=${DEMO_STATS_KEY}
             ENV
             echo "$GHCR_PAT" | docker login ghcr.io -u "$GHCR_USER" --password-stdin >/dev/null
             docker compose -f docker-compose.demo.yml --env-file .env pull

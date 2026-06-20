@@ -90,6 +90,12 @@ app:
     private-key-pem: ${APP_JITSI_PRIVATE_KEY_PEM:}
     server-url: ${APP_JITSI_SERVER_URL:https://8x8.vc}
     token-ttl: ${APP_JITSI_TOKEN_TTL:PT2H}
+  catalog:
+    seed:
+      # Applies the full real-catalog CatalogSeedData on boot (find-or-create, idempotent).
+      # ON by default for dev/prod. Turned OFF on the demo deploy (APP_CATALOG_SEED_ENABLED=false)
+      # so the demo only carries each session's own 8-course world (faster boot, clean browser).
+      enabled: ${APP_CATALOG_SEED_ENABLED:true}
   demo:
     # Master switch for the public, no-login interactive demo (demo.bubbleup.online).
     # OFF here and forced OFF on the AWS prod deploy; turned ON only on the separate
@@ -99,6 +105,9 @@ app:
     # Idle window before an abandoned demo world is swept, and how often the sweep runs.
     session-ttl: ${APP_DEMO_SESSION_TTL:PT2H}
     sweep-interval: ${APP_DEMO_SWEEP_INTERVAL:PT10M}
+    # Shared secret guarding GET /api/demo/stats (the no-login demo has no admin auth).
+    # Blank => stats endpoint rejects everything. Set via APP_DEMO_STATS_KEY on the demo box.
+    stats-key: ${APP_DEMO_STATS_KEY:}
     seed:
       # Boots 10 demo users + Study Bubbles on first start. Idempotent.
       # Temporarily ON by default while iterating; turn off in any env that

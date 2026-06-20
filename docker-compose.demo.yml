@@ -54,6 +54,12 @@ services:
       # isolated worlds. Flip to "true" only if you want the shared demo logins
       # (which also need the dev password page baked into the frontend image).
       APP_DEMO_SEED_ENABLED: "false"
+      # Skip the 665KB real-catalog seed: each demo world builds its own 8-course
+      # university, so the global catalog is dead weight here (slow boot + a course
+      # browser full of irrelevant courses).
+      APP_CATALOG_SEED_ENABLED: "false"
+      # Shared secret guarding GET /api/demo/stats (the demo usage counters).
+      APP_DEMO_STATS_KEY: ${APP_DEMO_STATS_KEY:-}
       # `update` keeps existing rows on each deploy and ALTERs tables to match new
       # entity definitions; Flyway (enabled in application.yml) runs migrations on
       # boot. application.yml defaults to create-drop, so this override is required.

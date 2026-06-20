@@ -16,12 +16,17 @@ import java.time.Duration;
  * <p>{@code sessionTtl} is the idle window after which an abandoned demo world is
  * swept; the client sends a heartbeat that bumps {@code DemoSession.lastSeenAt}.
  * {@code sweepInterval} is how often the cleanup job runs.
+ *
+ * <p>{@code statsKey} is the shared secret guarding {@code GET /api/demo/stats} —
+ * the no-login demo has no admin auth, so the operator passes this key to read the
+ * usage counters. Blank (the default) makes the stats endpoint reject everything.
  */
 @ConfigurationProperties(prefix = "app.demo")
 public record DemoProperties(
         boolean enabled,
         Duration sessionTtl,
-        Duration sweepInterval
+        Duration sweepInterval,
+        String statsKey
 ) {
     public DemoProperties {
         if (sessionTtl == null) sessionTtl = Duration.ofHours(2);
