@@ -7,7 +7,9 @@ import { useOnboardingStore } from '../store/onboardingStore'
 import { useTourStore } from '../store/tourStore'
 import { useBentoLayoutStore } from '../store/bentoLayoutStore'
 import { useQuizPromptStore } from '../store/quizPromptStore'
+import { useViewportStore } from '../store/viewportStore'
 import { Button } from '../components/Button'
+import { BubbleField } from '../components/BubbleField'
 import { BubbleLogo } from '../components/Icons'
 
 /**
@@ -15,6 +17,9 @@ import { BubbleLogo } from '../components/Icons'
  * isolated world server-side, auto-logs the guest in, hydrates onboarding (so the
  * hub renders instead of the wizard), kicks off the guided tour, and lands on the
  * hub. Only mounted in the demo build (DEMO_MODE).
+ *
+ * Visual language mirrors LoginPage (brand-gradient shell, top bar, BubbleField,
+ * iridescent card, footer) so the public face of the product stays consistent.
  */
 export default function DemoLandingPage() {
   const { t } = useTranslation()
@@ -22,6 +27,7 @@ export default function DemoLandingPage() {
   const setAuth = useAuthStore((s) => s.setAuth)
   const refreshOnboarding = useOnboardingStore((s) => s.refresh)
   const startTour = useTourStore((s) => s.start)
+  const isPhone = useViewportStore((s) => s.tier === 'phone')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(false)
 
@@ -48,26 +54,67 @@ export default function DemoLandingPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-app p-6">
-      <div className="w-full max-w-lg text-center bg-surface rounded-[2rem] shadow-bubble border border-line p-8 tablet:p-12 animate-pop-in">
-        <BubbleLogo className="w-16 h-16 mx-auto mb-6" />
-        <h1 className="text-3xl font-extrabold text-base mb-3">{t('demo.landing.title')}</h1>
-        <p className="text-secondary mb-2">{t('demo.landing.subtitle')}</p>
-        <p className="text-sm text-muted mb-8">{t('demo.landing.blurb')}</p>
+    <div className="relative flex min-h-screen flex-col overflow-x-hidden bg-base text-base">
+      <div className="pointer-events-none absolute inset-0 z-0 bg-brand-gradient-soft opacity-30 dark:opacity-20" />
 
-        <Button
-          variant="deep"
-          size="lg"
-          className="w-full"
-          onClick={handleStart}
-          disabled={loading}
-        >
-          {loading ? t('demo.landing.starting') : t('demo.landing.cta')}
-        </Button>
+      {/* Top bar — mirrors LoginPage. */}
+      <header className="sticky top-0 z-30 border-b border-line bg-base/80 backdrop-blur-md">
+        <div className="mx-auto flex h-16 w-full max-w-[1200px] items-center px-4 tablet:px-6 desktop:px-8">
+          <div className="flex items-center gap-2.5">
+            <div className="ring-iridescent rounded-full p-[1.5px] shadow-themed">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-gradient text-on-brand">
+                <BubbleLogo className="h-5 w-5" />
+              </div>
+            </div>
+            <span className="font-heading text-xl font-bold text-base">{t('brand.name')}</span>
+          </div>
+        </div>
+      </header>
 
-        {error && <p className="mt-4 text-sm text-danger">{t('demo.landing.error')}</p>}
-        <p className="mt-6 text-xs text-muted">{t('demo.landing.disclaimer')}</p>
-      </div>
+      {/* Hero: drifting bubble field + the start-demo card, vertically centred. */}
+      <main className="relative z-10 flex w-full flex-grow items-center justify-center">
+        <BubbleField />
+        <div className="relative z-10 mx-auto w-full max-w-lg px-4 py-10 tablet:py-12">
+          <div className="ring-iridescent animate-rise-in rounded-[2.5rem] p-[2px] shadow-bubble">
+            <div className="bubble-surface relative overflow-hidden rounded-[calc(2.5rem-2px)] p-6 text-center tablet:p-10">
+              <BubbleLogo className="mx-auto mb-6 h-16 w-16" />
+              <h1 className="font-heading text-3xl font-extrabold text-base">{t('demo.landing.title')}</h1>
+              <p className="mt-3 text-secondary">{t('demo.landing.subtitle')}</p>
+              <p className="mt-2 text-sm text-muted">{t('demo.landing.blurb')}</p>
+
+              {/* Desktop recommendation — prominent on phones, a soft hint elsewhere. */}
+              <p
+                className={
+                  isPhone
+                    ? 'mt-6 rounded-2xl border border-line bg-surface-hover px-4 py-2.5 text-sm font-medium text-secondary'
+                    : 'mt-6 text-xs text-muted'
+                }
+              >
+                💻 {t('demo.landing.desktopNote')}
+              </p>
+
+              <Button
+                variant="deep"
+                size="lg"
+                className="mt-6 w-full"
+                onClick={handleStart}
+                disabled={loading}
+              >
+                {loading ? t('demo.landing.starting') : t('demo.landing.cta')}
+              </Button>
+
+              {error && <p className="mt-4 text-sm text-danger">{t('demo.landing.error')}</p>}
+              <p className="mt-6 text-xs text-muted">{t('demo.landing.disclaimer')}</p>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <footer className="relative z-10 border-t border-line bg-base/90 backdrop-blur-md">
+        <div className="mx-auto w-full max-w-[1200px] px-4 py-6 text-center desktop:px-8">
+          <p className="text-xs text-muted">{t('login.footerRights')}</p>
+        </div>
+      </footer>
     </div>
   )
 }

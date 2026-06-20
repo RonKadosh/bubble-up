@@ -6,13 +6,17 @@ import com.ronkadosh.bubbleup.bootstrap.seed.DemoWorldHandle;
 import com.ronkadosh.bubbleup.bootstrap.seed.DemoWorldSeeder;
 import com.ronkadosh.bubbleup.common.datetime.TimeProvider;
 import com.ronkadosh.bubbleup.demo.api.dto.DemoStartResponse;
+import com.ronkadosh.bubbleup.demo.api.dto.DemoStatsResponse;
 import com.ronkadosh.bubbleup.demo.model.DemoSession;
+import com.ronkadosh.bubbleup.demo.model.DemoStartLog;
 import com.ronkadosh.bubbleup.demo.persistence.DemoSessionRepository;
+import com.ronkadosh.bubbleup.demo.persistence.DemoStartLogRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.util.UUID;
 
 /**
@@ -28,6 +32,7 @@ public class DemoSessionService {
     private final DemoWorldSeeder seeder;
     private final AuthInternalService authInternalService;
     private final DemoSessionRepository repository;
+    private final DemoStartLogRepository startLogRepository;
     private final DemoWorldPurger purger;
     private final TimeProvider timeProvider;
 
@@ -44,6 +49,9 @@ public class DemoSessionService {
                 .createdAt(timeProvider.now())
                 .lastSeenAt(timeProvider.now())
                 .build());
+
+        // Permanent tally — survives the idle sweep that purges the DemoSession above.
+        startLogRepository.save(DemoStartLog.builder().startedAt(timeProvider.now()).build());
 
         return new DemoStartResponse(
                 session.accessToken(),
@@ -64,5 +72,14 @@ public class DemoSessionService {
     /** Eager teardown when the visitor explicitly leaves; the sweep is the backstop. */
     public void end(UUID guestUserId) {
         repository.findByGuestUserId(guestUserId).ifPresent(purger::purgeWorld);
+    }
+
+    /** Usage counters for the operator's secret-key stats view. */
+    @Transactional(readOnly = true)
+    public DemoStatsResponse stats() {
+        return new DemoStatsResponse(
+                startLogRepository.count(),
+                repository.count(),
+                startLogRepository.countByStartedAtAfter(timeProvider.now().minus(Duration.ofDays(7))));
     }
 }

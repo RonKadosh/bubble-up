@@ -81,6 +81,9 @@ public class SecurityConfig {
                         // Only does anything when app.demo.enabled (the demo controller is gated);
                         // harmless 404 elsewhere. /heartbeat + /end stay authenticated.
                         .requestMatchers(HttpMethod.POST, ApiPaths.DEMO_BASE + "/start").permitAll()
+                        // Demo usage stats — guarded by the app.demo.stats-key secret in the
+                        // controller, not JWT (the no-login demo has no admin session).
+                        .requestMatchers(HttpMethod.GET, ApiPaths.DEMO_BASE + "/stats").permitAll()
                         .anyRequest().authenticated()
                 )
                 // Missing/invalid JWT must return 401 (not the Spring default 403). The frontend

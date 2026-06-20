@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { GOOGLE_OAUTH_START_URL } from '../api/auth'
@@ -6,6 +6,10 @@ import { useAuthStore } from '../store/authStore'
 import { Button } from '../components/Button'
 import { BubbleField } from '../components/BubbleField'
 import { BubbleLogo, ArrowRightIcon } from '../components/Icons'
+
+/** Public, no-login interactive demo — runs on its own VPS, separate from this app.
+ *  Hard-coded because the frontend has no env-config layer yet (known gap). */
+const DEMO_URL = 'https://demo.bubbleup.online'
 
 /**
  * Public landing page + sign-in. A real product page (top bar → hero with the
@@ -25,12 +29,6 @@ export default function LoginPage() {
   const [params] = useSearchParams()
   const [error, setError] = useState<string>('')
 
-  // The real demo is being built by a teammate; for now the CTA flashes a
-  // self-contained "coming soon" notice (the global Toaster isn't mounted on
-  // this public route). Swap showDemoNotice for a navigate/link when it lands.
-  const [demoNotice, setDemoNotice] = useState<boolean>(false)
-  const demoTimer = useRef<number | null>(null)
-
   // Already signed in? Go straight into the app.
   useEffect(() => {
     if (!accessToken) return
@@ -45,18 +43,9 @@ export default function LoginPage() {
     setError(errorMessage(code, t))
   }, [params, t])
 
-  // Clear any pending notice timer on unmount.
-  useEffect(() => () => { if (demoTimer.current) window.clearTimeout(demoTimer.current) }, [])
-
   function startGoogleSignIn() {
     // Full-page navigate. The backend issues an HTTP 302 to accounts.google.com.
     window.location.assign(GOOGLE_OAUTH_START_URL)
-  }
-
-  function showDemoNotice() {
-    setDemoNotice(true)
-    if (demoTimer.current) window.clearTimeout(demoTimer.current)
-    demoTimer.current = window.setTimeout(() => setDemoNotice(false), 3600)
   }
 
   return (
@@ -94,22 +83,18 @@ export default function LoginPage() {
               {t('login.heroSubtitle')}
             </p>
 
-            {/* Demo call-out, folded into the hero so the page stays one screen. */}
+            {/* Demo call-out, folded into the hero so the page stays one screen.
+                Full-page navigate to the public demo (separate VPS). */}
             <div className="flex flex-col items-center gap-3 desktop:items-start">
               <Button
                 variant="secondary"
                 size="lg"
-                onClick={showDemoNotice}
+                onClick={() => window.location.assign(DEMO_URL)}
                 aria-label={t('login.demoCta')}
                 rightIcon={<ArrowRightIcon className="h-5 w-5 rtl:rotate-180" />}
               >
                 {t('login.demoCta')}
               </Button>
-              {demoNotice && (
-                <p role="status" className="animate-pop-in rounded-full bg-surface-hover px-4 py-2 text-sm text-secondary">
-                  {t('login.demoComingSoon')}
-                </p>
-              )}
             </div>
           </div>
 

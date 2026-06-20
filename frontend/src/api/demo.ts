@@ -41,3 +41,19 @@ export async function demoHeartbeat(): Promise<void> {
 export async function endDemo(): Promise<void> {
   await client.post('/demo/end')
 }
+
+export interface DemoStats {
+  totalStarts: number
+  activeSessions: number
+  last7Days: number
+}
+
+/**
+ * Demo usage counters for the operator. Guarded by a shared secret (app.demo.stats-key
+ * on the backend) passed as ?key=... — the no-login demo has no admin session. A wrong
+ * or missing key throws 401.
+ */
+export async function getDemoStats(key: string): Promise<DemoStats> {
+  const res = await client.get<ApiSuccess<DemoStats>>('/demo/stats', { params: { key } })
+  return res.data.data
+}
