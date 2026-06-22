@@ -42,8 +42,10 @@ public class DemoController {
 
     @PostMapping("/start")
     @RateLimit(limit = 30, windowSeconds = 60, scope = RateLimitScope.PER_IP)
-    public ApiResponse<DemoStartResponse> start() {
-        return ApiResponse.success(demoSessionService.start());
+    public ApiResponse<DemoStartResponse> start(java.util.Locale locale) {
+        // The world is seeded in the visitor's language (Accept-Language, resolved by
+        // Spring); the frontend sets it on the demo landing before calling start.
+        return ApiResponse.success(demoSessionService.start(locale.getLanguage()));
     }
 
     /**

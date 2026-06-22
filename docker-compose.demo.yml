@@ -60,6 +60,15 @@ services:
       APP_CATALOG_SEED_ENABLED: "false"
       # Shared secret guarding GET /api/demo/stats (the demo usage counters).
       APP_DEMO_STATS_KEY: ${APP_DEMO_STATS_KEY:-}
+      # Run matching synchronously: disables the async MatchingEventListener so a single
+      # "Start demo" can't flood the small recompute pool and starve the guided tour's
+      # "matchable" step. The DemoWorldSeeder warm-up + inline submitAnswer cover it.
+      APP_MATCHING_ASYNC_RECOMPUTE: "false"
+      # With the behavior pipeline off, weight confidence fully to the quiz. Personas
+      # answer 7 questions → confidence 1.0 → group confidence 1.0, so a new guest who
+      # clears the matchable gate actually sees MATCHED bubbles (not all Trending).
+      APP_MATCHING_QUESTION_WEIGHT: "1.0"
+      APP_MATCHING_BEHAVIOR_WEIGHT: "0.0"
       # `update` keeps existing rows on each deploy and ALTERs tables to match new
       # entity definitions; Flyway (enabled in application.yml) runs migrations on
       # boot. application.yml defaults to create-drop, so this override is required.

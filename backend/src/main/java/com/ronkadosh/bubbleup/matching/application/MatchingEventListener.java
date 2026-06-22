@@ -2,15 +2,25 @@ package com.ronkadosh.bubbleup.matching.application;
 
 import com.ronkadosh.bubbleup.common.events.GroupMembershipChangedEvent;
 import com.ronkadosh.bubbleup.common.events.UserBehaviorEvent;
-import com.ronkadosh.bubbleup.common.events.BehaviorEventType;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+/**
+ * Drives matching recompute off domain events, asynchronously after commit.
+ *
+ * <p>Disabled when {@code app.matching.async-recompute=false} (the demo box): there
+ * the recompute runs synchronously instead — {@code submitAnswer} applies it inline
+ * and {@link com.ronkadosh.bubbleup.bootstrap.seed.DemoWorldSeeder} warms the world
+ * once at seed time — so a single "Start demo" can't enqueue hundreds of tasks onto
+ * the small pool and starve the guided tour's "matchable" gate.
+ */
 @Component
+@ConditionalOnProperty(name = "app.matching.async-recompute", havingValue = "true", matchIfMissing = true)
 @RequiredArgsConstructor
 public class MatchingEventListener {
 
@@ -19,13 +29,7 @@ public class MatchingEventListener {
     @Async("matchingExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onUserBehavior(UserBehaviorEvent event) {
-        if (event.eventType() == BehaviorEventType.USER_ANSWERED_QUIZ_QUESTION) {
-            commandService.recomputeUserQuizProfile(event.userId());
-        } else {
-            commandService.recordBehaviorEvent(event.userId(), event.eventType());
-        }
-        commandService.recomputeGroupProfilesForUser(event.userId());
-        commandService.refreshUserMatchCache(event.userId());
+        commandService.applyUserBehavior(event.userId(), event.eventType());
     }
 
     @Async("matchingExecutor")

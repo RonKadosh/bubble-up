@@ -162,12 +162,19 @@ app:
     # matching_confidence (= user_confidence × group_profile_confidence) at/above this
     # renders a bubble as MATCHED (shows %); below it renders as TRENDING (reason labels).
     matched-display-threshold: ${APP_MATCHING_MATCHED_THRESHOLD:0.30}
+    # Async recompute via MatchingEventListener (prod default). The demo box sets this
+    # false so matching runs synchronously — no async herd to starve the guided tour.
+    async-recompute: ${APP_MATCHING_ASYNC_RECOMPUTE:true}
     confidence:
       question-cap: 7              # answered questions for full question-confidence
       behavior-evidence-cap: 3.0   # saturated behavior-evidence units (Σ count/(count+k)) for full
                                    # behavior-confidence — needs a SPREAD of distinct actions, not volume
-      question-weight: 0.70
-      behavior-weight: 0.30
+      # Split of user_confidence between quiz answers and behavior. The demo runs
+      # quiz-only matching (async behavior pipeline off), so it sets question-weight=1.0
+      # / behavior-weight=0.0 — otherwise persona confidence caps at 0.70 and no group
+      # ever reaches the confidence needed to show MATCHED to a new guest.
+      question-weight: ${APP_MATCHING_QUESTION_WEIGHT:0.70}
+      behavior-weight: ${APP_MATCHING_BEHAVIOR_WEIGHT:0.30}
       user-cap: 1.0
       group-member-cap: 5    # members for the group-confidence size factor to saturate
     trending:

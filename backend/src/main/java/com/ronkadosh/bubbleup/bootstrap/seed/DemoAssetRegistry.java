@@ -58,6 +58,8 @@ public class DemoAssetRegistry {
     public void buildTemplates() {
         templates.put("syllabus.pdf", new Template("application/pdf", pdf("Course Syllabus")));
         templates.put("welcome.txt", new Template("text/plain", WELCOME.getBytes(StandardCharsets.UTF_8)));
+        // Hebrew variant of the plaintext welcome note (PDFs stay Latin — see pdf()).
+        templates.put("welcome.he.txt", new Template("text/plain", WELCOME_HE.getBytes(StandardCharsets.UTF_8)));
         templates.put("lecture-notes-1.pdf", new Template("application/pdf", pdf("Lecture Notes  Week 1")));
         templates.put("lecture-notes-2.pdf", new Template("application/pdf", pdf("Lecture Notes  Week 2")));
         templates.put("past-exam-2025.pdf", new Template("application/pdf", pdf("2025 Midterm")));
@@ -113,6 +115,11 @@ public class DemoAssetRegistry {
             "Welcome to the Bubble!\n\n"
             + "This is your group's shared shelf. Drop notes, past exams, and resources here\n"
             + "so everyone can study together. Files are organized into folders on the left.\n";
+
+    private static final String WELCOME_HE =
+            "ברוכים הבאים לקבוצה!\n\n"
+            + "זהו המדף המשותף של הקבוצה שלכם. העלו לכאן סיכומים, מבחנים קודמים ומשאבים\n"
+            + "כדי שכולם יוכלו ללמוד יחד. הקבצים מאורגנים בתיקיות בצד.\n";
 
     /** Smallest valid PNG (a 1x1 transparent pixel), so "Diagram.png" has real bytes to preview. */
     private static final byte[] PNG_1X1 = Base64.getDecoder().decode(

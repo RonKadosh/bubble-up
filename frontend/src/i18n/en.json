@@ -5,6 +5,7 @@
       "subtitle": "A 2 minute guided tour of the study group platform.",
       "blurb": "No sign up, no setup. Click below and you'll land in a fully populated campus with a quick walkthrough, then a sandbox to explore freely.",
       "cta": "Start demo",
+      "langPrompt": "Choose your language",
       "starting": "Setting up your campus...",
       "preparing": "We're prepping your world — this might take a few seconds.",
       "error": "Something went wrong starting the demo. Please try again.",

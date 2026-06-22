@@ -37,9 +37,9 @@ public class DemoSessionService {
     private final TimeProvider timeProvider;
 
     @Transactional
-    public DemoStartResponse start() {
+    public DemoStartResponse start(String lang) {
         String token = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
-        DemoWorldHandle handle = seeder.seed(token);
+        DemoWorldHandle handle = seeder.seed(token, lang);
         AuthSession session = authInternalService.issueSession(handle.guestUserId());
 
         repository.save(DemoSession.builder()
