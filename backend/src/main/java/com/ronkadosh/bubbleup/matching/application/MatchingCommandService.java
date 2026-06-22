@@ -83,6 +83,27 @@ public class MatchingCommandService {
                                 .build())
                 );
         eventPublisher.publishEvent(new UserBehaviorEvent(userId, BehaviorEventType.USER_ANSWERED_QUIZ_QUESTION));
+        // With the async pipeline off (demo), the listener won't pick this up — apply the
+        // recompute inline so getReliability/recommendations reflect the answer immediately.
+        if (!props.asyncRecompute()) {
+            self.applyUserBehavior(userId, BehaviorEventType.USER_ANSWERED_QUIZ_QUESTION);
+        }
+    }
+
+    /**
+     * The full recompute for one user's action: refresh their profile (quiz vector or
+     * behavior count), the profiles of their groups, and their match cache. Invoked
+     * async by {@link MatchingEventListener} in prod, or synchronously (see
+     * {@link #submitAnswer}) when {@code app.matching.async-recompute=false}.
+     */
+    public void applyUserBehavior(UUID userId, BehaviorEventType eventType) {
+        if (eventType == BehaviorEventType.USER_ANSWERED_QUIZ_QUESTION) {
+            self.recomputeUserQuizProfile(userId);
+        } else {
+            self.recordBehaviorEvent(userId, eventType);
+        }
+        self.recomputeGroupProfilesForUser(userId);
+        self.refreshUserMatchCache(userId);
     }
 
     /**
@@ -106,7 +127,16 @@ public class MatchingCommandService {
             for (QuizAnswerOption o : options) {
                 if (o.weightsArray()[targetRole] > best.weightsArray()[targetRole]) best = o;
             }
-            submitAnswer(userId, question.getId(), best.getId());
+            // Write the response directly rather than via submitAnswer: no behavior event
+            // (which the demo's disabled listener would drop anyway) and, crucially, no
+            // per-answer synchronous recompute. The demo seeder does ONE deduped warm-up
+            // afterward instead of recomputing this persona's profile on every answer.
+            quizResponseRepository.save(QuizResponse.builder()
+                    .userId(userId)
+                    .questionId(question.getId())
+                    .answerId(best.getId())
+                    .respondedAt(timeProvider.now())
+                    .build());
         }
     }
 

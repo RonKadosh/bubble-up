@@ -419,7 +419,7 @@ function FilesBrowserView({
             return (
               <div
                 key={f.id}
-                data-tour={f.originalName === 'Syllabus.pdf' ? 'file-syllabus' : undefined}
+                data-tour={(f.originalName === 'Syllabus.pdf' || f.originalName === 'סילבוס.pdf') ? 'file-syllabus' : undefined}
                 className="bg-surface border border-line rounded-3xl p-3 shadow-themed flex items-center gap-3 bubble-pop"
               >
                 <span className="text-xl" aria-hidden>{fileIcon(f.contentType)}</span>

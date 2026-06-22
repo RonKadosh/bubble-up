@@ -111,99 +111,114 @@ public class DemoWorldSeeder {
 
     // ── Static world definition (Demo-world.md §4–§9) ──────────────────────────
 
-    /** role index: 0 LEADER · 1 PLANNER · 2 EXPERT · 3 CREATIVE · 4 COMMUNICATOR · 5 TEAM_PLAYER · 6 CHALLENGER */
-    private record Persona(String slug, String name, int role) {}
-    private record CourseDef(String code, String name, double credits, String dept, String description) {}
-    private record BubbleDef(String slug, String name, String desc, int max, String course, List<String> members) {}
-    private record ExpertDef(String slug, String name, boolean verified, String dept, String headline, String bio, Set<String> tags) {}
-    private record SessionDef(String host, String title, String desc, long startMin, long durMin, int capacity, List<String> bubbles) {}
+    /** role index: 0 LEADER · 1 PLANNER · 2 EXPERT · 3 CREATIVE · 4 COMMUNICATOR · 5 TEAM_PLAYER · 6 CHALLENGER.
+     *  Each user-visible field carries an English + Hebrew twin; the seed picks by the
+     *  visitor's language (Accept-Language at /demo/start, see {@link #loc}). Structural
+     *  fields (slug, role, course code, member lists) are language-independent. */
+    private record Persona(String slug, String name, String nameHe, int role) {}
+    private record CourseDef(String code, String name, String nameHe, double credits, String dept, String description, String descriptionHe) {}
+    /** {@code role} = the bubble's theme role index; its members are seeded toward it so the
+     *  group's role vector has a sharp peak (varied match %s). */
+    private record BubbleDef(String slug, String name, String nameHe, String desc, String descHe, int max, String course, int role, List<String> members) {}
+    private record ExpertDef(String slug, String name, String nameHe, boolean verified, String dept, String headline, String headlineHe, String bio, String bioHe, Set<String> tags) {}
+    private record SessionDef(String host, String title, String titleHe, String desc, String descHe, long startMin, long durMin, int capacity, List<String> bubbles) {}
 
     private static final List<Persona> SCIENCE = List.of(
-            new Persona("ava-cohen", "Ava Cohen", 1), new Persona("noah-levi", "Noah Levi", 2),
-            new Persona("mia-katz", "Mia Katz", 4), new Persona("liam-shapiro", "Liam Shapiro", 0),
-            new Persona("emma-roth", "Emma Roth", 3), new Persona("ethan-mizrahi", "Ethan Mizrahi", 6),
-            new Persona("sara-friedman", "Sara Friedman", 5), new Persona("daniel-peretz", "Daniel Peretz", 2),
-            new Persona("tamar-ben-david", "Tamar Ben-David", 1), new Persona("omar-haddad", "Omar Haddad", 4),
-            new Persona("lily-nguyen", "Lily Nguyen", 3), new Persona("jonah-stern", "Jonah Stern", 0),
-            new Persona("maya-azoulay", "Maya Azoulay", 5), new Persona("adam-klein", "Adam Klein", 6),
-            new Persona("nicole-bar", "Nicole Bar", 1), new Persona("ryan-oliveira", "Ryan Oliveira", 2),
-            new Persona("hana-suzuki", "Hana Suzuki", 4), new Persona("leo-martin", "Leo Martin", 3),
-            new Persona("priya-sharma", "Priya Sharma", 0), new Persona("yossi-gabay", "Yossi Gabay", 5),
-            new Persona("zoe-kim", "Zoe Kim", 6), new Persona("marco-rossi", "Marco Rossi", 2),
-            new Persona("dana-vardi", "Dana Vardi", 1), new Persona("felix-braun", "Felix Braun", 4));
+            new Persona("ava-cohen", "Ava Cohen", "אווה כהן", 1), new Persona("noah-levi", "Noah Levi", "נואה לוי", 2),
+            new Persona("mia-katz", "Mia Katz", "מיה כץ", 4), new Persona("liam-shapiro", "Liam Shapiro", "ליאם שפירא", 0),
+            new Persona("emma-roth", "Emma Roth", "אמה רוט", 3), new Persona("ethan-mizrahi", "Ethan Mizrahi", "איתן מזרחי", 6),
+            new Persona("sara-friedman", "Sara Friedman", "שרה פרידמן", 5), new Persona("daniel-peretz", "Daniel Peretz", "דניאל פרץ", 2),
+            new Persona("tamar-ben-david", "Tamar Ben-David", "תמר בן-דוד", 1), new Persona("omar-haddad", "Omar Haddad", "עומר חדאד", 4),
+            new Persona("lily-nguyen", "Lily Nguyen", "לילי נגוין", 3), new Persona("jonah-stern", "Jonah Stern", "יונה שטרן", 0),
+            new Persona("maya-azoulay", "Maya Azoulay", "מאיה אזולאי", 5), new Persona("adam-klein", "Adam Klein", "אדם קליין", 6),
+            new Persona("nicole-bar", "Nicole Bar", "ניקול בר", 1), new Persona("ryan-oliveira", "Ryan Oliveira", "ראיין אוליביירה", 2),
+            new Persona("hana-suzuki", "Hana Suzuki", "האנה סוזוקי", 4), new Persona("leo-martin", "Leo Martin", "ליאו מרטין", 3),
+            new Persona("priya-sharma", "Priya Sharma", "פריה שארמה", 0), new Persona("yossi-gabay", "Yossi Gabay", "יוסי גבאי", 5),
+            new Persona("zoe-kim", "Zoe Kim", "זואי קים", 6), new Persona("marco-rossi", "Marco Rossi", "מרקו רוסי", 2),
+            new Persona("dana-vardi", "Dana Vardi", "דנה ורדי", 1), new Persona("felix-braun", "Felix Braun", "פליקס בראון", 4));
 
     private static final List<Persona> SOCIOLOGY = List.of(
-            new Persona("lena-fischer", "Lena Fischer", 4), new Persona("amir-cohen", "Amir Cohen", 0),
-            new Persona("grace-owens", "Grace Owens", 5), new Persona("tariq-aziz", "Tariq Aziz", 2),
-            new Persona("yael-sade", "Yael Sade", 3), new Persona("ben-harel", "Ben Harel", 1),
-            new Persona("sofia-romano", "Sofia Romano", 4), new Persona("malik-johnson", "Malik Johnson", 6),
-            new Persona("ruth-adler", "Ruth Adler", 5), new Persona("ivan-petrov", "Ivan Petrov", 2),
-            new Persona("nina-lopez", "Nina Lopez", 3), new Persona("caleb-wright", "Caleb Wright", 0),
-            new Persona("aisha-rahman", "Aisha Rahman", 1), new Persona("theo-dubois", "Theo Dubois", 4),
-            new Persona("hila-regev", "Hila Regev", 5), new Persona("samuel-okafor", "Samuel Okafor", 6),
-            new Persona("clara-meyer", "Clara Meyer", 3), new Persona("josh-green", "Josh Green", 0),
-            new Persona("fatima-ali", "Fatima Ali", 1), new Persona("david-stein", "David Stein", 2),
-            new Persona("olivia-park", "Olivia Park", 4), new Persona("rami-khoury", "Rami Khoury", 5),
-            new Persona("esther-weiss", "Esther Weiss", 6), new Persona("lucas-silva", "Lucas Silva", 3));
+            new Persona("lena-fischer", "Lena Fischer", "לנה פישר", 4), new Persona("amir-cohen", "Amir Cohen", "אמיר כהן", 0),
+            new Persona("grace-owens", "Grace Owens", "גרייס אוונס", 5), new Persona("tariq-aziz", "Tariq Aziz", "טארק עזיז", 2),
+            new Persona("yael-sade", "Yael Sade", "יעל שדה", 3), new Persona("ben-harel", "Ben Harel", "בן הראל", 1),
+            new Persona("sofia-romano", "Sofia Romano", "סופיה רומנו", 4), new Persona("malik-johnson", "Malik Johnson", "מאליק ג'ונסון", 6),
+            new Persona("ruth-adler", "Ruth Adler", "רות אדלר", 5), new Persona("ivan-petrov", "Ivan Petrov", "איוואן פטרוב", 2),
+            new Persona("nina-lopez", "Nina Lopez", "נינה לופז", 3), new Persona("caleb-wright", "Caleb Wright", "כיילב רייט", 0),
+            new Persona("aisha-rahman", "Aisha Rahman", "עאישה רחמן", 1), new Persona("theo-dubois", "Theo Dubois", "תיאו דובואה", 4),
+            new Persona("hila-regev", "Hila Regev", "הילה רגב", 5), new Persona("samuel-okafor", "Samuel Okafor", "סמואל אוקפור", 6),
+            new Persona("clara-meyer", "Clara Meyer", "קלרה מאייר", 3), new Persona("josh-green", "Josh Green", "ג'וש גרין", 0),
+            new Persona("fatima-ali", "Fatima Ali", "פאטמה עלי", 1), new Persona("david-stein", "David Stein", "דיוויד שטיין", 2),
+            new Persona("olivia-park", "Olivia Park", "אוליביה פארק", 4), new Persona("rami-khoury", "Rami Khoury", "רמי חורי", 5),
+            new Persona("esther-weiss", "Esther Weiss", "אסתר וייס", 6), new Persona("lucas-silva", "Lucas Silva", "לוקאס סילבה", 3));
 
     private static final List<CourseDef> COURSES = List.of(
-            new CourseDef("CS101", "Introduction to Computer Science", 4.0, "SCI", "Foundations of programming, algorithms, and computational thinking."),
-            new CourseDef("MAT110", "Calculus I", 5.0, "SCI", "Limits, derivatives, integrals, and their applications."),
-            new CourseDef("PHY120", "General Physics", 4.0, "SCI", "Classical mechanics, energy, and motion."),
-            new CourseDef("CHM130", "Organic Chemistry", 4.0, "SCI", "Structure, mechanisms, and reactions of carbon compounds."),
-            new CourseDef("SOC101", "Introduction to Sociology", 3.0, "SOC", "Society, institutions, and the sociological imagination."),
-            new CourseDef("PSY110", "Social Psychology", 3.0, "SOC", "How people think, feel, and behave in social contexts."),
-            new CourseDef("RES120", "Research Methods in Social Science", 4.0, "SOC", "Survey design, qualitative methods, and statistics."),
-            new CourseDef("ANT130", "Cultural Anthropology", 3.0, "SOC", "Culture, ritual, kinship, and ethnographic fieldwork."));
+            new CourseDef("CS101", "Introduction to Computer Science", "מבוא למדעי המחשב", 4.0, "SCI", "Foundations of programming, algorithms, and computational thinking.", "יסודות התכנות, אלגוריתמים וחשיבה חישובית."),
+            new CourseDef("MAT110", "Calculus I", "חשבון אינפיניטסימלי 1", 5.0, "SCI", "Limits, derivatives, integrals, and their applications.", "גבולות, נגזרות, אינטגרלים והשימושים שלהם."),
+            new CourseDef("PHY120", "General Physics", "פיזיקה כללית", 4.0, "SCI", "Classical mechanics, energy, and motion.", "מכניקה קלאסית, אנרגיה ותנועה."),
+            new CourseDef("CHM130", "Organic Chemistry", "כימיה אורגנית", 4.0, "SCI", "Structure, mechanisms, and reactions of carbon compounds.", "מבנה, מנגנונים ותגובות של תרכובות פחמן."),
+            new CourseDef("SOC101", "Introduction to Sociology", "מבוא לסוציולוגיה", 3.0, "SOC", "Society, institutions, and the sociological imagination.", "חברה, מוסדות והדמיון הסוציולוגי."),
+            new CourseDef("PSY110", "Social Psychology", "פסיכולוגיה חברתית", 3.0, "SOC", "How people think, feel, and behave in social contexts.", "כיצד אנשים חושבים, מרגישים ומתנהגים בהקשרים חברתיים."),
+            new CourseDef("RES120", "Research Methods in Social Science", "שיטות מחקר במדעי החברה", 4.0, "SOC", "Survey design, qualitative methods, and statistics.", "תכנון סקרים, שיטות איכותניות וסטטיסטיקה."),
+            new CourseDef("ANT130", "Cultural Anthropology", "אנתרופולוגיה תרבותית", 3.0, "SOC", "Culture, ritual, kinship, and ethnographic fieldwork.", "תרבות, פולחן, קרבה ועבודת שדה אתנוגרפית."));
 
-    /** Bubbles per Demo-world §6. Member list has the owner first. */
+    /** Bubbles per Demo-world §6. Member list has the owner first. The {@code role} arg
+     *  is the bubble's theme (0 LEADER · 1 PLANNER · 2 EXPERT · 3 CREATIVE · 4 COMMUNICATOR
+     *  · 5 TEAM_PLAYER · 6 CHALLENGER); members are seeded toward it, and themes vary within
+     *  each course so a guest sees a spread of complementarity match %s. */
     private static final List<BubbleDef> BUBBLES = List.of(
-            new BubbleDef("cs101-night-owls", "CS101 Night Owls", "Late-night coding and problem-set grinding.", 8, "CS101", List.of("ava-cohen", "noah-levi", "mia-katz", "liam-shapiro", "emma-roth")),
-            new BubbleDef("cs101-recursion-club", "Recursion Club", "We solve it by solving it again.", 6, "CS101", List.of("noah-levi", "ethan-mizrahi", "sara-friedman")),
-            new BubbleDef("cs101-debuggers", "The Debuggers", "Stuck on a bug? Bring it here.", 6, "CS101", List.of("mia-katz", "daniel-peretz", "tamar-ben-david", "omar-haddad")),
-            new BubbleDef("cs101-hello-world", "Hello, World!", "Absolute beginners welcome.", 10, "CS101", List.of("liam-shapiro", "lily-nguyen", "jonah-stern", "maya-azoulay", "adam-klein", "nicole-bar", "ryan-oliveira")),
-            new BubbleDef("mat110-limits-crew", "Limits & Beyond", "Conquering limits, derivatives, integrals.", 6, "MAT110", List.of("tamar-ben-david", "ava-cohen")),
-            new BubbleDef("mat110-derivative-dojo", "Derivative Dojo", "Daily practice — black belt by finals.", 8, "MAT110", List.of("emma-roth", "hana-suzuki", "leo-martin", "priya-sharma", "yossi-gabay")),
-            new BubbleDef("mat110-integral-squad", "Integral Squad", "Area under the curve, area under pressure.", 6, "MAT110", List.of("ryan-oliveira", "zoe-kim", "marco-rossi")),
-            new BubbleDef("mat110-epsilon-delta", "Epsilon-Delta Gang", "For the rigor lovers.", 5, "MAT110", List.of("daniel-peretz", "dana-vardi", "felix-braun", "nicole-bar")),
-            new BubbleDef("phy120-newtons-crew", "Newton's Crew", "Forces, motion, and free pizza.", 7, "PHY120", List.of("jonah-stern", "liam-shapiro", "maya-azoulay", "adam-klein", "ethan-mizrahi", "sara-friedman")),
-            new BubbleDef("phy120-momentum", "Momentum", "Keep the study streak going.", 6, "PHY120", List.of("priya-sharma", "leo-martin")),
-            new BubbleDef("phy120-quantum-leap", "Quantum Leap", "From classical to spooky.", 6, "PHY120", List.of("marco-rossi", "omar-haddad", "hana-suzuki", "zoe-kim")),
-            new BubbleDef("phy120-lab-partners", "Lab Partners", "Lab reports, decoded together.", 8, "PHY120", List.of("yossi-gabay", "ava-cohen", "noah-levi", "mia-katz", "dana-vardi")),
-            new BubbleDef("chm130-mole-people", "The Mole People", "Stoichiometry support group.", 6, "CHM130", List.of("felix-braun", "dana-vardi", "nicole-bar")),
-            new BubbleDef("chm130-benzene-buddies", "Benzene Buddies", "Mechanisms, rings, and reactions.", 7, "CHM130", List.of("emma-roth", "lily-nguyen", "leo-martin", "priya-sharma", "hana-suzuki", "adam-klein")),
-            new BubbleDef("chm130-titration-nation", "Titration Nation", "Drop by drop to an A.", 5, "CHM130", List.of("zoe-kim", "marco-rossi", "ethan-mizrahi", "sara-friedman")),
-            new BubbleDef("chm130-orgo-survivors", "Orgo Survivors", "We made it past midterm 1. Barely.", 6, "CHM130", List.of("tamar-ben-david", "ryan-oliveira")),
-            new BubbleDef("soc101-society-now", "Society Now", "Current events through a sociological lens.", 8, "SOC101", List.of("lena-fischer", "amir-cohen", "grace-owens", "tariq-aziz", "yael-sade")),
-            new BubbleDef("soc101-norm-breakers", "Norm Breakers", "Studying social norms by questioning them.", 6, "SOC101", List.of("amir-cohen", "ben-harel", "sofia-romano")),
-            new BubbleDef("soc101-first-years", "First-Year Sociologists", "New to the major, learning together.", 10, "SOC101", List.of("grace-owens", "malik-johnson", "ruth-adler", "ivan-petrov", "nina-lopez", "caleb-wright", "aisha-rahman")),
-            new BubbleDef("soc101-coffee-and-theory", "Coffee & Theory", "Espresso-fueled discussions of the classics.", 6, "SOC101", List.of("yael-sade", "theo-dubois")),
-            new BubbleDef("psy110-mind-the-group", "Mind the Group", "Group dynamics — studied in a group.", 7, "PSY110", List.of("sofia-romano", "hila-regev", "samuel-okafor", "clara-meyer", "josh-green", "fatima-ali")),
-            new BubbleDef("psy110-cognitive-crew", "Cognitive Crew", "Biases, heuristics, and us.", 6, "PSY110", List.of("caleb-wright", "david-stein", "olivia-park", "rami-khoury")),
-            new BubbleDef("psy110-experiment-club", "The Experiment Club", "Designing and dissecting classic studies.", 5, "PSY110", List.of("aisha-rahman", "esther-weiss", "lucas-silva")),
-            new BubbleDef("psy110-attachment-theory", "Securely Attached", "Attachment theory study circle.", 6, "PSY110", List.of("nina-lopez", "lena-fischer")),
-            new BubbleDef("res120-data-diggers", "Data Diggers", "Surveys, stats, and SPSS tears.", 7, "RES120", List.of("ben-harel", "ruth-adler", "ivan-petrov", "malik-johnson", "grace-owens")),
-            new BubbleDef("res120-qualitative-circle", "The Qualitative Circle", "Interviews, coding, grounded theory.", 6, "RES120", List.of("clara-meyer", "theo-dubois", "hila-regev")),
-            new BubbleDef("res120-p-value-pals", "p-value Pals", "Making peace with statistics.", 8, "RES120", List.of("david-stein", "olivia-park", "rami-khoury", "esther-weiss", "lucas-silva", "samuel-okafor")),
-            new BubbleDef("res120-methodology-mavens", "Methodology Mavens", "Designing bulletproof studies.", 5, "RES120", List.of("fatima-ali", "josh-green")),
-            new BubbleDef("ant130-fieldwork-friends", "Fieldwork Friends", "Ethnography, notes, and stories.", 7, "ANT130", List.of("tariq-aziz", "yael-sade", "amir-cohen", "sofia-romano")),
-            new BubbleDef("ant130-ritual-roundtable", "Ritual Roundtable", "Rites, myths, and meaning.", 6, "ANT130", List.of("ruth-adler", "nina-lopez", "caleb-wright", "aisha-rahman", "ivan-petrov")),
-            new BubbleDef("ant130-culture-club", "Culture Club", "Cross-cultural comparison, weekly.", 6, "ANT130", List.of("samuel-okafor", "clara-meyer", "olivia-park")),
-            new BubbleDef("ant130-kinship-crew", "Kinship Crew", "Mapping families and societies.", 5, "ANT130", List.of("esther-weiss", "rami-khoury")));
+            new BubbleDef("cs101-night-owls", "CS101 Night Owls", "ינשופי הלילה של CS101", "Late-night coding and problem-set grinding.", "קוד עד מאוחר בלילה וטחינת תרגילים.", 8, "CS101", 5, List.of("ava-cohen", "noah-levi", "mia-katz", "liam-shapiro", "emma-roth")),
+            new BubbleDef("cs101-recursion-club", "Recursion Club", "מועדון הרקורסיה", "We solve it by solving it again.", "פותרים את זה על ידי פתרון חוזר.", 6, "CS101", 6, List.of("noah-levi", "ethan-mizrahi", "sara-friedman")),
+            new BubbleDef("cs101-debuggers", "The Debuggers", "הדבאגרים", "Stuck on a bug? Bring it here.", "תקועים על באג? תביאו אותו לכאן.", 6, "CS101", 2, List.of("mia-katz", "daniel-peretz", "tamar-ben-david", "omar-haddad")),
+            new BubbleDef("cs101-hello-world", "Hello, World!", "שלום עולם!", "Absolute beginners welcome.", "מתחילים מוחלטים מוזמנים.", 10, "CS101", 4, List.of("liam-shapiro", "lily-nguyen", "jonah-stern", "maya-azoulay", "adam-klein", "nicole-bar", "ryan-oliveira")),
+            new BubbleDef("mat110-limits-crew", "Limits & Beyond", "גבולות ומעבר", "Conquering limits, derivatives, integrals.", "כובשים גבולות, נגזרות ואינטגרלים.", 6, "MAT110", 1, List.of("tamar-ben-david", "ava-cohen")),
+            new BubbleDef("mat110-derivative-dojo", "Derivative Dojo", "דוג'ו הנגזרות", "Daily practice — black belt by finals.", "תרגול יומי — חגורה שחורה עד המבחנים.", 8, "MAT110", 6, List.of("emma-roth", "hana-suzuki", "leo-martin", "priya-sharma", "yossi-gabay")),
+            new BubbleDef("mat110-integral-squad", "Integral Squad", "חוליית האינטגרלים", "Area under the curve, area under pressure.", "השטח מתחת לעקומה, והלחץ מעל.", 6, "MAT110", 5, List.of("ryan-oliveira", "zoe-kim", "marco-rossi")),
+            new BubbleDef("mat110-epsilon-delta", "Epsilon-Delta Gang", "חבורת אפסילון-דלתא", "For the rigor lovers.", "לאוהבי הקפדנות.", 5, "MAT110", 2, List.of("daniel-peretz", "dana-vardi", "felix-braun", "nicole-bar")),
+            new BubbleDef("phy120-newtons-crew", "Newton's Crew", "הצוות של ניוטון", "Forces, motion, and free pizza.", "כוחות, תנועה ופיצה חינם.", 7, "PHY120", 0, List.of("jonah-stern", "liam-shapiro", "maya-azoulay", "adam-klein", "ethan-mizrahi", "sara-friedman")),
+            new BubbleDef("phy120-momentum", "Momentum", "תנע", "Keep the study streak going.", "שומרים על רצף הלמידה.", 6, "PHY120", 1, List.of("priya-sharma", "leo-martin")),
+            new BubbleDef("phy120-quantum-leap", "Quantum Leap", "קפיצה קוונטית", "From classical to spooky.", "מהקלאסי אל המוזר.", 6, "PHY120", 3, List.of("marco-rossi", "omar-haddad", "hana-suzuki", "zoe-kim")),
+            new BubbleDef("phy120-lab-partners", "Lab Partners", "שותפים למעבדה", "Lab reports, decoded together.", "דוחות מעבדה, מפענחים יחד.", 8, "PHY120", 5, List.of("yossi-gabay", "ava-cohen", "noah-levi", "mia-katz", "dana-vardi")),
+            new BubbleDef("chm130-mole-people", "The Mole People", "אנשי המול", "Stoichiometry support group.", "קבוצת תמיכה בסטויכיומטריה.", 6, "CHM130", 5, List.of("felix-braun", "dana-vardi", "nicole-bar")),
+            new BubbleDef("chm130-benzene-buddies", "Benzene Buddies", "חברי הבנזן", "Mechanisms, rings, and reactions.", "מנגנונים, טבעות ותגובות.", 7, "CHM130", 2, List.of("emma-roth", "lily-nguyen", "leo-martin", "priya-sharma", "hana-suzuki", "adam-klein")),
+            new BubbleDef("chm130-titration-nation", "Titration Nation", "אומת הטיטרציה", "Drop by drop to an A.", "טיפה אחר טיפה אל הציון המושלם.", 5, "CHM130", 1, List.of("zoe-kim", "marco-rossi", "ethan-mizrahi", "sara-friedman")),
+            new BubbleDef("chm130-orgo-survivors", "Orgo Survivors", "ניצולי האורגנית", "We made it past midterm 1. Barely.", "שרדנו את מבחן האמצע הראשון. בקושי.", 6, "CHM130", 6, List.of("tamar-ben-david", "ryan-oliveira")),
+            new BubbleDef("soc101-society-now", "Society Now", "החברה עכשיו", "Current events through a sociological lens.", "אקטואליה דרך עדשה סוציולוגית.", 8, "SOC101", 4, List.of("lena-fischer", "amir-cohen", "grace-owens", "tariq-aziz", "yael-sade")),
+            new BubbleDef("soc101-norm-breakers", "Norm Breakers", "שוברי הנורמות", "Studying social norms by questioning them.", "לומדים נורמות חברתיות על ידי הטלת ספק בהן.", 6, "SOC101", 6, List.of("amir-cohen", "ben-harel", "sofia-romano")),
+            new BubbleDef("soc101-first-years", "First-Year Sociologists", "סוציולוגים בשנה א'", "New to the major, learning together.", "חדשים בחוג, לומדים יחד.", 10, "SOC101", 5, List.of("grace-owens", "malik-johnson", "ruth-adler", "ivan-petrov", "nina-lopez", "caleb-wright", "aisha-rahman")),
+            new BubbleDef("soc101-coffee-and-theory", "Coffee & Theory", "קפה ותיאוריה", "Espresso-fueled discussions of the classics.", "דיונים בקלאסיקות על בסיס אספרסו.", 6, "SOC101", 3, List.of("yael-sade", "theo-dubois")),
+            new BubbleDef("psy110-mind-the-group", "Mind the Group", "שימו לב לקבוצה", "Group dynamics — studied in a group.", "דינמיקה קבוצתית — נלמדת בקבוצה.", 7, "PSY110", 0, List.of("sofia-romano", "hila-regev", "samuel-okafor", "clara-meyer", "josh-green", "fatima-ali")),
+            new BubbleDef("psy110-cognitive-crew", "Cognitive Crew", "צוות הקוגניציה", "Biases, heuristics, and us.", "הטיות, היוריסטיקות ואנחנו.", 6, "PSY110", 2, List.of("caleb-wright", "david-stein", "olivia-park", "rami-khoury")),
+            new BubbleDef("psy110-experiment-club", "The Experiment Club", "מועדון הניסויים", "Designing and dissecting classic studies.", "מתכננים ומנתחים מחקרים קלאסיים.", 5, "PSY110", 1, List.of("aisha-rahman", "esther-weiss", "lucas-silva")),
+            new BubbleDef("psy110-attachment-theory", "Securely Attached", "מחוברים בביטחון", "Attachment theory study circle.", "מעגל לימוד בתיאוריית ההיקשרות.", 6, "PSY110", 4, List.of("nina-lopez", "lena-fischer")),
+            new BubbleDef("res120-data-diggers", "Data Diggers", "חופרי הנתונים", "Surveys, stats, and SPSS tears.", "סקרים, סטטיסטיקה ודמעות SPSS.", 7, "RES120", 2, List.of("ben-harel", "ruth-adler", "ivan-petrov", "malik-johnson", "grace-owens")),
+            new BubbleDef("res120-qualitative-circle", "The Qualitative Circle", "המעגל האיכותני", "Interviews, coding, grounded theory.", "ראיונות, קידוד ותיאוריה מעוגנת בשדה.", 6, "RES120", 3, List.of("clara-meyer", "theo-dubois", "hila-regev")),
+            new BubbleDef("res120-p-value-pals", "p-value Pals", "חברי ה-p-value", "Making peace with statistics.", "עושים שלום עם הסטטיסטיקה.", 8, "RES120", 5, List.of("david-stein", "olivia-park", "rami-khoury", "esther-weiss", "lucas-silva", "samuel-okafor")),
+            new BubbleDef("res120-methodology-mavens", "Methodology Mavens", "מומחי המתודולוגיה", "Designing bulletproof studies.", "מתכננים מחקרים חסיני אש.", 5, "RES120", 1, List.of("fatima-ali", "josh-green")),
+            new BubbleDef("ant130-fieldwork-friends", "Fieldwork Friends", "חברים לעבודת שדה", "Ethnography, notes, and stories.", "אתנוגרפיה, רשימות וסיפורים.", 7, "ANT130", 4, List.of("tariq-aziz", "yael-sade", "amir-cohen", "sofia-romano")),
+            new BubbleDef("ant130-ritual-roundtable", "Ritual Roundtable", "שולחן עגול לפולחן", "Rites, myths, and meaning.", "טקסים, מיתוסים ומשמעות.", 6, "ANT130", 3, List.of("ruth-adler", "nina-lopez", "caleb-wright", "aisha-rahman", "ivan-petrov")),
+            new BubbleDef("ant130-culture-club", "Culture Club", "מועדון התרבות", "Cross-cultural comparison, weekly.", "השוואה בין-תרבותית, שבועית.", 6, "ANT130", 1, List.of("samuel-okafor", "clara-meyer", "olivia-park")),
+            new BubbleDef("ant130-kinship-crew", "Kinship Crew", "צוות הקרבה", "Mapping families and societies.", "ממפים משפחות וחברות.", 5, "ANT130", 0, List.of("esther-weiss", "rami-khoury")));
 
     private static final List<ExpertDef> EXPERTS = List.of(
-            new ExpertDef("prof-hannah-gold", "Prof. Hannah Gold", true, "SCI", "Algorithms & data structures, ex-FAANG", "Twelve years teaching CS fundamentals. I make Big-O click.", Set.of("algorithms", "data-structures", "computer-science")),
-            new ExpertDef("dr-omar-said", "Dr. Omar Said", true, "SCI", "Physicist — classical mechanics", "From free-body diagrams to orbital motion, one clear step at a time.", Set.of("physics", "mechanics", "calculus")),
-            new ExpertDef("dr-rachel-stone", "Dr. Rachel Stone", true, "SCI", "Organic chemistry tutor", "Reaction mechanisms without the memorization panic.", Set.of("chemistry", "organic-chemistry", "lab-safety")),
-            new ExpertDef("prof-daniel-roth", "Prof. Daniel Roth", true, "SOC", "Sociologist — social theory", "Durkheim to Bourdieu, and why it matters today.", Set.of("sociology", "social-theory", "research")),
-            new ExpertDef("dr-lily-chen", "Dr. Lily Chen", false, "SOC", "Quantitative research methods", "Survey design and statistics for social scientists.", Set.of("statistics", "research-methods", "data-analysis")));
+            new ExpertDef("prof-hannah-gold", "Prof. Hannah Gold", "פרופ' חנה גולד", true, "SCI", "Algorithms & data structures, ex-FAANG", "אלגוריתמים ומבני נתונים, לשעבר FAANG", "Twelve years teaching CS fundamentals. I make Big-O click.", "שתים-עשרה שנים מלמדת יסודות מדעי המחשב. אני גורמת ל-Big-O להתחבר.", Set.of("algorithms", "data-structures", "computer-science")),
+            new ExpertDef("dr-omar-said", "Dr. Omar Said", "ד\"ר עומר סעיד", true, "SCI", "Physicist — classical mechanics", "פיזיקאי — מכניקה קלאסית", "From free-body diagrams to orbital motion, one clear step at a time.", "מדיאגרמות גוף חופשי ועד תנועה מסלולית, צעד ברור אחד בכל פעם.", Set.of("physics", "mechanics", "calculus")),
+            new ExpertDef("dr-rachel-stone", "Dr. Rachel Stone", "ד\"ר רייצ'ל סטון", true, "SCI", "Organic chemistry tutor", "מורה לכימיה אורגנית", "Reaction mechanisms without the memorization panic.", "מנגנוני תגובה בלי הפאניקה של השינון.", Set.of("chemistry", "organic-chemistry", "lab-safety")),
+            new ExpertDef("prof-daniel-roth", "Prof. Daniel Roth", "פרופ' דניאל רוט", true, "SOC", "Sociologist — social theory", "סוציולוג — תיאוריה חברתית", "Durkheim to Bourdieu, and why it matters today.", "מדורקהיים ועד בורדייה, ולמה זה רלוונטי היום.", Set.of("sociology", "social-theory", "research")),
+            new ExpertDef("dr-lily-chen", "Dr. Lily Chen", "ד\"ר לילי צ'ן", false, "SOC", "Quantitative research methods", "שיטות מחקר כמותיות", "Survey design and statistics for social scientists.", "תכנון סקרים וסטטיסטיקה למדעני החברה.", Set.of("statistics", "research-methods", "data-analysis")));
 
     private static final List<SessionDef> SESSIONS = List.of(
-            new SessionDef("prof-hannah-gold", "CS Algorithms Exam Crunch", "Past-paper walkthrough + your hardest questions before the CS final.", 15, 120, 4, List.of("cs101-night-owls", "cs101-debuggers")),
-            new SessionDef("dr-omar-said", "Mechanics Problem-Solving Clinic", "We work through the trickiest force and energy problems together.", Duration.ofDays(2).toMinutes(), 90, 6, List.of("phy120-newtons-crew", "phy120-lab-partners")),
-            new SessionDef("prof-daniel-roth", "Sociological Theory: Office Hours", "Bring a theorist you're stuck on; we'll untangle it live.", Duration.ofDays(7).toMinutes(), 60, 8, List.of("soc101-society-now", "ant130-fieldwork-friends")));
+            // The starter bubble's session is timed so its room opens ~2 min after seeding and
+            // stays open for 120 min — the guest can walk straight in when they finish the tour.
+            // Note the tight coupling: group enrollment CLOSES 5 min before start and the room
+            // OPENS 5 min before start (same instant). So startMin must be >5 for the seed's
+            // enrollGroup to succeed (it runs at ~t0), yet small so the room opens soon after.
+            // startMin=7 → enroll at ~t0 (closes at t0+2m, safe), room opens at t0+2m.
+            new SessionDef("prof-hannah-gold", "CS Algorithms Exam Crunch", "מרתון למבחן באלגוריתמים", "Past-paper walkthrough + your hardest questions before the CS final.", "מעבר על מבחנים קודמים + השאלות הקשות שלכם לפני המבחן.", 7, 120, 4, List.of("cs101-night-owls", "cs101-debuggers")),
+            new SessionDef("dr-omar-said", "Mechanics Problem-Solving Clinic", "קליניקת פתרון בעיות במכניקה", "We work through the trickiest force and energy problems together.", "פותרים יחד את בעיות הכוח והאנרגיה המאתגרות ביותר.", Duration.ofDays(2).toMinutes(), 90, 6, List.of("phy120-newtons-crew", "phy120-lab-partners")),
+            new SessionDef("prof-daniel-roth", "Sociological Theory: Office Hours", "תיאוריה סוציולוגית: שעות קבלה", "Bring a theorist you're stuck on; we'll untangle it live.", "הביאו הוגה שאתם תקועים עליו; נפענח אותו יחד בשידור חי.", Duration.ofDays(7).toMinutes(), 60, 8, List.of("soc101-society-now", "ant130-fieldwork-friends")));
 
-    /** Generic chat snippets (Demo-world §9); {course} is interpolated. */
+    /** Generic chat snippets (Demo-world §9); {course} is interpolated. EN + HE arrays are
+     *  index-aligned; the seed picks one set by language. */
     private static final String[] CHAT_SNIPPETS = {
             "Hey everyone 👋 glad we got this Bubble going!",
             "When are we meeting this week?",
@@ -216,6 +231,18 @@ public class DemoWorldSeeder {
             "I'll bring snacks 🍪",
             "Good luck on the {course} midterm everyone! 🍀"};
 
+    private static final String[] CHAT_SNIPPETS_HE = {
+            "היי לכולם 👋 שמח שהקבוצה הזו יצאה לדרך!",
+            "מתי נפגשים השבוע?",
+            "יום חמישי בערב מתאים לי 🙌",
+            "העליתי את הסיכומים של {course} לקבצים 📄",
+            "מישהו פתר את שאלה 3 בתרגיל? 😅",
+            "גם אני לגמרי תקוע עליה — בואו נעבור על זה יחד",
+            "הוספתי מפגש לימוד ליומן, תראו 📅",
+            "תודה, זה ממש עזר 🙏",
+            "אני אביא חטיפים 🍪",
+            "בהצלחה במבחן האמצע של {course} לכולם! 🍀"};
+
     private static final List<String> CS101_CONVO = List.of(
             "Hey Night Owls 🦉 welcome to the Bubble!",
             "Finally a place to grind CS101 together 😄",
@@ -224,34 +251,43 @@ public class DemoWorldSeeder {
             "Let's cover it at the study session — added it to the calendar 📅",
             "I'll be there. Bringing snacks 🍪");
 
+    private static final List<String> CS101_CONVO_HE = List.of(
+            "היי ינשופי לילה 🦉 ברוכים הבאים לקבוצה!",
+            "סוף סוף מקום לטחון את CS101 יחד 😄",
+            "העליתי את הסיכומים של שבוע 1 + שבוע 2 לקבצים 📄",
+            "אגדה 🙏 עוד מישהו אבוד בתרגיל הרקורסיה?",
+            "בואו נעבור על זה במפגש הלימוד — הוספתי ליומן 📅",
+            "אני אהיה שם. מביא חטיפים 🍪");
+
     // ── Seed entry point ───────────────────────────────────────────────────────
 
     @Transactional
-    public DemoWorldHandle seed(String token) {
+    public DemoWorldHandle seed(String token, String lang) {
+        boolean he = "he".equals(lang);   // any other value → English
         Instant t0 = timeProvider.now();
         String passwordHash = passwordEncoder.encode(DEMO_PASSWORD);
 
         // 1. University + term + departments + courses + offerings.
         UUID universityId = universityRepository.save(University.builder()
-                .shortCode("BUU" + token).name("Bubble.up University").country("US").build()).getId();
+                .shortCode("BUU" + token).name(loc(he, "Bubble.up University", "אוניברסיטת Bubble.up")).country("US").build()).getId();
 
         LocalDate today = LocalDate.ofInstant(t0, ZoneOffset.UTC);
         termRepository.save(Term.builder()
-                .universityId(universityId).code("DEMO").name("Current Semester").kind(TermKind.SPRING)
+                .universityId(universityId).code("DEMO").name(loc(he, "Current Semester", "סמסטר נוכחי")).kind(TermKind.SPRING)
                 .academicYear(today.getYear()).startsOn(today.minusDays(45)).endsOn(today.plusDays(75)).build());
         Term term = termRepository.findByUniversityIdAndCode(universityId, "DEMO").orElseThrow();
 
         Map<String, UUID> deptIds = new HashMap<>();
         deptIds.put("SCI", departmentRepository.save(Department.builder()
-                .universityId(universityId).shortCode("SCI").name("Science Department").build()).getId());
+                .universityId(universityId).shortCode("SCI").name(loc(he, "Science Department", "המחלקה למדעים")).build()).getId());
         deptIds.put("SOC", departmentRepository.save(Department.builder()
-                .universityId(universityId).shortCode("SOC").name("Sociology Department").build()).getId());
+                .universityId(universityId).shortCode("SOC").name(loc(he, "Sociology Department", "המחלקה לסוציולוגיה")).build()).getId());
 
         Map<String, UUID> courseIds = new HashMap<>();
         for (CourseDef c : COURSES) {
             UUID courseId = courseRepository.save(Course.builder()
-                    .universityId(universityId).code(c.code()).name(c.name())
-                    .creditPoints(BigDecimal.valueOf(c.credits())).description(c.description()).build()).getId();
+                    .universityId(universityId).code(c.code()).name(loc(he, c.name(), c.nameHe()))
+                    .creditPoints(BigDecimal.valueOf(c.credits())).description(loc(he, c.description(), c.descriptionHe())).build()).getId();
             courseIds.put(c.code(), courseId);
             courseDepartmentRepository.save(CourseDepartment.builder()
                     .courseId(courseId).departmentId(deptIds.get(c.dept())).primary(true).build());
@@ -261,15 +297,15 @@ public class DemoWorldSeeder {
 
         // 2. Persona + expert + admin users.
         Map<String, UUID> userIds = new HashMap<>();
-        for (Persona p : SCIENCE) userIds.put(p.slug(), createUser(p.slug(), p.name(), token, passwordHash, UserRole.STUDENT, universityId, deptIds.get("SCI"), "people"));
-        for (Persona p : SOCIOLOGY) userIds.put(p.slug(), createUser(p.slug(), p.name(), token, passwordHash, UserRole.STUDENT, universityId, deptIds.get("SOC"), "people"));
-        UUID adminId = createUser("admin", "Demo Admin", token, passwordHash, UserRole.ADMIN, universityId, deptIds.get("SCI"), null);
+        for (Persona p : SCIENCE) userIds.put(p.slug(), createUser(p.slug(), loc(he, p.name(), p.nameHe()), token, passwordHash, UserRole.STUDENT, universityId, deptIds.get("SCI"), "people"));
+        for (Persona p : SOCIOLOGY) userIds.put(p.slug(), createUser(p.slug(), loc(he, p.name(), p.nameHe()), token, passwordHash, UserRole.STUDENT, universityId, deptIds.get("SOC"), "people"));
+        UUID adminId = createUser("admin", loc(he, "Demo Admin", "מנהל הדגמה"), token, passwordHash, UserRole.ADMIN, universityId, deptIds.get("SCI"), null);
 
         // 3. Experts: user + profile, then force VERIFIED / PENDING (config-independent).
         for (ExpertDef e : EXPERTS) {
-            UUID uid = createUser(e.slug(), e.name(), token, passwordHash, UserRole.STUDENT, universityId, deptIds.get(e.dept()), "experts");
+            UUID uid = createUser(e.slug(), loc(he, e.name(), e.nameHe()), token, passwordHash, UserRole.STUDENT, universityId, deptIds.get(e.dept()), "experts");
             userIds.put(e.slug(), uid);
-            expertProfileService.applyAsExpert(uid, new ApplyAsExpertRequest(e.headline(), e.bio(), e.tags()));
+            expertProfileService.applyAsExpert(uid, new ApplyAsExpertRequest(loc(he, e.headline(), e.headlineHe()), loc(he, e.bio(), e.bioHe()), e.tags()));
             if (e.verified()) expertAdminInternalService.verify(uid, adminId);
             else expertAdminInternalService.revoke(uid);
         }
@@ -285,26 +321,33 @@ public class DemoWorldSeeder {
         for (BubbleDef b : BUBBLES) {
             UUID ownerId = userIds.get(b.members().get(0));
             UUID groupId = groupCommandService.createGroup(new CreateGroupRequest(
-                    b.name(), b.desc(), GroupVisibility.PUBLIC, b.max(), null, courseIds.get(b.course())), ownerId).id();
+                    loc(he, b.name(), b.nameHe()), loc(he, b.desc(), b.descHe()), GroupVisibility.PUBLIC, b.max(), null, courseIds.get(b.course())), ownerId).id();
             groupIds.put(b.slug(), groupId);
             for (int i = 1; i < b.members().size(); i++) {
                 groupCommandService.joinGroup(groupId, userIds.get(b.members().get(i)));
             }
         }
 
-        // 6. Character profiles → gives each bubble a distinct matching vector.
-        for (Persona p : SCIENCE) matchingCommandService.seedCharacterAnswers(userIds.get(p.slug()), p.role(), CHARACTER_ANSWER_COUNT);
-        for (Persona p : SOCIOLOGY) matchingCommandService.seedCharacterAnswers(userIds.get(p.slug()), p.role(), CHARACTER_ANSWER_COUNT);
+        // 6. Character profiles → gives each bubble a distinct matching vector. Each persona
+        //    leans toward the THEME role of the bubble they anchor (the one they own, else
+        //    their first membership) — so a bubble's members share a role and its group
+        //    vector gets a sharp peak, which is what makes the guest's complementarity
+        //    match %s actually spread out instead of clustering.
+        Map<String, Integer> personaRole = new HashMap<>();
+        for (BubbleDef b : BUBBLES) personaRole.putIfAbsent(b.members().get(0), b.role()); // owners win their owned bubble
+        for (BubbleDef b : BUBBLES) for (String slug : b.members()) personaRole.putIfAbsent(slug, b.role());
+        for (Persona p : SCIENCE) matchingCommandService.seedCharacterAnswers(userIds.get(p.slug()), personaRole.getOrDefault(p.slug(), p.role()), CHARACTER_ANSWER_COUNT);
+        for (Persona p : SOCIOLOGY) matchingCommandService.seedCharacterAnswers(userIds.get(p.slug()), personaRole.getOrDefault(p.slug(), p.role()), CHARACTER_ANSWER_COUNT);
 
         // 7. Calendar, files, chat history per bubble.
         int idx = 0;
         for (BubbleDef b : BUBBLES) {
             UUID groupId = groupIds.get(b.slug());
             UUID ownerId = userIds.get(b.members().get(0));
-            String courseName = courseName(b.course());
-            seedCalendar(groupId, ownerId, courseName, idx, t0);
-            seedFiles(groupId, ownerId, b.members().size(), t0);
-            seedChat(groupId, b, userIds, courseName, idx, t0);
+            String courseName = courseName(b.course(), he);
+            seedCalendar(groupId, ownerId, courseName, idx, t0, he);
+            seedFiles(groupId, ownerId, b.members().size(), t0, he);
+            seedChat(groupId, b, userIds, courseName, idx, t0, he);
             idx++;
         }
 
@@ -313,7 +356,7 @@ public class DemoWorldSeeder {
             UUID hostId = userIds.get(s.host());
             Instant startsAt = t0.plus(Duration.ofMinutes(s.startMin()));
             UUID sessionId = expertSessionCommandService.createSession(hostId,
-                    new CreateExpertSessionRequest(s.title(), s.desc(), startsAt, startsAt.plus(Duration.ofMinutes(s.durMin())), s.capacity())).id();
+                    new CreateExpertSessionRequest(loc(he, s.title(), s.titleHe()), loc(he, s.desc(), s.descHe()), startsAt, startsAt.plus(Duration.ofMinutes(s.durMin())), s.capacity())).id();
             for (String bubbleSlug : s.bubbles()) {
                 UUID groupId = groupIds.get(bubbleSlug);
                 UUID groupOwnerId = userIds.get(ownerSlugOf(bubbleSlug));
@@ -322,13 +365,25 @@ public class DemoWorldSeeder {
         }
 
         // 9. The visitor "You": no matching profile (Explore stays Trending-only until the tour quiz).
-        UUID guestId = createUser("you", "You", token, passwordHash, UserRole.STUDENT, universityId, deptIds.get("SCI"), null);
+        UUID guestId = createUser("you", loc(he, "You", "אני"), token, passwordHash, UserRole.STUDENT, universityId, deptIds.get("SCI"), null);
         enrollOnce(new HashSet<>(), guestId, courseIds.get("CS101"));
         enrollmentCommandService.enroll(guestId, courseIds.get("SOC101"));
         UUID starterGroupId = groupIds.get("cs101-night-owls");
         groupCommandService.joinGroup(starterGroupId, guestId);
         onboardingStateRepository.save(OnboardingState.builder()
                 .userId(guestId).wizardLevel(6).collapsed(false).updatedAt(t0).build());
+
+        // 10. Warm the matching engine synchronously. The demo runs with
+        //     app.matching.async-recompute=false, so the MatchingEventListener is disabled
+        //     and the seed events above fire into the void — this is where matching state
+        //     is actually built. Persona quiz profiles first (their QuizResponse rows were
+        //     written inertly by seedCharacterAnswers), then each group profile (a group
+        //     vector is the confidence-weighted average of its members'). The guest is left
+        //     profile-less on purpose — Explore stays Trending-only until the tour quiz.
+        //     One deduped pass ≈ a couple of seconds, vs the async herd's minutes.
+        for (Persona p : SCIENCE) matchingCommandService.recomputeUserQuizProfile(userIds.get(p.slug()));
+        for (Persona p : SOCIOLOGY) matchingCommandService.recomputeUserQuizProfile(userIds.get(p.slug()));
+        for (UUID groupId : groupIds.values()) matchingCommandService.recomputeGroupProfile(groupId);
 
         log.info("DemoWorldSeeder: seeded world {} — university {} (32 bubbles, {} users, guest {})",
                 token, universityId, userIds.size() + 1, guestId);
@@ -361,14 +416,16 @@ public class DemoWorldSeeder {
         }
     }
 
-    private void seedCalendar(UUID groupId, UUID ownerId, String courseName, int idx, Instant t0) {
+    private void seedCalendar(UUID groupId, UUID ownerId, String courseName, int idx, Instant t0, boolean he) {
         // MEETING (not STUDY_SESSION) so no live video room is auto-created at seed time.
-        createEvent(groupId, ownerId, CalendarEventType.MEETING, "Weekly study session",
+        createEvent(groupId, ownerId, CalendarEventType.MEETING, loc(he, "Weekly study session", "מפגש לימוד שבועי"),
                 t0.plus(Duration.ofDays(2)).plus(Duration.ofHours(idx % 4)), 90);
-        createEvent(groupId, ownerId, CalendarEventType.DEADLINE, courseName + " problem set due",
+        createEvent(groupId, ownerId, CalendarEventType.DEADLINE,
+                loc(he, courseName + " problem set due", "הגשת תרגיל ב" + courseName),
                 t0.plus(Duration.ofDays(5)), 30);
         if (idx % 2 == 0) {
-            createEvent(groupId, ownerId, CalendarEventType.EXAM, courseName + " midterm",
+            createEvent(groupId, ownerId, CalendarEventType.EXAM,
+                    loc(he, courseName + " midterm", "מבחן אמצע ב" + courseName),
                     t0.plus(Duration.ofDays(21)), 120);
         }
     }
@@ -378,18 +435,21 @@ public class DemoWorldSeeder {
                 CalendarOwnerType.GROUP, groupId, type, title, startsAt, startsAt.plus(Duration.ofMinutes(durMin))), ownerId);
     }
 
-    private void seedFiles(UUID groupId, UUID ownerId, int memberCount, Instant t0) {
-        addFile(groupId, ownerId, null, "Syllabus.pdf", "syllabus.pdf", t0);
-        addFile(groupId, ownerId, null, "Welcome.txt", "welcome.txt", t0);
-        UUID lectureNotes = addFolder(groupId, ownerId, "Lecture Notes", t0);
-        addFile(groupId, ownerId, lectureNotes, "Week-1-Notes.pdf", "lecture-notes-1.pdf", t0);
-        addFile(groupId, ownerId, lectureNotes, "Week-2-Notes.pdf", "lecture-notes-2.pdf", t0);
-        UUID pastExams = addFolder(groupId, ownerId, "Past Exams", t0);
-        addFile(groupId, ownerId, pastExams, "2025-Midterm.pdf", "past-exam-2025.pdf", t0);
+    private void seedFiles(UUID groupId, UUID ownerId, int memberCount, Instant t0, boolean he) {
+        // Display names + folder names are localized; the underlying asset bytes are shared
+        // (PDFs keep Latin-only inner text — see DemoAssetRegistry — but welcome.txt has a
+        // Hebrew variant selected by the asset key).
+        addFile(groupId, ownerId, null, loc(he, "Syllabus.pdf", "סילבוס.pdf"), "syllabus.pdf", t0);
+        addFile(groupId, ownerId, null, loc(he, "Welcome.txt", "ברוכים הבאים.txt"), he ? "welcome.he.txt" : "welcome.txt", t0);
+        UUID lectureNotes = addFolder(groupId, ownerId, loc(he, "Lecture Notes", "סיכומי הרצאות"), t0);
+        addFile(groupId, ownerId, lectureNotes, loc(he, "Week-1-Notes.pdf", "סיכום-שבוע-1.pdf"), "lecture-notes-1.pdf", t0);
+        addFile(groupId, ownerId, lectureNotes, loc(he, "Week-2-Notes.pdf", "סיכום-שבוע-2.pdf"), "lecture-notes-2.pdf", t0);
+        UUID pastExams = addFolder(groupId, ownerId, loc(he, "Past Exams", "מבחנים קודמים"), t0);
+        addFile(groupId, ownerId, pastExams, loc(he, "2025-Midterm.pdf", "מבחן-אמצע-2025.pdf"), "past-exam-2025.pdf", t0);
         if (memberCount >= 4) {
-            UUID resources = addFolder(groupId, ownerId, "Resources", t0);
-            addFile(groupId, ownerId, resources, "Cheat-Sheet.pdf", "cheat-sheet.pdf", t0);
-            addFile(groupId, ownerId, resources, "Diagram.png", "diagram.png", t0);
+            UUID resources = addFolder(groupId, ownerId, loc(he, "Resources", "משאבים"), t0);
+            addFile(groupId, ownerId, resources, loc(he, "Cheat-Sheet.pdf", "דף-נוסחאות.pdf"), "cheat-sheet.pdf", t0);
+            addFile(groupId, ownerId, resources, loc(he, "Diagram.png", "תרשים.png"), "diagram.png", t0);
         }
     }
 
@@ -408,7 +468,7 @@ public class DemoWorldSeeder {
                 .sizeBytes(blob.sizeBytes()).uploadedAt(t0.minus(Duration.ofDays(3))).build());
     }
 
-    private void seedChat(UUID groupId, BubbleDef b, Map<String, UUID> userIds, String courseName, int idx, Instant t0) {
+    private void seedChat(UUID groupId, BubbleDef b, Map<String, UUID> userIds, String courseName, int idx, Instant t0, boolean he) {
         List<ChatRoomSummary> rooms = chatInternalService.getRoomsForGroup(groupId);
         if (rooms.isEmpty()) return;
         UUID roomId = rooms.get(0).id();
@@ -418,13 +478,14 @@ public class DemoWorldSeeder {
         // guest's own join happens later, at T0, so "You joined" stays newest.)
         chatMessageRepository.backdateRoomMessages(roomId, t0.minus(Duration.ofDays(8)));
 
+        String[] snippets = he ? CHAT_SNIPPETS_HE : CHAT_SNIPPETS;
         List<String> lines = new ArrayList<>();
         if (b.slug().equals("cs101-night-owls")) {
-            lines.addAll(CS101_CONVO);
+            lines.addAll(he ? CS101_CONVO_HE : CS101_CONVO);
         } else {
             int count = 4 + (idx % 3); // 4–6
             for (int i = 0; i < count; i++) {
-                lines.add(CHAT_SNIPPETS[(idx + i) % CHAT_SNIPPETS.length].replace("{course}", courseName));
+                lines.add(snippets[(idx + i) % snippets.length].replace("{course}", courseName));
             }
         }
 
@@ -446,8 +507,14 @@ public class DemoWorldSeeder {
         }
     }
 
-    private static String courseName(String code) {
-        return COURSES.stream().filter(c -> c.code().equals(code)).findFirst().map(CourseDef::name).orElse(code);
+    private static String courseName(String code, boolean he) {
+        return COURSES.stream().filter(c -> c.code().equals(code)).findFirst()
+                .map(c -> he ? c.nameHe() : c.name()).orElse(code);
+    }
+
+    /** Pick the English or Hebrew variant of a seeded string by the world's language. */
+    private static String loc(boolean he, String en, String heText) {
+        return he ? heText : en;
     }
 
     private static String ownerSlugOf(String bubbleSlug) {

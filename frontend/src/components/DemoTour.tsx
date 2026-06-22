@@ -310,7 +310,7 @@ export function DemoTour() {
     <button
       type="button"
       onClick={() => useTourStore.getState().stop()}
-      className="demo-skip-btn fixed top-4 right-4 z-[2147483647] rounded-full bg-white/95 backdrop-blur
+      className="demo-skip-btn fixed top-4 right-4 rtl:right-auto rtl:left-4 z-[2147483647] rounded-full bg-white/95 backdrop-blur
                  border border-rose-200 text-rose-600 px-4 py-2 text-sm font-semibold
                  shadow-lg hover:bg-rose-50 hover:border-rose-300 bubble-pop"
     >

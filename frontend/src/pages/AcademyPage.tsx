@@ -45,6 +45,7 @@ import {
   unenroll as unenrollApi,
 } from '../api/enrollment'
 import { describeError } from '../api/errors'
+import { getMyProfile } from '../api/users'
 import { useOnboardingStore } from '../store/onboardingStore'
 import { useViewportStore } from '../store/viewportStore'
 
@@ -139,13 +140,19 @@ export default function AcademyPage() {
     setError(null)
     ;(async () => {
       try {
-        const unis = await getUniversities()
+        const [unis, profile] = await Promise.all([
+          getUniversities(),
+          getMyProfile().catch(() => null),
+        ])
         if (cancelled) return
         if (unis.length === 0) {
           setLoadingShell(false)
           return
         }
-        const uni = unis[0]
+        // Scope to the viewer's OWN university, not whichever sorts first. The demo
+        // creates one university per session, so unis[0] is usually some other guest's
+        // world — picking it would show the wrong catalog and block enrollment.
+        const uni = unis.find((u) => u.id === profile?.universityId) ?? unis[0]
         setUniversity(uni)
         const [depts, termList, ct, enrollments] = await Promise.all([
           getDepartments(uni.id),

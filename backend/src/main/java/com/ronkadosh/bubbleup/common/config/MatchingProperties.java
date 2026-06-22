@@ -18,6 +18,11 @@ public record MatchingProperties(
         Duration quizCooldown,
         // matching_confidence at/above this → MATCHED (show %); below → TRENDING (reason labels).
         double matchedDisplayThreshold,
+        // When true (prod default), profile/group/cache recompute runs async off the
+        // MatchingEventListener. When false (the demo box), the listener is disabled and
+        // recompute runs synchronously (submitAnswer inline + DemoWorldSeeder warm-up),
+        // so the seeded world is matching-ready and the guest's tour answers reflect at once.
+        boolean asyncRecompute,
         Confidence confidence,
         Trending trending,
         // Per-action-type behavior signal definitions, keyed by event type. See BehaviorSignal.

@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { startDemo } from '../api/demo'
 import { useAuthStore } from '../store/authStore'
+import { useLanguageStore } from '../store/languageStore'
 import { useOnboardingStore } from '../store/onboardingStore'
 import { useTourStore } from '../store/tourStore'
 import { useBentoLayoutStore } from '../store/bentoLayoutStore'
@@ -29,8 +30,19 @@ export default function DemoLandingPage() {
   const refreshOnboarding = useOnboardingStore((s) => s.refresh)
   const startTour = useTourStore((s) => s.start)
   const isPhone = useViewportStore((s) => s.tier === 'phone')
+  const lang = useLanguageStore((s) => s.lang)
+  const setLang = useLanguageStore((s) => s.setLang)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(false)
+
+  // The demo opens in Hebrew (RTL); the toggle lets the visitor switch to English
+  // before starting. The chosen language rides Accept-Language on /demo/start (so the
+  // world is seeded in it) and drives the whole UI. Demo build only — the global
+  // languageStore default stays English for the production app.
+  useEffect(() => {
+    setLang('he')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function handleStart() {
     if (loading) return
@@ -93,6 +105,30 @@ export default function DemoLandingPage() {
               >
                 {t('demo.landing.desktopNote')}
               </p>
+
+              {/* Language choice — the world is seeded in the picked language. Hidden once
+                  the seed is underway. */}
+              {!loading && (
+                <div className="mt-6 flex flex-col items-center gap-2">
+                  <span className="text-xs text-muted">{t('demo.landing.langPrompt')}</span>
+                  <div className="inline-flex rounded-full border border-line bg-surface-hover p-1">
+                    {(['he', 'en'] as const).map((code) => (
+                      <button
+                        key={code}
+                        type="button"
+                        onClick={() => setLang(code)}
+                        className={`rounded-full px-5 py-1.5 text-sm font-semibold transition-colors ${
+                          lang === code
+                            ? 'bg-brand-gradient text-on-brand shadow-themed'
+                            : 'text-secondary hover:text-base'
+                        }`}
+                      >
+                        {code === 'he' ? 'עברית' : 'English'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* While the world seeds (a few seconds), swap the CTA for the soap-bubble
                   loader + a reassuring note so the click clearly registered. */}

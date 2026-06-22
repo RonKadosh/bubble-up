@@ -34,6 +34,7 @@ class MatchingScorerTest {
                 0.20,   // quizWeightMin
                 Duration.ofMinutes(10),                       // quizCooldown
                 0.30,                                          // matchedDisplayThreshold
+                true,                                          // asyncRecompute
                 new MatchingProperties.Confidence(7, 3, 0.70, 0.30, 1.0, 5),
                 new MatchingProperties.Trending(0.35, 0.30, 0.20, 0.15, 14, 14, 30, 50, 5, 10, 5),
                 Map.of(
