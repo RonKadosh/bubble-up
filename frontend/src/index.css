@@ -704,3 +704,19 @@
    descendant selectors below out-specify both and re-enable interaction. */
 .driver-active .demo-skip-btn,
 .driver-no-interaction .demo-skip-btn { pointer-events: auto !important; }
+
+/* The bento "maximize" (⤢) control is a small, easy-to-miss glyph. While it's the
+   spotlighted tour target (s10 Calendar / s12 Files), tint it and pulse a brand
+   ring so it's unmistakable that THIS little arrow is what to click. driver.js
+   stamps `.driver-active-element` on whatever it highlights, so this only fires
+   on the maximize button that's currently in focus. */
+@keyframes tour-cta-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-primary-500) 60%, transparent); transform: scale(1); }
+  50%      { box-shadow: 0 0 0 7px color-mix(in srgb, var(--color-primary-500) 0%, transparent); transform: scale(1.22); }
+}
+[data-tour$="-maximize"].driver-active-element {
+  color: var(--color-primary-600) !important;
+  background: color-mix(in srgb, var(--color-primary-500) 14%, var(--surface));
+  border-radius: 0.6rem;
+  animation: tour-cta-pulse 1.4s ease-in-out infinite;
+}
