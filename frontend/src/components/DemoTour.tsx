@@ -82,7 +82,9 @@ const STEPS: TourStep[] = [
     awaitEvent: 'demo:chat-sent' },
   { key: 's10', type: 'gated', anchor: 'bento-calendar-maximize', side: 'left',   // maximize calendar
     watch: () => useBentoLayoutStore.getState().focused === 'calendar' },
-  { key: 's11', type: 'gated', anchor: 'calendar-grid', side: 'top', align: 'start', // add an event
+  // Add an event: spotlight the "New event" button, then hop onto the create modal
+  // once it opens, so each gets its own focused highlight (vs dimming the whole grid).
+  { key: 's11', type: 'gated', anchor: 'calendar-new-event', revealAnchor: 'event-modal', side: 'left', align: 'start',
     awaitEvent: 'demo:event-created' },
   // Share an event to chat: open any event, hit "Share to chat". The view modal
   // renders inside the calendar-grid element (the spotlight hole) so it stays

@@ -10,6 +10,7 @@ import { useQuizPromptStore } from '../store/quizPromptStore'
 import { useViewportStore } from '../store/viewportStore'
 import { Button } from '../components/Button'
 import { BubbleField } from '../components/BubbleField'
+import { BubbleLoader } from '../components/BubbleLoader'
 import { BubbleLogo } from '../components/Icons'
 
 /**
@@ -90,18 +91,21 @@ export default function DemoLandingPage() {
                     : 'mt-6 text-xs text-muted'
                 }
               >
-                💻 {t('demo.landing.desktopNote')}
+                {t('demo.landing.desktopNote')}
               </p>
 
-              <Button
-                variant="deep"
-                size="lg"
-                className="mt-6 w-full"
-                onClick={handleStart}
-                disabled={loading}
-              >
-                {loading ? t('demo.landing.starting') : t('demo.landing.cta')}
-              </Button>
+              {/* While the world seeds (a few seconds), swap the CTA for the soap-bubble
+                  loader + a reassuring note so the click clearly registered. */}
+              {loading ? (
+                <div className="mt-6 flex flex-col items-center gap-3" role="status" aria-live="polite">
+                  <BubbleLoader size={56} />
+                  <p className="text-sm font-medium text-secondary">{t('demo.landing.preparing')}</p>
+                </div>
+              ) : (
+                <Button variant="deep" size="lg" className="mt-6 w-full" onClick={handleStart}>
+                  {t('demo.landing.cta')}
+                </Button>
+              )}
 
               {error && <p className="mt-4 text-sm text-danger">{t('demo.landing.error')}</p>}
               <p className="mt-6 text-xs text-muted">{t('demo.landing.disclaimer')}</p>

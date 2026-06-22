@@ -99,7 +99,7 @@ function AgendaView({ groupId, meId, isOwner, isMember, chatRoomId, onError, onS
           <IconButton
             variant="cell"
             size="sm"
-            onClick={() => setModalState({ mode: 'create', initialDateStr: toLocalDateStr(new Date()) })}
+            onClick={() => setModalState({ mode: 'create' })}
             aria-label={t('groups.calendar.addAria')}
             title={t('groups.calendar.newEvent')}
           >
@@ -189,7 +189,9 @@ function AgendaView({ groupId, meId, isOwner, isMember, chatRoomId, onError, onS
 
 type ModalState =
   | { mode: 'day'; dateStr: string }
-  | { mode: 'create'; initialDateStr: string }
+  // initialDateStr omitted = "New event" toolbar button (no day chosen → EventModal
+  // defaults to tomorrow); set = a specific day clicked in the grid/agenda.
+  | { mode: 'create'; initialDateStr?: string }
   | { mode: 'view'; event: CalendarEvent }
   | { mode: 'edit'; event: CalendarEvent }
 
@@ -273,7 +275,8 @@ function MonthGridView({ groupId, meId, isOwner, isMember, chatRoomId, onError, 
           <Button
             variant="cell"
             size="sm"
-            onClick={() => setModalState({ mode: 'create', initialDateStr: toLocalDateStr(new Date()) })}
+            data-tour="calendar-new-event"
+            onClick={() => setModalState({ mode: 'create' })}
           >
             {t('groups.calendar.newEvent')}
           </Button>
@@ -405,12 +408,35 @@ export function EventModal({
         endsAt: toLocalInput(initialEvent.endsAt),
       }
     }
-    const dateStr = initialDateStr ?? toLocalDateStr(new Date())
+    // A specific day clicked in the grid/agenda is honored; the toolbar "New event"
+    // button passes none, so default to tomorrow. Tomorrow morning is a sensible
+    // upcoming slot and dodges the demo starter bubble's "now" expert session — a
+    // same-day default would overlap it and trip GROUP_SCHEDULE_CONFLICT.
+    let dateStr: string
+    if (initialDateStr) {
+      dateStr = initialDateStr
+    } else {
+      const tomorrow = new Date()
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      dateStr = toLocalDateStr(tomorrow)
+    }
+    let startsAt = `${dateStr}T09:00`
+    let endsAt = `${dateStr}T10:00`
+    // Never default into the past (e.g. a today slot after 9am) — roll to the next
+    // full hour so the form submits cleanly instead of tripping EVENT_STARTS_IN_PAST.
+    // datetime-local strings sort chronologically, so a string compare is enough.
+    if (startsAt < toLocalInput(new Date().toISOString())) {
+      const next = new Date()
+      next.setMinutes(0, 0, 0)
+      next.setHours(next.getHours() + 1)
+      startsAt = toLocalInput(next.toISOString())
+      endsAt = toLocalInput(new Date(next.getTime() + 60 * 60 * 1000).toISOString())
+    }
     return {
       eventType: 'STUDY_SESSION' as CalendarEventType,
       description: '',
-      startsAt: `${dateStr}T09:00`,
-      endsAt: `${dateStr}T10:00`,
+      startsAt,
+      endsAt,
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -485,6 +511,7 @@ export function EventModal({
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3 tablet:p-4 animate-fade-in" onClick={onClose}>
       <form
+        data-tour="event-modal"
         onSubmit={handleSubmit}
         className="bg-surface rounded-3xl shadow-bubble animate-pop-in w-full max-w-[28rem] max-h-[80vh] flex flex-col border border-line"
         onClick={(e) => e.stopPropagation()}

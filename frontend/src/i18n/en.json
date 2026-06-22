@@ -6,6 +6,7 @@
       "blurb": "No sign up, no setup. Click below and you'll land in a fully populated campus with a quick walkthrough, then a sandbox to explore freely.",
       "cta": "Start demo",
       "starting": "Setting up your campus...",
+      "preparing": "We're prepping your world — this might take a few seconds.",
       "error": "Something went wrong starting the demo. Please try again.",
       "disclaimer": "This is a sandbox. Nothing here is real, and data resets periodically.",
       "desktopNote": "Best experienced on a desktop or laptop."
@@ -28,8 +29,8 @@
       "s7": { "title": "This is a Bubble", "body": "A study group's home base. Chat, calendar, shared files, and live rooms, all in one place." },
       "s8": { "title": "The Chat", "body": "Messages, polls, and shared links live here. It's the heart of every Bubble." },
       "s9": { "title": "Say hi", "body": "Type a message in the box and press Enter to continue. Emojis are welcome." },
-      "s10": { "title": "Customize your view", "body": "Each panel can take center stage. Click the maximize icon on the Calendar to focus it." },
-      "s11": { "title": "Plan something", "body": "Click any day and add your own study event, then continue." },
+      "s10": { "title": "Customize your view", "body": "Each panel can take center stage. Click the pulsing ⤢ maximize icon on the Calendar to focus it." },
+      "s11": { "title": "Plan something", "body": "Click 'New event', fill in a quick study session, and create it." },
       "s12": { "title": "Now the Files", "body": "Maximize the Files panel. It's your Bubble's shared shelf of notes and past exams." },
       "s13": { "title": "Take a peek", "body": "Open Syllabus.pdf. It previews right here, no download needed." },
       "s14": { "title": "Share it", "body": "Open any event, then tap 'Share to chat'. It drops the event right into your chat for everyone." },
