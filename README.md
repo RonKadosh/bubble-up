@@ -1,173 +1,147 @@
 # Bubble.up
 
-> Find the right people to study with — and get everything you need to actually study together.
+> A full-stack platform that matches university students into complementary study groups and gives each group a complete collaborative workspace.
 
-**Bubble.up** is a platform for university students that solves a deceptively hard problem: studying alone is inefficient, but finding *good* study partners is mostly luck. You ask around, you join a random WhatsApp group, you hope someone shows up. Bubble.up replaces that luck with a matching engine — and then hands every group the infrastructure (chat, calendar, shared files, live sessions, experts) it needs to learn together from day one.
+[**Try the live demo**](https://demo.bubbleup.online) · No account required · English and Hebrew
 
-The unit of the product is the **Bubble**: a small, course-scoped study group. Bubble.up's job is to put the right students in the right Bubble, and make that Bubble a place where real work happens.
+![Bubble.up group workspace showing real-time chat, shared files, calendar events, and group members](docs/images/bubble-workspace.png)
 
----
+Bubble.up tackles two connected problems: finding study partners who work well together, and giving a newly formed group everything it needs to begin studying immediately. Instead of browsing arbitrary groups, students receive recommendations from a confidence-aware matching engine. Every matched **Bubble** includes chat, shared files, a calendar, live video, a collaborative whiteboard, and access to verified experts.
 
-## Table of contents
+## At a glance
 
-- [What Bubble.up v1 solves](#what-bubbleup-v1-solves)
-- [What is a Bubble?](#what-is-a-bubble)
-- [The matching system](#the-matching-system)
-- [The expert system](#the-expert-system)
-- [Under the hood](#under-the-hood)
-- [Running it locally](#running-it-locally)
+- **Complementary matching:** recommends groups based on the roles they are missing, not simply on member similarity.
+- **Real-time collaboration:** STOMP/WebSocket chat, presence-aware rooms, live sessions, and shared group activity.
+- **Complete group workspace:** files, folders, events, deadlines, polls, members, video, and whiteboard tools in one interface.
+- **Academic domain model:** universities, departments, courses, terms, offerings, enrollments, and course-gated group membership.
+- **Expert workflow:** application, admin verification, session scheduling, capacity management, and Bubble enrollment.
+- **Accessible internationally:** a bilingual English/Hebrew interface with full LTR and RTL layout support.
 
----
+## Engineering highlights
 
-## What Bubble.up v1 solves
+### Deterministic, confidence-aware matching
 
-Every student knows the value of a good study group and the pain of forming one. The people who'd be a great fit are sitting in the same lecture hall, but there's no mechanism to find them — so groups form by proximity and friendship, not by fit, and half of them never produce a single shared note.
+Each student and Bubble is represented across seven collaboration roles:
 
-Bubble.up v1 is built around one idea: **suitable study partners, plus the infrastructure to study with them.**
+> **Leader · Planner · Expert · Creative · Communicator · Team Player · Challenger**
 
-- **Matching, not browsing.** Instead of scrolling a list of groups and guessing, students take a short character quiz and simply *use the app*. Both feed a profile that the matching engine uses to recommend Bubbles where they'd genuinely add something.
-- **A complete workspace per group.** Every Bubble comes with live chat, a shared calendar, file storage, live video, and a collaborative whiteboard — so a freshly matched group can start working immediately, with no setup and no glue tools.
-- **Experts on tap.** TAs and private tutors can become verified experts and open study sessions that Bubbles enroll into — bringing teaching capacity into the same place the learning already happens.
+A student's profile blends two sources of evidence:
 
-The whole product is scoped to the academic catalog — **University → Department → Course** — so a Bubble is always anchored to a specific course, and matching is always comparing like with like.
+1. **Character quiz answers**, normalized into a role-profile shape.
+2. **Observed product behavior**, mapped through configurable signals with diminishing returns so one repeated action cannot dominate the profile.
 
----
+The scorer calculates what a group is missing and measures how well a student fills those gaps using cosine similarity. Profile confidence determines how much the final recommendation relies on personalized fit versus group activity and popularity. The scorer is pure, stateless, deterministic, and unit-tested, so live recommendations and cached results use identical logic.
 
-## What is a Bubble?
+### Feature-oriented backend boundaries
 
-A **Bubble** is a small study group scoped to a single course. It's the heart of the product, and it's more than a chat room — it's a self-contained collaborative workspace. Each Bubble gives its members a four-tab hub:
+The Spring Boot backend is organized into self-contained feature modules such as `auth`, `groups`, `chat`, `matching`, `expert`, and `catalog`. Each follows the same internal structure:
 
-| Tab | What it does |
-|-----|--------------|
-| **Chat** | Real-time messaging over WebSocket (STOMP). System messages mark joins/leaves; messages can link to calendar events and polls inline. |
-| **Calendar** | Shared study events and deadlines, scoped to the group. Expert sessions a Bubble enrolls into show up here too. |
-| **Files** | Upload, download, and manage shared materials (notes, slides, problem sets) with per-file access control. |
-| **Members** | Who's in the Bubble. Membership is gated on course enrollment — you can only join a Bubble for a course you're actually taking. |
-
-On top of the hub, Bubbles get **live sessions** — video calls plus a shared **collaborative whiteboard** — so a study session can happen entirely inside the app.
-
-A few deliberate design choices:
-
-- **Bubbles are course-anchored.** A Bubble always belongs to exactly one course in the catalog. This keeps groups focused and gives the matching engine a clean comparison space.
-- **Enrollment gates membership.** Joining, creating, or being added to a Bubble requires enrollment in that course's offering. You can't end up in a study group for a class you aren't taking.
-- **Every Bubble is born ready.** Creating a Bubble automatically provisions its default chat room, so the workspace is never empty on day one.
-
-The name is the metaphor: a Bubble is a small, self-contained space where a handful of people focus together — and the UI leans into it, with round, soft, "bubble-pop" visuals throughout.
-
----
-
-## The matching system
-
-This is the core of Bubble.up, and the part I've put the most thought into. The goal isn't to find students who are *similar* to each other — it's to build **balanced, complementary** groups. A Bubble of five natural leaders and no planners isn't a good group.
-
-### Seven roles
-
-Every student and every Bubble is described as a vector over seven collaboration roles:
-
-> **Leader · Planner · Expert · Creative · Communicator · TeamPlayer · Challenger**
-
-A student's role vector comes from blending **two independent sources of evidence**:
-
-1. **A character quiz.** Short, opt-in questions whose answers carry weight toward one or more roles. The accumulated weights are normalized to a *shape* (the strongest role sits at 1.0), so answering the same way three times or thirty times yields the same profile — what's measured is the shape of who you are, not how chatty you were.
-
-2. **Your behavior in the app.** Real actions — sending messages, sharing files, joining sessions, and so on — are counted and mapped to roles through a configurable signal table. Each action type runs through a *saturating* curve, so the signal has diminishing returns: it sharpens the picture without letting any one habit dominate it.
-
-The two sources are blended with a weight that shifts over time: a brand-new user is mostly quiz-driven (we don't have behavior yet), and as they use the app, observed behavior carries more of the profile.
-
-### Confidence, and why it matters
-
-Every profile carries a **confidence** — how much evidence actually backs it. This is what keeps the system honest:
-
-- Confidence rises with the **diversity** of evidence (more answered questions, a *spread* of distinct actions), not raw volume. Sending a thousand chat messages can't fake a strong profile — only doing a variety of things can.
-- A Bubble's profile confidence accounts for how many members have meaningful profiles and how large the group is, so a one-person group never reads as a confident signal.
-
-### How a match is scored
-
-For a given student and a candidate Bubble:
-
-- We compute what the group is **short on** — the roles it's weak in — and measure how well the student fills exactly those gaps (cosine similarity against the group's *need* vector). This is **complementarity, not similarity**: you score high when you're strong where the group is weak.
-- That personalized score is blended with a **trending** score (group activity, recent joins, size, upcoming sessions) according to confidence. When we have little evidence about a student or a group, we lean on what's popular and active; as confidence grows, we lean on the real personalized fit.
-
-The whole formula lives in one pure, deterministic, unit-tested scorer — no hidden state, no I/O — so the matching logic is auditable and the numbers are reproducible.
-
-### An open design question: should we explain *why*?
-
-One thing I'm still deliberately undecided on: **how much of the matching ideology to expose to the user.**
-
-There's a real tension here. Showing a student *"you're being recommended this Bubble because it needs a Planner and you're a strong Planner"* is transparent and can build trust. But it also invites gaming (people answering the quiz to chase a label), it can feel reductive (nobody wants to be told they're "the Communicator"), and it pressures the model to be legible rather than accurate. Hiding it entirely is simpler and safer, but risks feeling like a black box.
-
-The current build leans toward showing a match *percentage* and a light "matched vs. trending" distinction without exposing the seven-role decomposition. Whether to open that box further — and how to do it without inviting gaming — is an active product decision, not a settled one.
-
----
-
-## The expert system
-
-Bubble.up isn't only peer-to-peer. Teaching assistants and private tutors can bring real teaching capacity into the platform through the **expert system**.
-
-The flow is built around verification, because "expert" has to mean something:
-
-1. **Apply.** Any user can apply to become an expert, describing who they are and what they can teach. The application lands in a `PENDING` state.
-2. **Admin review.** An admin inspects the request and either **verifies** or **rejects** it (`PENDING → VERIFIED / REJECTED`). Only verified experts get expert capabilities — there's no self-serve path to the badge.
-3. **Open sessions.** Once verified, an expert exposes themselves by opening **study sessions**: scheduled sessions with a capacity, backed by a calendar event and the platform's live-session infrastructure (video + whiteboard).
-4. **Bubbles enroll.** Study groups enroll into a session up to its capacity. The session shows up on the group's calendar, and the expert hosts it inside the app — with host-gated controls over the room, the whiteboard, and the call.
-
-The result is a clean loop: a TA or tutor proves who they are once, then becomes discoverable and bookable by exactly the groups studying the material they teach.
-
----
-
-## Under the hood
-
-A short tour for the curious — the engineering reflects a few deliberate principles.
-
-### Backend
-
-- **Java 21 · Spring Boot 3 · Postgres · JPA/Hibernate · JWT · STOMP over WebSocket.**
-- **Modular by feature, strict boundaries.** Each feature (`auth`, `groups`, `chat`, `matching`, `expert`, `catalog`, …) is a self-contained module with the same internal shape: `model → persistence → application → api`, plus an `internal/` interface that is the *only* surface other modules may call. Features never reach into each other's repositories — they fuse if you let them, so the architecture forbids it.
-- **A shared `common/` infrastructure layer** carries the cross-cutting machinery: a single response envelope, typed error codes mapped to HTTP statuses in one place, an injected clock and current-user provider (both swappable for tests and simulation), file storage behind an interface, a single WebSocket publisher with named destinations, and typed configuration properties. Feature code composes these rather than re-inventing them.
-- **The matching engine is a pure function.** All scoring is centralized in one stateless, deterministic scorer with no I/O, so the same code serves both the live path and the precomputed match cache and the two can't drift apart.
-
-### Frontend
-
-- **React 18 · TypeScript (strict) · Vite · Tailwind · Zustand · @stomp/stompjs.**
-- **State has a deliberate scope ladder:** local `useState` by default, lift to the page when siblings must agree, and a **Zustand** store only when state genuinely crosses pages or must survive a remount (auth, theme, language, layout). One concern per store, granular selectors, persistence only where it's truly needed. No Redux, no Context-as-state-manager.
-- **One client for each transport.** A single axios instance and a single STOMP client are shared app-wide; pages subscribe to live rooms and clean up on unmount, while the app shell owns the connection lifecycle.
-- **Bilingual and RTL-aware from the start.** Every user-facing string is internationalized (English + Hebrew), and layout uses logical CSS properties so the same components render correctly left-to-right and right-to-left.
-
----
-
-## Running it locally
-
-```bash
-docker-compose up                    # full stack: Postgres + backend (:8080) + frontend (:3000)
+```text
+model → persistence → application → api
 ```
 
-Or run the sides independently:
+Cross-feature access goes through explicit `internal/` interfaces rather than another feature's repositories. Shared infrastructure centralizes error handling, response envelopes, authentication context, time, file storage, pagination, configuration, and WebSocket publishing.
 
-```bash
-cd backend  && mvn spring-boot:run   # backend only (needs Postgres on :5432)
-cd frontend && npm run dev           # frontend dev server on :3000, proxies /api to :8080
+### Deliberate frontend state and transport ownership
+
+The React client keeps state local by default and uses focused Zustand stores only for state that crosses pages or survives remounts. A single Axios client owns HTTP behavior, while one STOMP client owns the WebSocket lifecycle and room subscriptions. Strict TypeScript, centralized internationalization, and logical CSS properties keep the UI consistent across English, Hebrew, LTR, and RTL.
+
+### Production-style delivery
+
+- Docker Compose environments for local development, production, and the public demo.
+- GitHub Actions for backend tests, frontend builds, container images, and deployment.
+- Caddy-managed HTTPS and reverse proxying on the public VPS demo.
+- Health checks, structured request logging, trace IDs, and container log inspection.
+- Unit, integration, and end-to-end journey tests across core workflows.
+
+## Product capabilities
+
+| Area | What is implemented |
+|---|---|
+| **Matching** | Quiz and behavioral profiles, role vectors, confidence scoring, complementary recommendations, and trending fallback |
+| **Bubbles** | Course-scoped groups, enrollment-gated membership, roles, invitations, and automatic workspace provisioning |
+| **Chat** | Real-time STOMP messaging, system messages, polls, linked events, presence, and reconnect handling |
+| **Files** | Group folders, upload/download, file metadata, access control, and pluggable storage |
+| **Calendar** | Study events, meetings, deadlines, exams, and expert sessions |
+| **Live sessions** | Video rooms, collaborative whiteboard, and host-gated controls |
+| **Experts** | Applications, admin review, verification, session creation, capacity, and group enrollment |
+| **Platform** | JWT authentication, academic catalog, admin tools, demo isolation, i18n, and RTL support |
+
+## Architecture and stack
+
+```text
+React + TypeScript
+        │
+        ├── REST / Axios
+        └── STOMP / WebSocket
+                │
+Java 21 + Spring Boot 3
+        │
+        ├── PostgreSQL / JPA
+        ├── File storage abstraction
+        └── Video and whiteboard integrations
 ```
 
-Sanity checks:
+| Layer | Technologies |
+|---|---|
+| **Frontend** | React 18, TypeScript, Vite, Tailwind CSS, Zustand, i18next, Axios, STOMP.js |
+| **Backend** | Java 21, Spring Boot 3, Spring Security, JPA/Hibernate, WebSocket/STOMP, JWT |
+| **Data** | PostgreSQL in deployed environments, H2 for tests |
+| **Delivery** | Docker, Docker Compose, GitHub Actions, GHCR, Caddy, VPS |
+| **Testing** | JUnit 5, Spring integration tests, MockMvc journey tests, frontend build/type checks |
 
-```bash
-cd backend  && mvn -DskipTests clean compile   # backend compiles
-cd backend  && mvn test                        # ~test suite, H2 in-memory, no Docker needed
-cd frontend && npm run build                   # strict tsc + vite build
+## How a Bubble works
+
+A Bubble is a small study group anchored to one course offering. Membership is validated against course enrollment, and creating a Bubble automatically provisions its default chat room. Members then share one workspace for conversation, materials, scheduling, and live study sessions—without assembling separate chat, storage, calendar, and meeting tools.
+
+The academic hierarchy keeps recommendations and collaboration properly scoped:
+
+```text
+University → Department → Course → Offering → Bubble
 ```
 
-Local debugging:
+## Run locally
+
+### Full stack with Docker
 
 ```bash
-docker-compose up -d --build
-curl http://localhost:8080/api/actuator/health
+docker compose up --build
 ```
 
-Open Dozzle at `http://localhost:9999` to inspect container logs. Backend HTTP
-requests are logged as `http_request ...`; copy the `traceId` from a failed or
-slow request and search for that value to follow the request through the backend
-logs. Request bodies are intentionally not logged.
+This starts PostgreSQL, the Spring Boot backend on `:8080`, and the React frontend on `:3000`.
+
+### Run each side independently
+
+```bash
+# Backend — requires PostgreSQL on :5432
+cd backend
+mvn spring-boot:run
+
+# Frontend — proxies /api to :8080
+cd frontend
+npm install
+npm run dev
+```
+
+Environment templates are provided in [`.env.example`](.env.example) and [`.env.prod.example`](.env.prod.example). Never commit real credentials.
+
+### Verify the build
+
+```bash
+cd backend && mvn test
+cd frontend && npm run build
+```
+
+## Repository layout
+
+```text
+backend/              Spring Boot application and tests
+frontend/             React application
+infra/                Infrastructure and deployment configuration
+.github/workflows/    CI and deployment pipelines
+docs/images/          README media
+```
 
 ---
 
-<sub>Bubble.up is an evolving project. The matching ideology, the depth of expert tooling, and how much of the model to surface to users are all areas of active iteration.</sub>
+Bubble.up is an evolving engineering project. The public demo runs in an isolated sandbox with generated data that is reset periodically.
