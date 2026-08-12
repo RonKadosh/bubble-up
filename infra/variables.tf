@@ -31,7 +31,6 @@ variable "data_volume_size_gb" {
 variable "budget_email" {
   description = "Email to notify when monthly spend approaches the budget cap."
   type        = string
-  default     = "aamit@post.bgu.ac.il"
 }
 
 variable "monthly_budget_usd" {

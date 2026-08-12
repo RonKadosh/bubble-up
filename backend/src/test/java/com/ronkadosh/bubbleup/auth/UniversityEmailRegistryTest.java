@@ -33,7 +33,7 @@ class UniversityEmailRegistryTest {
 
     @Test
     void matchesBgu() {
-        Optional<UniversityEmailRegistry.Match> student = registry.lookup("aamit@post.bgu.ac.il");
+        Optional<UniversityEmailRegistry.Match> student = registry.lookup("student@post.bgu.ac.il");
         assertThat(student).isPresent();
         assertThat(student.get().key()).isEqualTo("bgu");
         assertThat(student.get().kind()).isEqualTo(MemberKind.STUDENT);
@@ -69,7 +69,7 @@ class UniversityEmailRegistryTest {
 
     @Test
     void matchesMixedCaseAndWhitespace() {
-        Optional<UniversityEmailRegistry.Match> match = registry.lookup("Aamit@Post.BGU.Ac.IL");
+        Optional<UniversityEmailRegistry.Match> match = registry.lookup("Student@Post.BGU.Ac.IL");
         assertThat(match).isPresent();
         assertThat(match.get().key()).isEqualTo("bgu");
         assertThat(match.get().kind()).isEqualTo(MemberKind.STUDENT);

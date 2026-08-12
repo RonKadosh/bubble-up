@@ -17,8 +17,8 @@ change:
 
 ```
 demo/avatars/
-├── people/<persona-slug>.jpg     ← optional (see Demo-world.md §5 for slugs)
-└── experts/<expert-slug>.jpg     ← optional (see Demo-world.md §9)
+├── people/<persona-slug>.jpg     ← optional demo-person avatar
+└── experts/<expert-slug>.jpg     ← optional demo-expert avatar
 ```
 
 (Only loaded when `app.demo.enabled=true`.)

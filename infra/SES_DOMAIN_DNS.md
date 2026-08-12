@@ -25,7 +25,7 @@ Full names (if your DNS UI requires the whole thing):
 
 | Type | Name (host) | Value |
 |------|-------------|-------|
-| TXT | `_dmarc` | `v=DMARC1; p=none; rua=mailto:aamit@post.bgu.ac.il` |
+| TXT | `_dmarc` | `v=DMARC1; p=none; rua=mailto:dmarc@example.com` |
 
 (`p=none` = monitor only, safe to start. Tighten to `quarantine` later.)
 

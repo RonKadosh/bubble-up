@@ -18,8 +18,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  *
  * <p>Where the per-feature {@code *IT} classes assert one endpoint at a time, the
  * {@code *JourneyE2EIT} classes that extend this one compose the exact HTTP call
- * sequences the frontend makes (see {@code frontend/src/api/*.ts}) into whole user
- * stories from {@code FLOWS.md}. The point is to prove that the screens' real
+ * sequences the frontend makes (see {@code frontend/src/api/*.ts}) into complete
+ * user journeys. The point is to prove that the screens' real
  * call-chains hang together, not just that each handler works in isolation.
  *
  * <p>The helpers here mirror the frontend {@code api/} functions 1:1 — most

@@ -64,8 +64,8 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * Builds one complete, isolated demo world per "Start demo" click (see
- * Demo-world.md). Lives in {@code bootstrap/seed} — the sanctioned
+ * Builds one complete, isolated demo world per "Start demo" click. Lives in
+ * {@code bootstrap/seed} — the sanctioned
  * module-boundary-exception zone (same as {@code DemoSeeder}/{@code LoadTestSeeder})
  * — so it may inject repositories + command services directly and write backdated
  * rows the public APIs can't.
@@ -109,7 +109,7 @@ public class DemoWorldSeeder {
     private final OnboardingStateRepository onboardingStateRepository;
     private final DemoAssetRegistry assets;
 
-    // ── Static world definition (Demo-world.md §4–§9) ──────────────────────────
+    // Static demo-world definition
 
     /** role index: 0 LEADER · 1 PLANNER · 2 EXPERT · 3 CREATIVE · 4 COMMUNICATOR · 5 TEAM_PLAYER · 6 CHALLENGER.
      *  Each user-visible field carries an English + Hebrew twin; the seed picks by the

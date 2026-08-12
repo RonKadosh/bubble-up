@@ -13,8 +13,8 @@ import { useAuthStore } from '../store/authStore'
 /**
  * The game-tutorial overlay for the demo. driver.js paints the spotlight + popover;
  * we own step advancement (so we can navigate across routes and auto-advance GATED
- * steps when the visitor performs the real action). The 25-step graph mirrors
- * Demo-script.md; copy is i18n (`demo.tour.s<N>.{title,body}`).
+ * steps when the visitor performs the real action). The 25-step graph defines
+ * the guided demo flow; copy is i18n (`demo.tour.s<N>.{title,body}`).
  *
  * Interaction model:
  *  - modal/coachmark steps set {@code disableActiveInteraction} so the dimmed page
@@ -63,7 +63,7 @@ interface TourStep {
 
 const HOME = '/groups'
 
-// data-tour anchors are added to the real components; see Demo-script.md §4.
+// data-tour anchors are added to the real components used by the guided tour.
 // `key` is the i18n copy slot (demo.tour.<key>); array order is the play order. The
 // two are intentionally decoupled — "Share it" (s14 copy) plays right after "Say hi"
 // so it stays in the chat-focused layout (no jarring maximize swap).
