@@ -2,10 +2,8 @@ package com.ronkadosh.bubbleup.matching;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.ronkadosh.bubbleup.catalog.internal.CatalogInternalService;
-import com.ronkadosh.bubbleup.catalog.model.Course;
 import com.ronkadosh.bubbleup.catalog.model.CourseOffering;
 import com.ronkadosh.bubbleup.catalog.persistence.CourseOfferingRepository;
-import com.ronkadosh.bubbleup.catalog.persistence.CourseRepository;
 import com.ronkadosh.bubbleup.catalog.persistence.TermRepository;
 import com.ronkadosh.bubbleup.common.events.BehaviorEventType;
 import com.ronkadosh.bubbleup.groups.model.GroupMember;
@@ -59,7 +57,6 @@ class MatchingRecommendationsIT extends IntegrationTest {
     @Autowired GroupProfileRepository groupProfileRepository;
     @Autowired GroupRepository groupRepository;
     @Autowired GroupMemberRepository groupMemberRepository;
-    @Autowired CourseRepository courseRepository;
     @Autowired CourseOfferingRepository courseOfferingRepository;
     @Autowired TermRepository termRepository;
     @Autowired CatalogInternalService catalogInternalService;
@@ -153,7 +150,7 @@ class MatchingRecommendationsIT extends IntegrationTest {
     @Test
     void groupAverage_isConfidenceWeighted_soStrongKnownMemberDominates() throws Exception {
         UUID courseId = claimCourse();
-        UUID offeringId = anyOfferingForCourse(courseId);
+        UUID offeringId = currentTermOffering(courseId);
         StudyGroup group = groupRepository.save(StudyGroup.builder()
                 .name("F bubble").description("x").visibility(GroupVisibility.PUBLIC)
                 .offeringId(offeringId).maxMembers(10).createdBy(UUID.randomUUID()).build());
@@ -264,7 +261,7 @@ class MatchingRecommendationsIT extends IntegrationTest {
 
     private UUID candidate(UUID courseId, UUID createdBy, double[] avg, double groupConfidence,
                            int memberCount, long activity, int recentJoins, int upcoming) {
-        return candidateOnOffering(anyOfferingForCourse(courseId), createdBy, avg, groupConfidence,
+        return candidateOnOffering(currentTermOffering(courseId), createdBy, avg, groupConfidence,
                 memberCount, activity, recentJoins, upcoming);
     }
 
@@ -293,13 +290,7 @@ class MatchingRecommendationsIT extends IntegrationTest {
         return group.getId();
     }
 
-    private UUID anyOfferingForCourse(UUID courseId) {
-        List<UUID> offerings = catalogInternalService.offeringIdsForCourses(List.of(courseId));
-        assertThat(offerings).as("seeded course must have an offering").isNotEmpty();
-        return offerings.get(0);
-    }
-
-    /** The course's current-term ({@code 2025-B}) offering — resolved explicitly so it can't be confused with a seeded past-term one. */
+    /** The course's current-term offering, resolved explicitly so it cannot be confused with a past-term one. */
     private UUID currentTermOffering(UUID courseId) {
         UUID termId = catalogInternalService.currentTermFor(seedUniversityId()).orElseThrow().id();
         return catalogInternalService.offeringIdForCourseAndTerm(courseId, termId).orElseThrow();
@@ -325,8 +316,10 @@ class MatchingRecommendationsIT extends IntegrationTest {
 
     /** A distinct seeded course per test, so groups created here don't bleed across tests. */
     private UUID claimCourse() {
-        List<Course> all = courseRepository.findAll();
-        return all.get(COURSE_IDX.getAndIncrement() % all.size()).getId();
+        UUID currentTermId = catalogInternalService.currentTermFor(seedUniversityId()).orElseThrow().id();
+        List<CourseOffering> currentOfferings = courseOfferingRepository.findAllByTermId(currentTermId);
+        assertThat(currentOfferings).as("current seeded term must have offerings").isNotEmpty();
+        return currentOfferings.get(COURSE_IDX.getAndIncrement() % currentOfferings.size()).getCourseId();
     }
 
     private static double[] uniform(double v) {

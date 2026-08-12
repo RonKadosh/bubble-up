@@ -2,11 +2,10 @@ package com.ronkadosh.bubbleup.support;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ronkadosh.bubbleup.catalog.model.Course;
 import com.ronkadosh.bubbleup.catalog.model.CourseOffering;
 import com.ronkadosh.bubbleup.auth.internal.AuthInternalService;
+import com.ronkadosh.bubbleup.catalog.internal.CatalogInternalService;
 import com.ronkadosh.bubbleup.catalog.persistence.CourseOfferingRepository;
-import com.ronkadosh.bubbleup.catalog.persistence.CourseRepository;
 import com.ronkadosh.bubbleup.catalog.persistence.DepartmentRepository;
 import com.ronkadosh.bubbleup.catalog.persistence.UniversityRepository;
 import com.ronkadosh.bubbleup.common.context.UserRole;
@@ -31,11 +30,11 @@ public abstract class IntegrationTest {
 
     @Autowired protected MockMvc mvc;
     @Autowired protected ObjectMapper om;
-    @Autowired private CourseRepository courseRepository;
     @Autowired private CourseOfferingRepository courseOfferingRepository;
     @Autowired private UniversityRepository universityRepository;
     @Autowired private DepartmentRepository departmentRepository;
     @Autowired private AuthInternalService authInternalService;
+    @Autowired private CatalogInternalService catalogInternalService;
 
     /**
      * Any seeded course id. The catalog seeder runs at boot and produces a small
@@ -43,18 +42,23 @@ public abstract class IntegrationTest {
      * available in test profile.
      */
     protected UUID seedCourseId() {
-        return courseRepository.findAll().stream()
-                .findFirst()
-                .map(Course::getId)
-                .orElseThrow(() -> new IllegalStateException(
-                        "No seeded course — is CatalogSeeder enabled in the test profile?"));
+        return seedOffering().getCourseId();
     }
 
     private CourseOffering seedOffering() {
-        return courseOfferingRepository.findAll().stream()
+        UUID universityId = universityRepository.findAll().stream()
+                .findFirst()
+                .map(u -> u.getId())
+                .orElseThrow(() -> new IllegalStateException(
+                        "No seeded university — is CatalogSeeder enabled in the test profile?"));
+        UUID currentTermId = catalogInternalService.currentTermFor(universityId)
+                .orElseThrow(() -> new IllegalStateException(
+                        "No current or upcoming seeded term for university " + universityId))
+                .id();
+        return courseOfferingRepository.findAllByTermId(currentTermId).stream()
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException(
-                        "No seeded offering — is CatalogSeeder enabled in the test profile?"));
+                        "No seeded offering in current term " + currentTermId));
     }
 
     /**
